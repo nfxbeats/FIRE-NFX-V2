@@ -1,0 +1,65 @@
+from fireNFX_Defs import *
+
+class TnfxPlugin:
+    def __init__(self):
+        self.Name = ''
+        self.UserName = ''
+        self.Parameters = list() #
+
+class TnfxParameter:
+    def __init__(self, caption, offset, value, bipolar):
+        self.Offset = offset 
+        self.Caption = caption
+        self.Value = value
+        self.Bipolar = bipolar 
+
+class TnfxMixer:
+    def __init__(self):
+        self.Name = ""
+        self.FLIndex = -1
+        self.SelectPad = -1
+        self.MutePad = -1
+        self.Muted = 0
+
+class TnfxChannel:
+    def __init__(self):
+        self.Name = ""
+        self.FLIndex = -1
+        self.Mixer = TnfxMixer()
+        self.LoopSize = 0
+        self.Muted = 0
+
+class TnfxPattern:
+    def __init__(self):
+        self.Name = ""
+        self.FLIndex = -1
+        self.Channel = TnfxChannel()
+        self.Mixer = TnfxMixer()
+        self.Muted = 0
+        self.ShowChannelEditor = 0
+        self.ShowPianoRoll = 0
+        self.ShowChannelSettings = 0
+        self.Color = cOff
+        self.MutePreset1 = 0
+        self.MutePreset2 = 1
+        self.FilterParam = -1
+        self.ResParam = -1
+        self.PluginName = ''
+        self.Parameters = list() 
+        self.ParamPages = []
+        self.ParamPageIdx = -1
+
+class TnfxNoteInfo:
+    def __init__(self):
+        self.MIDINote = -1          # the midi Note for this pad
+        self.ChordNum = -1             # the chord . ie 1 = I, 2 = ii, etc
+        self.IsRootNote = False     #
+        self.IsKeyNote = False      #
+
+class TnfxPadMap:
+    def __init__(self, padIndex, flPat, color, tag):
+        self.PadIndex = padIndex          # the pad num 0..63
+        self.FLPattern = flPat
+        self.Color = color        # the color 
+        self.Pressed = -1 
+        self.Tag = tag
