@@ -16,6 +16,11 @@ UM_USER2 = 3
 
 USER_MODE = UM_CHANNEL 
 
+#Fire specific
+ManufacturerIDConst = 0x47
+DeviceIDBroadCastConst = 0x7F
+ProductIDConst = 0x43
+
 # Message IDs (from PC to device)
 MsgIDGetAllButtonStates = 0x40
 MsgIDGetPowerOnButtonStates = 0x41

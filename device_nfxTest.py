@@ -12,9 +12,11 @@ import transport
 import mixer 
 import general
 
+
 from fireNFX_Defs import * 
 from fireNFX_PadDefs import *
 from fireNFX_Utils import * 
+from fireNFX_Display import *
 
 _ShiftHeld = False
 _AltHeld = False
@@ -79,6 +81,10 @@ def OnInit():
     RefreshPadMode()
     RefreshTransport()
     RefreshShiftAlt()
+
+    InitDisplay()
+    DisplayText(Font6x16 , JustifyLeft, 0, "HELLO", True)
+    
 
 def ResetBeatIndicators():
     for i in range(0, len(BeatIndicators) ):
@@ -286,13 +292,13 @@ def HandleKnob(event, ctrlID):
     
 
 def HandleKnobReal(recEventIDIndex, value, Name, Bipolar):
-    knobres = 1/48
-    print('HandleKnobReaL', recEventIDIndex, value, REC_MIDIController, 0, Bipolar, knobres) 
-#    mixer.automateEvent(recEventIDIndex, value, REC_MIDIController, 0, Bipolar, knobres) 
-    general.processRECEvent(recEventIDIndex, value, REC_MIDIController)
-
-#    barVal = device.getLinkedValue(ID)
-#    fire.DisplayBar(Name, barVal, Bipolar)    
+    knobres = 1/64
+    currVal = device.getLinkedValue(recEventIDIndex)
+    #print('HandleKnobReal', Name, value,  recEventIDIndex, Bipolar, currVal, knobres) 
+    #general.processRECEvent(recEventIDIndex, value, REC_MIDIController)
+    mixer.automateEvent(recEventIDIndex, value, REC_MIDIController, 0, 1, knobres) 
+    currVal = device.getLinkedValue(recEventIDIndex)
+    DisplayBar(Name, currVal, Bipolar)
     return True
 
 def HandlePage(event, ctrlID):
