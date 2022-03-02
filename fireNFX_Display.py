@@ -42,8 +42,11 @@ def ClearDisplay():
     screen.update()
 
 def DisplayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime = 0):
-    screen.displayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime)
-
+    try:
+        screen.displayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime)
+    except:
+        return 
+    
 def DisplayBar(Text, Value, Bipolar):
     screen.displayBar(0, TextRowHeight * TimedTextRow, Text, Value, Bipolar)
 
@@ -55,11 +58,14 @@ def InitDisplay():
     sysexHeader = int.from_bytes(bytes([MIDI_BEGINSYSEX, ManufacturerIDConst, DeviceIDBroadCastConst ,ProductIDConst, MsgIDSendPackedOLEDData]), byteorder='little')
     screen.setup(sysexHeader, ScreenActiveTimeout, ScreenAutoTimeout, TextScrollPause, TextScrollSpeed, TextDisplayTime)
     screen.fillRect(0, 0, DisplayWidth, DisplayHeight, 0)
-    print('x')
 
 def DeInitDisplay():
     screen.deInit()
 
+# Helpers
+
+def DisplayTextTop(text):
+    DisplayText(Font6x16 , JustifyLeft, 0, text, True)
 
 
 

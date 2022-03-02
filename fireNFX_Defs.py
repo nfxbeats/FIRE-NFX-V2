@@ -2,12 +2,12 @@
 #
 # most of this is copied from the Image-Line device_Fire code
 
-MODE_STEP = 0
+MODE_PATTERNS = 0 # was MODE_STEP
 MODE_NOTE = 1
 MODE_DRUM = 2
 MODE_PERFORM = 3
 
-PAD_MODE = MODE_STEP
+PAD_MODE = MODE_PATTERNS
 
 UM_CHANNEL = 0
 UM_MIXER = 1
@@ -104,11 +104,16 @@ SelectCtrls = [IDSelect, IDSelectDown]
 PadCtrls = list()
 for ctrlID in range(IDPadFirst, IDPadLast+1):
     PadCtrls.append(ctrlID)
+MuteControls = [IDMute1, IDMute2, IDMute3, IDMute4]
 
 # the operating knobs mode NOT Pad mode
 KnobModeNames = ["Channel", "Mixer", "User1", "User2"]
 KnobModeCtrlID = IDKnobMode
 IDKnobModeLEDVals = [1,2,4,8]
+
+PattUpDnCtrls = [IDPatternUp, IDPatternDown]
+GridLRCtrls = [IDBankL, IDBankR]
+
 
 PageCtrls = [IDMute1, IDMute2, IDMute3, IDMute4] #using these since I dont use the step mode
 

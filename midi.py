@@ -471,6 +471,9 @@ widChannelRack = 1
 widPlaylist = 2
 widPianoRoll = 3
 widBrowser = 4
+widPlugin = 5
+widPluginEffect = 6
+widPluginGenerator = 7
 
 curfxScrollToMakeVisible = 1
 StartcurfxCancelSmoothing = 1 << 1
