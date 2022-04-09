@@ -11,7 +11,7 @@ import ui
 import transport 
 import mixer 
 import general
-
+import plugins 
 
 from fireNFX_Defs import * 
 from fireNFX_PadDefs import *
@@ -104,8 +104,10 @@ def OnRefresh(flags):
         HandlePatternChanges()
     if(HW_ChannelEvent & flags):
         #print('channel event')
-        RefreshChannelStrip()
-        
+        if (PAD_MODE == MODE_DRUM):
+            RefreshDrumPads()
+        elif(PAD_MODE == MODE_PATTERNS):
+            RefreshChannelStrip()
     if(HW_Dirty_Colors & flags):
         print('color change event')
     if(HW_Dirty_Tracks & flags):
@@ -145,13 +147,15 @@ def OnMidiIn(event):
         pMap = _PadMap[padNum]
         #print('Pad Detected', padNum)
 
-        if(event.data2 > 0): # On Pressed
-            # if STEP/PATTERN mode, treat as controls and not notes...
-            if(PAD_MODE == MODE_PATTERNS):
+        if(PAD_MODE == MODE_DRUM): # handles on and off
+            event.handled = HandlePads(event, padNum, pMap)
+        
+        # if STEP/PATTERN mode, treat as controls and not notes...
+        if(PAD_MODE == MODE_PATTERNS):
+            if(event.data2 > 0): # On Pressed
                 event.handled = HandlePads(event, padNum, pMap)
-        else:
-            event.handled = True #prevents a note off message
-        return 
+            else:
+                event.handled = True #prevents a note off message
 
     # handle other
     #print('Non Pad detected')
@@ -221,26 +225,36 @@ def HandleChannelStrip(padNum, isChannelStripMute):
 
 def HandlePads(event, padNum, pMap):
     print('handle pads', padNum)
+
     if(padNum in pdPresetNav):
         padIdx = pdPresetNav.index(padNum)
         HandlePresetNav(padIdx)
+
     if(padNum in pdMacroStrip):
         macIdx = pdMacroStrip.index(padNum)
         HandleMacros(macIdx)
-    elif(padNum in pdMutes):
-        event.handled = HandleMuteButtons(padNum)
-    elif(padNum in pdChanStrip):
-        event.handled = HandleChannelStrip(padNum, False)   
-    elif(padNum in pdChanStripMutes):
-        event.handled = HandleChannelStrip(padNum, True)   
-    elif(pMap.FLPattern > 0): # I dont think this is correct....
-        #if(event.data2 > 0): # On Press only
-        if(_CurrentPattern != pMap.FLPattern):
-            patterns.jumpToPattern(pMap.FLPattern)
-            ui.hideWindow(widPianoRoll)
-            ui.hideWindow(5) #widPlugin
-        elif(_AltHeld): # already on this pattern, check if alt is held    
-            CopyPattern(pMap.FLPattern)
+
+    if(PAD_MODE == MODE_DRUM):
+        if (padNum in pdFPCA) or (padNum in pdFPCB):
+            return HandleDrums(event, padNum)
+        else:
+            return True 
+
+    if(PAD_MODE == MODE_PATTERNS):
+        if(padNum in pdMutes):
+            event.handled = HandleMuteButtons(padNum)
+        elif(padNum in pdChanStrip):
+            event.handled = HandleChannelStrip(padNum, False)   
+        elif(padNum in pdChanStripMutes):
+            event.handled = HandleChannelStrip(padNum, True)   
+        elif(pMap.FLPattern > 0): # I dont think this is correct....
+            #if(event.data2 > 0): # On Press only
+            if(_CurrentPattern != pMap.FLPattern):
+                patterns.jumpToPattern(pMap.FLPattern)
+                ui.hideWindow(widPianoRoll)
+                ui.hideWindow(5) #widPlugin
+            elif(_AltHeld): # already on this pattern, check if alt is held    
+                CopyPattern(pMap.FLPattern)
     return True
 
 def HandlePresetNav(padIdx):
@@ -267,13 +281,33 @@ def HandleMacros(macIdx):
         #ShowPlaylist()
         #ShowMixer()
     elif(macIdx == 4):
+        DisplayTimedText('Show PR')
         ui.showWindow(widPianoRoll)
     elif(macIdx == 5):
+        DisplayTimedText('Copy')
         ui.copy()
     elif(macIdx == 6):
+        DisplayTimedText('Cut')
         ui.cut()
     elif(macIdx == 7):
+        DisplayTimedText('Paste')
         ui.paste()
+
+
+def HandleDrums(event, padNum):
+#    print('handle drums', 'in', event.data1, 'out', _PadMap[padNum].MIDINote)
+    if(padNum in pdFPCA) or (padNum in pdFPCB):
+        event.data1 = _PadMap[padNum].MIDINote
+        if(64 > event.data2 > 32 ):
+            event.data2 = 80
+        elif(110 > event.data2 > 64):
+            event.data2 = 110
+        elif(event.data2 > 110):
+            event.data2 = 127
+        return False # false to continue processing
+    else:
+        return True # mark as handled to prevent processing
+
 
 def HandleMuteButtons(padNum):
     btnIdx = pdMutes.index(padNum)
@@ -423,11 +457,11 @@ def HandlePadMode(event):
     if(ctrlID == IDStepSeq):
         PAD_MODE = MODE_PATTERNS
         RefreshPatternPads() 
-        
     elif(ctrlID == IDNote):
         PAD_MODE = MODE_NOTE
     elif(ctrlID == IDDrum):
         PAD_MODE = MODE_DRUM
+        RefreshDrumPads()
     elif(ctrlID == IDPerform):
         PAD_MODE = MODE_PERFORM
     
@@ -590,6 +624,44 @@ def RefreshPage():
         else:
             SendCC(PageCtrls[i], SingleColorOff)
     RefreshPatternPads()
+
+def RefreshDrumPads():
+    global _PadMap
+
+    chanIdx = channels.channelNumber()
+    pluginName = plugins.getPluginName(chanIdx, -1, 0)      
+    _showFPCColors = (pluginName == 'FPC') 
+    
+    if(_showFPCColors):  # Show Custom FPC Colors
+        PAD_Count =	0	#Retrieve number of pad parameters supported by plugin
+        PAD_Semitone =	1	#Retrieve semitone for pad specified by padIndex
+        PAD_Color =	2	#Retrieve color for pad specified by padIndex        
+
+        # FPC A Pads
+        fpcpadIdx = 0
+        semitone = 0
+        color = cOff
+        dim =  dimDefault
+        for p in pdFPCA:
+            color = plugins.getPadInfo(chanIdx, -1, PAD_Color, fpcpadIdx) # plugins.getColor(chanIdx, -1, GC_Semitone, fpcpadIdx)
+            semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, fpcpadIdx)
+            print(fpcpadIdx, 'semitone', semitone , 'color', color)
+            _PadMap[p].FPCColor = PadColorFromFLColor(color)
+            _PadMap[p].MIDINote = semitone 
+            SetPadColor(p, _PadMap[p].FPCColor, dim)
+            fpcpadIdx += 1 # NOTE! will be 16 when we exit the for loop, the proper first value for the B Pads loop...
+        # FPC B Pads
+        for p in pdFPCB:
+            color = plugins.getPadInfo(chanIdx, -1, PAD_Color, fpcpadIdx) 
+            semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, fpcpadIdx) 
+            _PadMap[p].FPCColor = PadColorFromFLColor(color)
+            _PadMap[p].MIDINote = semitone 
+            SetPadColor(p, _PadMap[p].FPCColor, dim)
+            fpcpadIdx += 1 # continue 
+
+    RefreshMacros() 
+    RefreshPresetNav()
+
 
 
 def RefreshKnobMode():

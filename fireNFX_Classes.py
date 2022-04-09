@@ -62,4 +62,5 @@ class TnfxPadMap:
         self.FLPattern = flPat
         self.Color = color        # the color 
         self.Pressed = -1 
+        self.MIDINote = -1
         self.Tag = tag
