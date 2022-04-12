@@ -64,3 +64,4 @@ class TnfxPadMap:
         self.Pressed = -1 
         self.MIDINote = -1
         self.Tag = tag
+        self.ItemIndex = -1

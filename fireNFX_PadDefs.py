@@ -20,22 +20,26 @@ pdFPCB = [52, 53, 54, 55,
           20, 21, 22, 23,
            4,  5,  6,  7]
 
+# quick slect FPC channels in drum mode
+pdFPCChannels = [ 8,  9, 10, 11,
+                 24, 25, 26, 27,
+                 40, 41, 42, 43,
+                 56, 57, 58, 59 ]
+
 
 
 
 #[ 12, 13, 14, 15, 28, 29, 30, 31]
-pdMacroStrip = [30, 31, 
-                14, 15,
-                46, 47, 
-                62, 63]
-colMacroStrip = [ cBlueDark,  cBlueMed, cBlueLight, cRed, cDimWhite, cCyan, cGreen, cOrange]
+pdMacroStrip = [ 12, 13, 14, 15, 28, 29, 30, 31]
+#[30, 31,                 14, 15,                46, 47,                 62, 63]
+colMacroStrip = [ cGreen, cCyan, cBlue, cPurple, cRed, cOrange, cYellow, cWhite ]
 
 pdPresetPrev = 44
 pdPresetNext = 60
 pdPresetNav = [pdPresetPrev, pdPresetNext]
 colPresetNav = [cDimWhite, cWhite]
 
-dimDefault = 3
-dimBright = 1
+dimDefault = 2
+dimBright = 0
 dimFull = 0
 
