@@ -2,6 +2,8 @@
 #
 # most of this is copied from the Image-Line device_Fire code
 
+from harmonicScales import *
+
 MODE_PATTERNS = 0 # was MODE_STEP
 MODE_NOTE = 1
 MODE_DRUM = 2
@@ -98,6 +100,8 @@ IDPadLast = 117
 TransportCtrls = [IDPatternSong, IDPlay, IDStop, IDRec]
 ShiftAltCtrls = [IDShift, IDAlt]
 PadModeCtrls = [IDStepSeq, IDNote, IDDrum, IDPerform]
+PadModeNames = ['Pattern', 'Note', 'Drum', 'Perform']
+PadModeShortNames = ['Pat', 'Note', 'Drum', 'Perf']
 NavCtrls = [IDUp, IDDown, IDLeft, IDRight]
 KnobCtrls = [IDKnob1, IDKnob2, IDKnob3, IDKnob4]
 SelectCtrls = [IDSelect, IDSelectDown]
@@ -108,6 +112,7 @@ MuteControls = [IDMute1, IDMute2, IDMute3, IDMute4]
 
 # the operating knobs mode NOT Pad mode
 KnobModeNames = ["Channel", "Mixer", "User1", "User2"]
+KnobModeShortNames = ["Ch", "Mi", "U1", "U2"]
 KnobModeCtrlID = IDKnobMode
 IDKnobModeLEDVals = [1,2,4,8]
 
@@ -162,4 +167,31 @@ IDColMetronome = DualColorFull2
 IDColWait = DualColorFull2
 IDColCount = DualColorFull2
 IDColLoop = DualColorFull2
+
+#
+
+#for the scale notes
+NotesListFlats = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B']
+NotesListSharps = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
+NotesList = NotesListSharps
+#list of notes values
+NoteValueList = [0,1,2,3,4,5,6,7,8,9,10,11]
+NoteIdxDef = 0 # off set from above    
+
+OctavesList = [1,2,3,4,5]
+OctaveIdxDef = 2 #index of above.
+
+ScalesList = [                           # descriptions/key notes from jake @ signals music studio - https://www.youtube.com/channel/UCRDDHLvQb8HjE2r7_ZuNtWA
+                                             # Tonality     KeyNote       Description
+        [HARMONICSCALE_MAJOR, 1],             # Major         7th         Bright, Happy, Melodic, Joyous
+        [HARMONICSCALE_DORIAN, 2] ,           # Minor         6th         Mellow, Smooth, Semi-dark, Spicy 
+        [HARMONICSCALE_PHRYGIAN, 3] ,         # Minor         2nd         Dark, Tense, Creepy, Exotic
+        [HARMONICSCALE_LYDIAN, 4] ,           # Major         4th         Floaty, Quirky, Sci-Fi, Spacy   *Jakes fave.
+        [HARMONICSCALE_MIXOLYDIAN, 5]  ,      # Major         7th         Bright, Upbeat, Rockish, Irish
+        [HARMONICSCALE_AEOLIAN, 6,] ,         # Minor         6th         Dark, Rock, Sad-ish, 
+        [HARMONICSCALE_LOCRIAN, 7,] ,         # Diminished    ???         ??? (No natural fifth, hard to use)
+        [HARMONICSCALE_MAJORPENTATONIC, 8],   # Major 
+        [HARMONICSCALE_MINORPENTATONIC, 9],   # Minor
+        [HARMONICSCALE_CHROMATIC, 10]     ]
+ScaleIdxDef = 9 
 

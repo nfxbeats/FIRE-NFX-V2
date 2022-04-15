@@ -44,6 +44,7 @@ def ClearDisplay():
 def DisplayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime = 0):
     try:
         screen.displayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime)
+        screen.update()
     except:
         return 
     
@@ -52,6 +53,7 @@ def DisplayBar(Text, Value, Bipolar):
 
 def DisplayTimedText(Text):
     screen.displayTimedText(Text, TimedTextRow)
+    screen.update()
 
 def InitDisplay():
     screen.init(DisplayWidth, DisplayHeight, TextRowHeight, FireFontSize, 0xFFFFFF, 0)
@@ -66,6 +68,13 @@ def DeInitDisplay():
 
 def DisplayTextTop(text):
     DisplayText(Font6x16 , JustifyLeft, 0, text, True)
+
+def DisplayTextBottom(text):
+    DisplayText(Font6x16 , JustifyLeft, 2, text, True)
+
+def DisplayTextMiddle(text):
+    DisplayText(Font6x16 , JustifyLeft, 1, text, True)
+
 
 
 

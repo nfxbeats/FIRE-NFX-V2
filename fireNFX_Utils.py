@@ -1,5 +1,6 @@
 import device
 import utils
+import plugins
 from midi import *
 from fireNFX_Defs import *
 
@@ -70,6 +71,19 @@ def PadColorFromFLColor(FLColor):
     b = (FLColor & 0xFF) // 2
     g = ((FLColor >> 8) & 0xFF) // 2
     return utils.RGBToColor(r, g, b)
+
+def ShowPluginInfo(chanIdx):
+    print('   PluginName: ', plugins.getPluginName(chanIdx, -1, 0))
+    pCnt = plugins.getParamCount(chanIdx, -1)
+    print('   ParamCount: ', pCnt)
+    for param in range(0, pCnt):
+        print('     Param', param, plugins.getParamName(param, chanIdx, -1) )
+        print('     Value', param, plugins.getParamValue(param, chanIdx, -1) )
+        print('    ValStr', param, plugins.getParamValueString(param, chanIdx, -1) )
+        print('    Color0', param, plugins.getColor(chanIdx, -1, 0, param) )
+        print('    Color1', param, plugins.getColor(chanIdx, -1, 1, param) )
+        print('----------------------')
+
 
     
 

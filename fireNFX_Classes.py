@@ -54,7 +54,7 @@ class TnfxNoteInfo:
         self.MIDINote = -1          # the midi Note for this pad
         self.ChordNum = -1             # the chord . ie 1 = I, 2 = ii, etc
         self.IsRootNote = False     #
-        self.IsKeyNote = False      #
+        self.Highlight = False      #
 
 class TnfxPadMap:
     def __init__(self, padIndex, flPat, color, tag):
@@ -62,6 +62,8 @@ class TnfxPadMap:
         self.FLPattern = flPat
         self.Color = color        # the color 
         self.Pressed = -1 
-        self.MIDINote = -1
+#        self.MIDINote = -1
         self.Tag = tag
         self.ItemIndex = -1
+        self.NoteInfo = TnfxNoteInfo()
+

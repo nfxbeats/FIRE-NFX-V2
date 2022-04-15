@@ -25,21 +25,41 @@ pdFPCChannels = [ 8,  9, 10, 11,
                  24, 25, 26, 27,
                  40, 41, 42, 43,
                  56, 57, 58, 59 ]
+           
+pdWorkArea = [ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,
+              16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
+              32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
+              48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 ]
 
+pdMacros = [ 12, 13, 14, 15, 28, 29, 30, 31]
+colMacros = [ cGreen, cCyan, cBlue, cPurple, cRed, cOrange, cYellow, cWhite ]
 
+dimDefault = 2
+dimBright = 0
+dimFull = 0
 
+#navigation
+pdNav = [ 44, 45, 46, 47,
+          60, 61, 62, 63]
 
-#[ 12, 13, 14, 15, 28, 29, 30, 31]
-pdMacroStrip = [ 12, 13, 14, 15, 28, 29, 30, 31]
-#[30, 31,                 14, 15,                46, 47,                 62, 63]
-colMacroStrip = [ cGreen, cCyan, cBlue, cPurple, cRed, cOrange, cYellow, cWhite ]
-
+#nav for PATTERNS and DRUMS
 pdPresetPrev = 44
 pdPresetNext = 60
 pdPresetNav = [pdPresetPrev, pdPresetNext]
 colPresetNav = [cDimWhite, cWhite]
 
-dimDefault = 2
-dimBright = 0
-dimFull = 0
+#nav for NOTES
+pdScalePrev = 44
+pdScaleNext = 60
+pdRootNotePrev = 45
+pdRootNoteNext = 61
+pdOctavePrev = 46
+pdOctaveNext = 62
+pdNoteUnused = 47
+pdNoteRepeat = 63
+colNoteRepeat = cOrange
+pdNoteFuncs = [pdScalePrev, pdScaleNext, pdRootNotePrev, pdRootNoteNext, pdOctavePrev, pdOctaveNext, pdNoteUnused, pdNoteUnused]
+colNoteFuncs = [cGreenLight, cGreen, cPurpleLight, cPurple, cBlueMed, cBlue, cOff, cOff ]
+
+
 
