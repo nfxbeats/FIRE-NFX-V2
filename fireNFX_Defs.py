@@ -1,7 +1,6 @@
 # name = FireNFX Definitions
 #
 # most of this is copied from the Image-Line device_Fire code
-
 from harmonicScales import *
 
 MODE_PATTERNS = 0 # was MODE_STEP
@@ -119,8 +118,12 @@ IDKnobModeLEDVals = [1,2,4,8]
 PattUpDnCtrls = [IDPatternUp, IDPatternDown]
 GridLRCtrls = [IDBankL, IDBankR]
 
+IDPage0 = IDMute1
+IDPage1 = IDMute2
+IDPage2 = IDMute3
+IDPage3 = IDMute4
 
-PageCtrls = [IDMute1, IDMute2, IDMute3, IDMute4] #using these since I dont use the step mode
+PageCtrls = [IDPage0, IDPage1, IDPage2, IDPage3] # using these since I dont use the step mode
 
 BeatIndicators = [IDTrackSel1, IDTrackSel2, IDTrackSel3, IDTrackSel4]
 
@@ -176,12 +179,13 @@ NotesListSharps = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
 NotesList = NotesListSharps
 #list of notes values
 NoteValueList = [0,1,2,3,4,5,6,7,8,9,10,11]
-NoteIdxDef = 0 # off set from above    
 
 OctavesList = [1,2,3,4,5]
-OctaveIdxDef = 2 #index of above.
 
-ScalesList = [                           # descriptions/key notes from jake @ signals music studio - https://www.youtube.com/channel/UCRDDHLvQb8HjE2r7_ZuNtWA
+ScalesList = [
+        [HARMONICSCALE_CHROMATIC, 0],
+        
+        # descriptions/key notes from jake @ signals music studio - https://www.youtube.com/channel/UCRDDHLvQb8HjE2r7_ZuNtWA
                                              # Tonality     KeyNote       Description
         [HARMONICSCALE_MAJOR, 1],             # Major         7th         Bright, Happy, Melodic, Joyous
         [HARMONICSCALE_DORIAN, 2] ,           # Minor         6th         Mellow, Smooth, Semi-dark, Spicy 
@@ -191,7 +195,20 @@ ScalesList = [                           # descriptions/key notes from jake @ si
         [HARMONICSCALE_AEOLIAN, 6,] ,         # Minor         6th         Dark, Rock, Sad-ish, 
         [HARMONICSCALE_LOCRIAN, 7,] ,         # Diminished    ???         ??? (No natural fifth, hard to use)
         [HARMONICSCALE_MAJORPENTATONIC, 8],   # Major 
-        [HARMONICSCALE_MINORPENTATONIC, 9],   # Minor
-        [HARMONICSCALE_CHROMATIC, 10]     ]
+        [HARMONICSCALE_MINORPENTATONIC, 9]    # Minor
+]
 ScaleIdxDef = 9 
 
+lvlN = -2 # Never
+lvlA = -1 # Always
+lvl0 = 0  # general use
+lvlE = 1
+lvlH = 2
+lvlR = 3
+lvlU = 4
+level0 = [lvl0, '....']
+levelE = [lvlE, 'SysEvent']
+levelH = [lvlH, 'Handler']
+levelR = [lvlR, 'Refresh']
+levelU = [lvlU, 'Update']
+prnLevels = [level0, levelE, levelH, levelR, levelU]

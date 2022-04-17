@@ -3,6 +3,8 @@
 
 from fireNFX_Utils import PadColorFromFLColor
 
+cChannel = -1 #generic value to indicate to use the channel color
+
 cOff        = 0x000000
 cWhite      = 0xFFFFFF
 cSilver     = 0X606060

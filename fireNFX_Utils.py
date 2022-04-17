@@ -4,7 +4,14 @@ import plugins
 from midi import *
 from fireNFX_Defs import *
 
-def SetPadColor(idx, col, dimFactor):
+_ColorMap = [0 for i in range(64)] 
+
+def SetPadColor(idx, col, dimFactor, bSaveColor = True):
+    global _ColorMap
+
+    if(col == -1):
+        col = _ColorMap[idx]
+
     #print('SetLEDCol', idx, col)
     r = (col & 0x7F0000) >> 16
     g = (col & 0x007F00) >> 8
@@ -19,6 +26,9 @@ def SetPadColor(idx, col, dimFactor):
 
     SetPadRGB(idx, r, g, b)
 
+    if(bSaveColor):
+        _ColorMap[idx] = col 
+
 def SetPadRGB(idx, r, g, b):  
     #print('SetLED', idx, r, g, b)
     dataOut = bytearray(4)
@@ -29,6 +39,8 @@ def SetPadRGB(idx, r, g, b):
     dataOut[i + 3] = b
 
     SendMessageToDevice(MsgIDSetRGBPadLedState, len(dataOut), dataOut)
+
+
 
 def SendCC(ID, Val):
 
