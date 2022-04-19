@@ -15,7 +15,7 @@ JustifyCenter = 1
 JustifyRight = 2
 ScreenDisplayDelay = 2 # delay (in ms) required to access the screen (seems slow)
 
-TextScrollPause = 10
+TextScrollPause = 5
 TextScrollSpeed = 2
 TextDisplayTime = 4000
 
@@ -29,12 +29,16 @@ Idle_Interval = 100
 Idle_Interval_Max = 8
 
 ScreenActiveTimeout = 30 # seconds to keep screen active (screen has its own timeout which will kick in after this)
-ScreenAutoTimeout = 10
+ScreenAutoTimeout = 4
 
 tlNone = 1
 tlText = 1 << 1
 tlBar = 1 << 2
 tlMeter = 1 << 3
+
+ROWTOP = 0
+ROWMID = 1
+ROWBOT = 2
 
 
 def ClearDisplay():
@@ -50,6 +54,14 @@ def DisplayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime = 0
     
 def DisplayBar(Text, Value, Bipolar):
     screen.displayBar(0, TextRowHeight * TimedTextRow, Text, Value, Bipolar)
+
+
+def DisplayTimedText2(Text1, Text2, Text3):
+    screen.displayTimedText(Text1, ROWTOP)
+    screen.displayTimedText(Text2, ROWMID)
+    screen.displayTimedText(Text3, ROWBOT)
+    screen.update()
+
 
 def DisplayTimedText(Text):
     screen.displayTimedText(Text, TimedTextRow)
@@ -67,13 +79,13 @@ def DeInitDisplay():
 # Helpers
 
 def DisplayTextTop(text):
-    DisplayText(Font6x16 , JustifyLeft, 0, text, True)
-
-def DisplayTextBottom(text):
-    DisplayText(Font6x16 , JustifyLeft, 2, text, True)
+    DisplayText(Font6x16 , JustifyLeft, ROWTOP, text, True)
 
 def DisplayTextMiddle(text):
-    DisplayText(Font6x16 , JustifyLeft, 1, text, True)
+    DisplayText(Font6x16 , JustifyLeft, ROWMID, text, True)
+
+def DisplayTextBottom(text):
+    DisplayText(Font6x16 , JustifyLeft, ROWBOT, text, True)
 
 
 

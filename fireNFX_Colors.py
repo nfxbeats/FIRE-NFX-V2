@@ -1,7 +1,7 @@
 # name= 
 #
 
-from fireNFX_Utils import PadColorFromFLColor
+from fireNFX_Utils import FLColorToPadColor
 
 cChannel = -1 #generic value to indicate to use the channel color
 
@@ -21,7 +21,7 @@ cOrange     =  0xFFA500
 cYellow     = 0xFFFF00
 
 cPurple         = 0x1000FF
-cPurpleLight    = PadColorFromFLColor(0xA020F0)
+cPurpleLight    = FLColorToPadColor(0xA020F0)
 
 cBlue       = 0x0000FF
 cBlueDark  = cBlue & 0x001010
@@ -33,7 +33,7 @@ cCyan       = 0x00FFFF
 cGreen      = 0x00FF00
 cGreenDark  = 0x084000
 cGreenMed   = 0x12B900
-cGreenLight = PadColorFromFLColor(0x43D633)
+cGreenLight = FLColorToPadColor(0x43D633)
 
 
 cX1 = cPurple & 0x100010

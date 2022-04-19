@@ -28,6 +28,7 @@ class TnfxChannel:
         self.Mixer = TnfxMixer(-1, "")
         self.LoopSize = 0
         self.Muted = 0
+        self.Color = 0 
 
 class TnfxPattern:
     def __init__(self, flIdx, name):
@@ -49,6 +50,15 @@ class TnfxPattern:
         self.ParamPages = []
         self.ParamPageIdx = -1
 
+class TnfxColorMap:
+    def __init__(self, padIndex, color, dimFactor):
+        self.PadIndex = padIndex
+        self.PadColor = color
+        self.DimFactor = dimFactor
+        self.R = 0
+        self.G = 0
+        self.B = 0
+
 class TnfxNoteInfo:
     def __init__(self):
         self.MIDINote = -1          # the midi Note for this pad
@@ -57,9 +67,9 @@ class TnfxNoteInfo:
         self.Highlight = False      #
 
 class TnfxPadMap:
-    def __init__(self, padIndex, flPat, color, tag):
+    def __init__(self, padIndex, flIndex, color, tag):
         self.PadIndex = padIndex          # the pad num 0..63
-        self.FLPattern = flPat
+        self.FLIndex = flIndex
         self.Color = color        # the color 
         self.Pressed = -1 
 #        self.MIDINote = -1

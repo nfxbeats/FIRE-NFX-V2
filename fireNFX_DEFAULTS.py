@@ -37,3 +37,9 @@ DEFAULT_OCTAVE = 3
 DEFAULT_SCALE = 0
 
 
+# Whether or not to light the channel strip will indicate
+# other channels that share the same mixer routing
+#
+DEFAULT_SHOW_CHANNEL_WITH_SHARED_MIXER_CHANNELS = True 
+
+

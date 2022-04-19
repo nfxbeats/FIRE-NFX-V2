@@ -1,16 +1,77 @@
 import device
+from fireNFX_Classes import TnfxColorMap
 import utils
 import plugins
 from midi import *
 from fireNFX_Defs import *
 
-_ColorMap = [0 for i in range(64)] 
+# init the color map
+_ColorMap = list()
+for p in range(64):
+    colorMap = TnfxColorMap(p, 0, 0)
+    _ColorMap.append(colorMap)
+
+def TestColorMap():
+    global _ColorMap
+
+    for r in range(127):
+        for g in range(127):
+            for b in range(127):
+                for cMap in _ColorMap:
+                    cMap.R = r
+                    cMap.G = g
+                    cMap.B = b 
+                FlushColorMap()  
+                
+def SetPadColorBuffer(idx, col, dimFactor, flushBuffer = False):
+    global _ColorMap
+    
+    if(col == -1):
+        col = _ColorMap[idx].PadColor
+
+    #print('SetLEDCol', idx, col)
+    r = (col & 0x7F0000) >> 16
+    g = (col & 0x007F00) >> 8
+    b = (col & 0x7F)
+
+    # reduce brightness by half time dimFactor
+    if(dimFactor > 0):
+        for i in range(dimFactor):
+            r = r >> 1
+            g = g >> 1
+            b = b >> 1
+
+    _ColorMap[idx].PadColor = col 
+    _ColorMap[idx].DimFactor = dimFactor
+    _ColorMap[idx].R = r
+    _ColorMap[idx].G = g
+    _ColorMap[idx].B = b
+    
+    if(flushBuffer):
+        FlushColorMap()
+
+def FlushColorMap():
+    dataOut = bytearray(4 * 64)
+    bufOffs = 0
+    for cMap in _ColorMap:
+        dataOut[bufOffs] = cMap.PadIndex
+        dataOut[bufOffs + 1] = cMap.R
+        dataOut[bufOffs + 2] = cMap.G
+        dataOut[bufOffs + 3] = cMap.B
+        bufOffs += 4
+    SendMessageToDevice(MsgIDSetRGBPadLedState, len(dataOut), dataOut)
+
 
 def SetPadColor(idx, col, dimFactor, bSaveColor = True):
     global _ColorMap
+    SetPadColorDirect(idx, col, dimFactor, bSaveColor)
+    #SetPadColorBuffer(idx, col, dimFactor, False)
+
+def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True):
+    global _ColorMap
 
     if(col == -1):
-        col = _ColorMap[idx]
+        col = _ColorMap[idx].PadColor
 
     #print('SetLEDCol', idx, col)
     r = (col & 0x7F0000) >> 16
@@ -27,7 +88,7 @@ def SetPadColor(idx, col, dimFactor, bSaveColor = True):
     SetPadRGB(idx, r, g, b)
 
     if(bSaveColor):
-        _ColorMap[idx] = col 
+        _ColorMap[idx].PadColor = col 
 
 def SetPadRGB(idx, r, g, b):  
     #print('SetLED', idx, r, g, b)
@@ -78,7 +139,7 @@ def SendMessageToDevice(ID, l, data):
     msg[len(msg) - 1] = MIDI_ENDSYSEX
     device.midiOutSysex(bytes(msg))
 
-def PadColorFromFLColor(FLColor):
+def FLColorToPadColor(FLColor):
     r = ((FLColor >> 16) & 0xFF) // 2
     b = (FLColor & 0xFF) // 2
     g = ((FLColor >> 8) & 0xFF) // 2

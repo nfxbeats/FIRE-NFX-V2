@@ -100,7 +100,7 @@ TransportCtrls = [IDPatternSong, IDPlay, IDStop, IDRec]
 ShiftAltCtrls = [IDShift, IDAlt]
 PadModeCtrls = [IDStepSeq, IDNote, IDDrum, IDPerform]
 PadModeNames = ['Pattern', 'Note', 'Drum', 'Perform']
-PadModeShortNames = ['Pat', 'Note', 'Drum', 'Perf']
+PadModeShortNames = ['PTN', 'NOTE', 'DRM', 'PERF']
 NavCtrls = [IDUp, IDDown, IDLeft, IDRight]
 KnobCtrls = [IDKnob1, IDKnob2, IDKnob3, IDKnob4]
 SelectCtrls = [IDSelect, IDSelectDown]
@@ -111,7 +111,7 @@ MuteControls = [IDMute1, IDMute2, IDMute3, IDMute4]
 
 # the operating knobs mode NOT Pad mode
 KnobModeNames = ["Channel", "Mixer", "User1", "User2"]
-KnobModeShortNames = ["Ch", "Mi", "U1", "U2"]
+KnobModeShortNames = ["C", "M", "U1", "U2"]
 KnobModeCtrlID = IDKnobMode
 IDKnobModeLEDVals = [1,2,4,8]
 
@@ -206,9 +206,11 @@ lvlE = 1
 lvlH = 2
 lvlR = 3
 lvlU = 4
+lvlD = 5
 level0 = [lvl0, '....']
 levelE = [lvlE, 'SysEvent']
 levelH = [lvlH, 'Handler']
 levelR = [lvlR, 'Refresh']
 levelU = [lvlU, 'Update']
-prnLevels = [level0, levelE, levelH, levelR, levelU]
+levelD = [lvlD, 'Display']
+prnLevels = [level0, levelE, levelH, levelR, levelU, levelD]
