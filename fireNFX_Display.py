@@ -29,7 +29,7 @@ Idle_Interval = 100
 Idle_Interval_Max = 8
 
 ScreenActiveTimeout = 30 # seconds to keep screen active (screen has its own timeout which will kick in after this)
-ScreenAutoTimeout = 4
+ScreenAutoTimeout = 10
 
 tlNone = 1
 tlText = 1 << 1
@@ -77,6 +77,12 @@ def DeInitDisplay():
     screen.deInit()
 
 # Helpers
+
+def DisplayTextAll(textTop, textMid, textBot):
+    DisplayTextTop(textTop)
+    DisplayTextMiddle(textMid)
+    DisplayTextBottom(textBot)
+    screen.update
 
 def DisplayTextTop(text):
     DisplayText(Font6x16 , JustifyLeft, ROWTOP, text, True)

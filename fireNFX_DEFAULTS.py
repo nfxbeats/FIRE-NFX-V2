@@ -14,7 +14,7 @@ DEFAULT_ROOT_NOTE_COLOR = cBlue
 # this is an interal way to control the brightness for things like vs non active pads
 # value can be 0-4 where 0 is NO DIMMING and 4 is MAX DIMMING
 DEFAULT_DIM_FACTOR = 3
-DEFAULT_DIM_BRIGHT = 2
+DEFAULT_DIM_BRIGHT = 1
 
 # How to display notes? Use sharps (#) or flats (b)
 # values can be: NotesListSharps  or NotesListFlats

@@ -34,8 +34,14 @@ PME_FromMIDI = 1 << 5
 PME_FromScript = 1 << 6
 
 #crDisplayRect flags
-CR_HighlightChannels = 1;
-CR_ScrollToView     = 1 << 1;
+CR_HighlightChannels = 1
+CR_ScrollToView     = 2
+CR_HighlightChannelMute =	4	  #	when specified, crDisplayRect works on channels and highlights only mute control
+CR_HighlightChannelPanVol =	8	  #	when specified, crDisplayRect works on channels and highlights only pan and volume controls
+CR_HighlightChannelTrack =	16	  #	when specified, crDisplayRect works on channels and highlights only track control
+CR_HighlightChannelName	 = 32	  #	when specified, crDisplayRect works on channels and highlights only channel name button
+CR_HighlightChannelSelect	 = 64	  #when specified, crDisplayRect works on channels and highlights only channel selection control
+
 
 #miDisplayRect flags
 MI_ScrollToView     = 1 << 1;
@@ -682,3 +688,12 @@ TackDefaultVolume = 800 / 1000
     
 def EncodeRemoteControlID(PortNum, ChanNum, CCNum):
   return CCNum + (ChanNum << 16) + ((PortNum + 1) << 22)
+
+#
+# used by channels/getChannelType. s/b in MIDI
+CT_Sampler	= 0	    #Internal sampler
+CT_Hybrid	= 1	    #generator plugin feeding internal sampler
+CT_GenPlug	= 2	    #generator plugin
+CT_Layer	= 3	    #Layer
+CT_AudioClip = 4	#Audio clip
+CT_AutoClip	= 5	    #Automation clip

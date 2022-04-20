@@ -29,6 +29,8 @@ class TnfxChannel:
         self.LoopSize = 0
         self.Muted = 0
         self.Color = 0 
+        self.ChannelType = -1
+        self.GlobalIndex = -1
 
 class TnfxPattern:
     def __init__(self, flIdx, name):
