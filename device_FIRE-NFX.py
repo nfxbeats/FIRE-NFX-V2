@@ -11,6 +11,7 @@ import transport
 import mixer 
 import general
 import plugins 
+import playlist
 
 from fireNFX_DEFAULTS import *
 
@@ -56,12 +57,7 @@ _Chord7th = False
 _VelocityMin = 100
 _VelocityMax = 126
 _DebugPrn = True
-_DebugMin = lvl0
-
-
-  
-
-
+_DebugMin = lvlD
 
 # FL Events
 def OnInit():
@@ -114,10 +110,12 @@ def UpdatePatternModeData(pattNum = -1):
     UpdateChannelMap()
     UpdatePatternModePadMap()
     
+def OnDoFullRefresh():
+    prn(lvlA, 'OnDoFullRefresh')    
 
 def OnIdle():
     if(_ShiftHeld):
-        RefreshShifted() 
+        RefreshShiftedStates() 
 
 def OnMidiMsg(event):
     prn(lvlN, "OnMidiMsg()", event.data1, event.data2)
@@ -199,7 +197,7 @@ def OnMidiIn(event):
     global _PadMap
     
 
-    prn(lvlE, "OnMidiIn", event.data1, event.data2)
+    prn(lvlA, "OnMidiIn", event.data1, event.data2)
     #if (event.status == midi.MIDI_NOTEON) & (event.data2 <= 0) :
     #   event.status = midi.MIDI_NOTEOFF
     #    event.data2 = 0
@@ -267,7 +265,8 @@ def OnMidiIn(event):
     if(event.data2 > 0): # Pressed
         if(_ShiftHeld):
             HandleShifted(event)
-        elif( ctrlID in PadModeCtrls):
+
+        if( ctrlID in PadModeCtrls):
             event.handled = HandlePadMode(event) 
         elif( ctrlID in TransportCtrls ):
             event.handled = HandleTransport(event)
@@ -281,6 +280,8 @@ def OnMidiIn(event):
             event.handled = HandlePattUpDn(ctrlID)
         elif( ctrlID in GridLRCtrls):
             event.handled = HandleGridLR(ctrlID)
+        elif( ctrlID == IDBrowser ):
+            event.handled = HandleBrowser()
     else: # Released
         event.handled = True 
 
@@ -564,12 +565,12 @@ def HandlePatternChanges():
                 currPattern = patterns.patternNumber()
                 _CurrentPattern = patterns.patternNumber()
                 UpdatePatternModeData(_CurrentPattern) # was UpdatePatternMap(_CurrentPattern) 
+        RefreshPatternStrip()
             
 
     if(patterns.patternCount() == 0) and (_CurrentPattern == 1): # empty project, set to 1
         _PatternCount = 1
 
-    RefreshPatternStrip()
     RefreshDisplay()
 
 def RefreshDisplay():
@@ -615,8 +616,17 @@ def RefreshDisplay():
     prn(lvlD, '  |-------------------------------------')
 
 def HandlePattUpDn(ctrlID):
-    prn(lvlH, 'HandlePattUpDn()', ctrlID)
-    if(_AltHeld):
+    prn(lvlH, 'HandlePattUpDn()', ctrlID, _ShiftHeld, _AltHeld, _CurrentChannel)
+
+    moveby = 1
+    if(ctrlID == IDPatternUp):
+        moveby = -1
+
+    if(_ShiftHeld):
+        newChanIdx = getCurrChanIdx() + moveby
+        if(0 <= newChanIdx < _ChannelCount):
+            channels.selectOneChannel(newChanIdx)
+    elif(_AltHeld):
         if(ctrlID == IDPatternUp):
             DisplayTimedText('vZoom Out')
             ui.verZoom(2)
@@ -624,13 +634,11 @@ def HandlePattUpDn(ctrlID):
             DisplayTimedText('vZoom In')
             ui.verZoom(-2)
     else:
-        moveby = 1
-        if(ctrlID == IDPatternUp):
-            moveby = - 1
         newPattern = _CurrentPattern + moveby
         if( 0 <= newPattern <= _PatternCount):   #if it's a valid spot then move it
             patterns.jumpToPattern(newPattern)
-
+    
+    RefreshDisplay()
     return True 
 
 def HandleGridLR(ctrlID):
@@ -823,11 +831,11 @@ def HandlePadMode(event):
 def SetPadMode(newPadMode):
     global PAD_MODE
     oldPadMode = PAD_MODE
-    RefreshPadModeButtons() # lights the button
 
     if(oldPadMode != newPadMode):
         PAD_MODE = newPadMode
         UpdatePatternModeData()
+        RefreshPadModeButtons() # lights the button
 
     RefreshAll()
 
@@ -899,8 +907,19 @@ def HandleShifted(event):
         transport.globalTransport(FPT_CountDown, 1)
     elif(ctrlID == IDLoop):
         transport.globalTransport(FPT_LoopRecord, 1)
-    RefreshShifted()
+    
+    RefreshShiftedStates()
     event.handled = True 
+
+def HandleBrowser():
+    global _ShowBrowser
+    _ShowBrowser = not _ShowBrowser
+    prn(lvlA, 'Browser', _ShowBrowser)
+    if(_ShowBrowser):
+        SendCC(IDBrowser, SingleColorHalfBright)   
+    else:
+        SendCC(IDBrowser, SingleColorOff) 
+    return True   
 
 
 # Refresh
@@ -925,7 +944,7 @@ def RefreshShiftAlt():
         SendCC(IDAlt, SingleColorOff)
 
     if(_ShiftHeld):
-        RefreshShifted()
+        RefreshShiftedStates()
     else:  
         SendCC(IDShift, DualColorOff)
         RefreshPadModeButtons()
@@ -949,7 +968,7 @@ def RefreshTransport():
     else:
         SendCC(IDRec, IDColRecOff)
 
-def RefreshShifted():
+def RefreshShiftedStates():
     ColOn = DualColorFull2 
     ColOff = DualColorOff
 
@@ -1114,43 +1133,21 @@ def RefreshNotes():
     RefreshMacros() 
     RefreshNavPads()
 
-def isSamplerChannel(chanIdx):
-    return channels.getChannelType(chanIdx) == CT_Sampler
-    
-def isHybridChannel(chanIdx):
-    return channels.getChannelType(chanIdx) == CT_Hybrid
-
-def isGenPluginChannel(chanIdx):
-    return channels.getChannelType(chanIdx) == CT_GenPlug
-    
-def isLayerChannel(chanIdx):
-    return channels.getChannelType(chanIdx) == CT_Layer
-
-def isAudioClipChannel(chanIdx):
-    return channels.getChannelType(chanIdx) == CT_AudioClip
-    
-def isAutomationChannel(chanIdx):
-    return channels.getChannelType(chanIdx) == CT_AutoClip
-    
-    
-    
-
-
-
 def RefreshDrumPads():
     global _PadMap
 
-    currChan = getCurrChanIdx() # channels.channelNumber()
+    chanIdx = getCurrChanIdx() # channels.channelNumber()
+    cMap = _ChannelMap[chanIdx]
     isFPC = False
-    if(isGenPluginChannel(currChan)):
-        isFPC = (plugins.getPluginName(currChan, -1, 0) == "FPC")
+    if(cMap.ChannelType == CT_GenPlug):
+        isFPC = (plugins.getPluginName(chanIdx, -1, 0) == "FPC")
 
-    if( isFPCActive() ):  # Show Custom FPC Colors
+    if( isFPC ):  # Show Custom FPC Colors
         PAD_Count =	0	#Retrieve number of pad parameters supported by plugin
         PAD_Semitone =	1	#Retrieve semitone for pad specified by padIndex
         PAD_Color =	2	#Retrieve color for pad specified by padIndex    
 
-        chanIdx = getCurrChanIdx() # channels.channelNumber()    
+#        chanIdx = getCurrChanIdx() # channels.channelNumber()    
 
         # FPC A Pads
         fpcpadIdx = 0
@@ -1193,7 +1190,6 @@ def RefreshDrumPads():
     for chan in range(channels.channelCount()):
         # check if there is room
         if(idx < len(pdFPCChannels)): 
-            prn(lvlA, 'find fpc', chan)
             if(_ChannelMap[chan].ChannelType == CT_GenPlug):
                 if(plugins.getPluginName(chan, -1, 0) == "FPC"):
                     if(not isFPC): #if an FPC is not selected, choose the first one
