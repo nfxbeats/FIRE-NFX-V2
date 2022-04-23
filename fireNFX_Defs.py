@@ -41,7 +41,8 @@ IDKnob3 = 18 #0x12
 IDKnob4 = 19 #0x13
 
 IDJogWheel = 118 #0x76
-IDSelect = IDJogWheel
+IDSelect = IDJogWheel 
+
 IDJogWheelDown = 25 #0x19
 IDSelectDown = IDJogWheelDown
 
@@ -103,7 +104,7 @@ PadModeNames = ['Pattern', 'Note', 'Drum', 'Perform']
 PadModeShortNames = ['PTN', 'NOTE', 'DRM', 'PERF']
 NavCtrls = [IDUp, IDDown, IDLeft, IDRight]
 KnobCtrls = [IDKnob1, IDKnob2, IDKnob3, IDKnob4]
-SelectCtrls = [IDSelect, IDSelectDown]
+SelectWheelCtrls = [IDSelect, IDSelectDown]
 PadCtrls = list()
 for ctrlID in range(IDPadFirst, IDPadLast+1):
     PadCtrls.append(ctrlID)
@@ -214,3 +215,4 @@ levelR = [lvlR, 'Refresh']
 levelU = [lvlU, 'Update']
 levelD = [lvlD, 'Display']
 prnLevels = [level0, levelE, levelH, levelR, levelU, levelD]
+

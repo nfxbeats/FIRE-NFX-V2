@@ -21,15 +21,15 @@ TextDisplayTime = 4000
 
 TimedTextRow = 1
 FPSRow = 3
-FireFontSize = 16
+FireFontSize = 15 # was 16
 TextOffset = -4
-TextRowHeight = 20
+TextRowHeight = 18 #was 20
 
 Idle_Interval = 100
 Idle_Interval_Max = 8
 
-ScreenActiveTimeout = 30 # seconds to keep screen active (screen has its own timeout which will kick in after this)
-ScreenAutoTimeout = 10
+ScreenActiveTimeout = 10 # seconds to keep screen active (screen has its own timeout which will kick in after this)
+ScreenAutoTimeout = 5
 
 tlNone = 1
 tlText = 1 << 1

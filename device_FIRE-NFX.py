@@ -44,6 +44,13 @@ _ShowChanRack = 1
 _ShowPlaylist = 1
 _ShowBrowser = 1
 _showText = ['OFF', 'ON']
+
+_ShowMenu = 0
+_menuItems = ['Option 1','Option 2','Option 3','Option 4','Option 5']
+_selectedItem = 0
+_menuItemSelected = _selectedItem
+
+
 #notes/scales
 _ScaleIdx = DEFAULT_SCALE
 _ScaleDisplayText = ""
@@ -58,6 +65,8 @@ _VelocityMin = 100
 _VelocityMax = 126
 _DebugPrn = True
 _DebugMin = lvlD
+
+
 
 # FL Events
 def OnInit():
@@ -281,7 +290,9 @@ def OnMidiIn(event):
         elif( ctrlID in GridLRCtrls):
             event.handled = HandleGridLR(ctrlID)
         elif( ctrlID == IDBrowser ):
-            event.handled = HandleBrowser()
+            event.handled = HandleBrowserButton()
+        elif(ctrlID in SelectWheelCtrls):
+            event.handled = HandleSelectWheel(event, ctrlID)
     else: # Released
         event.handled = True 
 
@@ -574,7 +585,10 @@ def HandlePatternChanges():
     RefreshDisplay()
 
 def RefreshDisplay():
+    global _menuItemSelected
+
     prn(lvlR, "RefreshDisplay()")
+    _menuItemSelected = _selectedItem # reset this for the next menu
     chanIdx = getCurrChanIdx() # 
     chanName = channels.getChannelName(chanIdx)
     mixerName = mixer.getTrackName(mixer.trackNumber())
@@ -911,14 +925,58 @@ def HandleShifted(event):
     RefreshShiftedStates()
     event.handled = True 
 
-def HandleBrowser():
-    global _ShowBrowser
-    _ShowBrowser = not _ShowBrowser
-    prn(lvlA, 'Browser', _ShowBrowser)
-    if(_ShowBrowser):
+def HandleSelectWheel(event, ctrlID):
+    global _menuItemSelected
+    global _selectedItem
+
+    prn(lvlA, 'HandleSelectWheel', ctrlID, event.data1, event.data2) 
+    ShowMenuItems()
+    jogNext = 1
+    jogPrev = 127
+    if(ctrlID == IDSelect):
+        if(event.data2 == jogNext) and (_menuItemSelected < (len(_menuItems)-1) ):
+            #prn(lvlA, 'mi', _menuItemSelected, '->', _menuItemSelected + 1 )
+            _menuItemSelected += 1
+        elif(event.data2 == jogPrev) and (_menuItemSelected > 0):
+            _menuItemSelected += -1
+        ShowMenuItems()
+        return True 
+    if(ctrlID == IDSelectDown):
+        _selectedItem = _menuItemSelected
+        return True 
+
+def ShowMenuItems():
+    pageLen = 3 # display is 3 lines tall
+    selPage = int(_menuItemSelected/pageLen) # 
+    selItemOffs = _menuItemSelected % pageLen    #
+    pageFirstItemOffs = (selPage * pageLen)       # 
+    maxItem = len(_menuItems)
+    displayText = ['','','']
+    
+    for i in range(0,3):
+        item = i + pageFirstItemOffs
+        if(item < maxItem):
+            preText = '...'
+            if(_menuItemSelected == item):
+                preText = '-->'
+            displayText[i] = preText + _menuItems[item]
+            prn(lvlA, displayText[i])
+
+    DisplayTextAll(displayText[0], displayText[1], displayText[2])
+
+def HandleBrowserButton():
+    #global _ShowBrowser
+    # using to trigger the menu for now
+    global _ShowMenu 
+
+    _ShowMenu = not _ShowMenu
+    prn(lvlA, 'Browser (MENU)', _ShowMenu)
+    if(_ShowMenu):
         SendCC(IDBrowser, SingleColorHalfBright)   
+        ShowMenuItems()
     else:
         SendCC(IDBrowser, SingleColorOff) 
+        RefreshDisplay()
     return True   
 
 
@@ -1338,7 +1396,7 @@ def getCurrChanIdx():
 
 def isFPCActive():
     chanIdx = getCurrChanIdx() # channels.channelNumber()
-    if(isGenPluginChannel(chanIdx)):
+    if(_ChannelMap[chanIdx].ChannelType == CT_GenPlug):
         pluginName = plugins.getPluginName(chanIdx, -1, 0)      
         return (pluginName == 'FPC') 
     else:
