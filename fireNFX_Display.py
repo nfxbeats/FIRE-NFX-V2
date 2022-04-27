@@ -55,6 +55,13 @@ def DisplayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime = 0
 def DisplayBar(Text, Value, Bipolar):
     screen.displayBar(0, TextRowHeight * TimedTextRow, Text, Value, Bipolar)
 
+def DisplayBar2(Text, Value, ValueStr, Bipolar):
+    screen.displayBar(0, TextRowHeight * ROWTOP, Text, Value, Bipolar)
+    DisplayText(Font6x16 , JustifyCenter, ROWBOT, ValueStr, True)
+    screen.update()
+
+
+
 
 def DisplayTimedText2(Text1, Text2, Text3):
     screen.displayTimedText(Text1, ROWTOP)
@@ -64,7 +71,7 @@ def DisplayTimedText2(Text1, Text2, Text3):
 
 
 def DisplayTimedText(Text):
-    screen.displayTimedText(Text, TimedTextRow)
+    screen.displayTimedText(Text, 2) #TimedTextRow)
     screen.update()
 
 def InitDisplay():

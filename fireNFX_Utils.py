@@ -1,5 +1,5 @@
 import device
-from fireNFX_Classes import TnfxColorMap
+from fireNFX_Classes import TnfxColorMap, TnfxParameter
 import utils
 import plugins
 from midi import *
@@ -72,6 +72,7 @@ def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True):
 
     if(col == -1):
         col = _ColorMap[idx].PadColor
+        dimFactor = _ColorMap[idx].DimFactor
 
     #print('SetLEDCol', idx, col)
     r = (col & 0x7F0000) >> 16
@@ -89,6 +90,7 @@ def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True):
 
     if(bSaveColor):
         _ColorMap[idx].PadColor = col 
+        _ColorMap[idx].DimFactor = dimFactor
 
 def SetPadRGB(idx, r, g, b):  
     #print('SetLED', idx, r, g, b)
@@ -145,18 +147,25 @@ def FLColorToPadColor(FLColor):
     g = ((FLColor >> 8) & 0xFF) // 2
     return utils.RGBToColor(r, g, b)
 
+def getPluginParam(chanIdx, paramIdx):
+    m = chanIdx 
+    caption = plugins.getParamName(paramIdx, chanIdx, -1) # -1 denotes not mixer
+    value = plugins.getParamValue(paramIdx, chanIdx, -1) 
+    valuestr = plugins.getParamValueString(paramIdx, chanIdx, -1)
+    bipolar = False
+    print('     Param', paramIdx, caption )
+    print('     Value', paramIdx, value )
+    print('    ValStr', paramIdx, valuestr )
+    print('    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
+    print('    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
+    print('----------------------')
+    return TnfxParameter(caption, paramIdx, value, valuestr, bipolar)
+
 def ShowPluginInfo(chanIdx):
     print('   PluginName: ', plugins.getPluginName(chanIdx, -1, 0))
     pCnt = plugins.getParamCount(chanIdx, -1)
     print('   ParamCount: ', pCnt)
     for param in range(0, pCnt):
-        print('     Param', param, plugins.getParamName(param, chanIdx, -1) )
-        print('     Value', param, plugins.getParamValue(param, chanIdx, -1) )
-        print('    ValStr', param, plugins.getParamValueString(param, chanIdx, -1) )
-        print('    Color0', param, plugins.getColor(chanIdx, -1, 0, param) )
-        print('    Color1', param, plugins.getColor(chanIdx, -1, 1, param) )
-        print('----------------------')
-
-
-    
+        if(plugins.getParamName(param, chanIdx, -1) != ''):
+            getPluginParam(chanIdx, param)
 

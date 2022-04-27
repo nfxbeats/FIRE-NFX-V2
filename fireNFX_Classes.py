@@ -1,17 +1,19 @@
 from fireNFX_Defs import *
 
 class TnfxPlugin:
-    def __init__(self):
-        self.Name = ''
-        self.UserName = ''
+    def __init__(self, name):
+        self.Name = name
         self.Parameters = list() #
 
 class TnfxParameter:
-    def __init__(self, caption, offset, value, bipolar):
+    def __init__(self, offset, caption, value, valuestr, bipolar, stepsize = 0, maxvalue = 0):
         self.Offset = offset 
         self.Caption = caption
         self.Value = value
+        self.ValueStr = valuestr
         self.Bipolar = bipolar 
+        self.StepSize = stepsize
+        self.MaxValue = maxvalue
 
 class TnfxMixer:
     def __init__(self, flIdx, name):
@@ -31,6 +33,9 @@ class TnfxChannel:
         self.Color = 0 
         self.ChannelType = -1
         self.GlobalIndex = -1
+        self.ShowChannelEditor = -1
+        self.ShowCSForm = -1
+        self.ShowPianoRoll = -1
 
 class TnfxPattern:
     def __init__(self, flIdx, name):
@@ -51,6 +56,16 @@ class TnfxPattern:
         self.Parameters = list() 
         self.ParamPages = []
         self.ParamPageIdx = -1
+
+class TnfxPlaylistTrack:
+    def __init__(self, flIdx, name, color):
+        self.FLIndex = flIdx
+        self.Name = name
+        self.Color = color
+        self.Muted = -1
+        self.Selected = False 
+        
+
 
 class TnfxColorMap:
     def __init__(self, padIndex, color, dimFactor):
@@ -79,3 +94,11 @@ class TnfxPadMap:
         self.ItemIndex = -1
         self.NoteInfo = TnfxNoteInfo()
 
+class TnfxMacro:
+    def __init__(self, name, color):
+        self.Name = name
+        self.PadIndex = -1
+        self.Color = color 
+
+
+    
