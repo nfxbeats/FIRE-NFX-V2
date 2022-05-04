@@ -2,6 +2,9 @@ import device
 from fireNFX_Classes import TnfxColorMap, TnfxParameter
 import utils
 import plugins
+import mixer
+import playlist
+import ui
 from midi import *
 from fireNFX_Defs import *
 
@@ -160,6 +163,51 @@ def getPluginParam(chanIdx, paramIdx):
     print('    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
     print('----------------------')
     return TnfxParameter(caption, paramIdx, value, valuestr, bipolar)
+
+def setSnapMode(newmode):
+    mode = ui.getSnapMode()
+    while(mode < newmode):
+        ui.snapMode(1)  # inc by 1
+        mode = ui.getSnapMode()
+    while(mode > newmode):
+        ui.snapMode(-1)  # inc by 1
+        mode = ui.getSnapMode()
+        
+# snap defs are in MIDI.py aka Snap_Cell, Snap_line, etc
+SnapModes = ["Default", "Line", "?", "Cell", "None",
+              "1/6 Step", "1/4 Step", "1/3 Step", "1/2 Step", "Step",
+              "1/6 Beat", "1/4 Beat", "1/3 Beat", "1/2 Beat", "Beat",
+              "Bar"]
+
+#define your list of snap modes to cycle through.
+SnapModesList = [Snap_Beat, Snap_HalfBeat, Snap_ThirdBeat, Snap_Step, Snap_HalfStep, Snap_ThirdStep, Snap_None]
+InitialSnapIndex = 1 #initial value - index of above - 0-based
+RepeatSnapIdx = 4 # for repeat mode
+
+
+BeatLengthNames = ['Bar/Whole', 'Half', 'Quarter', 'Dotted 8th', '8th', '16th', '32nd', '64th']
+BeatLengthDivs  = [0, .5, 1, 1.33333, 2, 4, 8, 16]
+BeatLengthsOffs = 6 #  offset of above 
+def GetBeatLenInMS(div):
+    #   0 = 1 bar whole not
+    #   0.5 = half
+    #   1 = Quarter
+    #   1.33333 = dotted 8 
+    #   2 = Eighth
+    #   4 = sixteenth
+    #   8 = 32nd
+    #  16 = 64th
+
+    tempo = mixer.getCurrentTempo(0)
+    beatlen = (60000/tempo)
+    if(div > 0 ):
+        timeval = (beatlen/div) * 1000 #
+    else: #when div = 0...
+        timeval = beatlen * 4000 # one bar aka whole note.
+    barlen = playlist.getVisTimeTick()
+    print('tempo', tempo, 'div', div, 'beatlen', beatlen, 'output', timeval, 'Barlen', barlen) 
+    return int(timeval)
+
 
 def ShowPluginInfo(chanIdx):
     print('   PluginName: ', plugins.getPluginName(chanIdx, -1, 0))

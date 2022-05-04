@@ -64,6 +64,11 @@ pdDown = 61
 pdRight = 62
 pdUDLR = [pdEsc, pdUp, pdEnter, pdLeft, pdDown, pdRight]
 
+# for modes that need channel specific window control - ie Note mode, FPC, etc
+pdShowChanEditor = 44
+pdShowChanPianoRoll = 60
+pdShowChanPads = [pdShowChanEditor, pdShowChanPianoRoll]
+colShowChanPads = [cWhite, cDimWhite]
 
 dimDefault = DEFAULT_DIM_FACTOR
 dimBright = DEFAULT_DIM_BRIGHT
@@ -84,8 +89,10 @@ pdPresetNext = 63
 pdPresetNav = [pdPresetPrev, pdPresetNext]
 colPresetNav = [cWhite, cDimWhite]
 
-pdNoteRepeat = 60
+pdNoteRepeat = 46
 colNoteRepeat = cOrange
+pdNoteRepeatLength = 62
+colNoteRepeatLength = cMagentaLight
 
 #nav for NOTES
 pdRootNotePrev = 45

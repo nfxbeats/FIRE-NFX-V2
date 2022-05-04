@@ -109,10 +109,9 @@ PadCtrls = list()
 for ctrlID in range(IDPadFirst, IDPadLast+1):
     PadCtrls.append(ctrlID)
 MuteControls = [IDMute1, IDMute2, IDMute3, IDMute4]
-
 # the operating knobs mode NOT Pad mode
 KnobModeNames = ["Channel", "Mixer", "User1", "User2"]
-KnobModeShortNames = ["Ch", "Mi", "U1", "U2"]
+KnobModeShortNames = ["Ch", "Mx", "U1", "U2"]
 KnobModeCtrlID = IDKnobMode
 IDKnobModeLEDVals = [1,2,4,8]
 

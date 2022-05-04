@@ -3,6 +3,7 @@ from fireNFX_Defs import *
 class TnfxPlugin:
     def __init__(self, name):
         self.Name = name
+        self.ID = ''
         self.Parameters = list() #
 
 class TnfxParameter:
@@ -79,15 +80,15 @@ class TnfxColorMap:
 class TnfxNoteInfo:
     def __init__(self):
         self.MIDINote = -1          # the midi Note for this pad
-        self.ChordNum = -1             # the chord . ie 1 = I, 2 = ii, etc
+        self.ChordNum = -1          # the chord . ie 1 = I, 2 = ii, etc
         self.IsRootNote = False     #
         self.Highlight = False      #
 
 class TnfxPadMap:
     def __init__(self, padIndex, flIndex, color, tag):
-        self.PadIndex = padIndex          # the pad num 0..63
+        self.PadIndex = padIndex    # the pad num 0..63
         self.FLIndex = flIndex
-        self.Color = color        # the color 
+        self.Color = color          # the color 
         self.Pressed = -1 
 #        self.MIDINote = -1
         self.Tag = tag
