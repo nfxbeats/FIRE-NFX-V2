@@ -1,4 +1,5 @@
 # name=FIRE-NFX
+# supportedDevices=FL STUDIO FIRE
 
 import device
 import midi
@@ -56,6 +57,7 @@ _ScaleDisplayText = ""
 _ScaleNotes = list()
 _NoteIdx = DEFAULT_NOTE_NAMES.index(DEFAULT_ROOT_NOTE)
 _NoteRepeat = False
+_NoteRepeatLengthIdx = BeatLengthsDefaultOffs
 _isRepeating = False
 _SnapIdx = InitialSnapIndex
 _OctaveIdx = OctavesList.index(DEFAULT_OCTAVE)
@@ -78,6 +80,11 @@ macCut = TnfxMacro("Cut", cBlueLight)
 macPaste = TnfxMacro("Paste", cCyan)
 _MacroList = [macCloseAll, macTogChanRack, macTogPlaylist, macTogMixer, macPluginInfo, macCopy, macCut, macPaste]
 #colMacros = [ cGreen, cCyan, cBlue, cPurple, cRed, cOrange, cYellow, cWhite ]
+
+# list of notes that are mapped to pads
+_NoteMap = list()
+
+
 #endregion 
 
 #region FL MIDI API Events
@@ -124,9 +131,24 @@ def OnInit():
     RefreshAll()
 def OnDoFullRefresh():
     prn(lvlA, 'OnDoFullRefresh')    
+
+_lastNote =-1
+
 def OnIdle():
+    global _lastNote
     if(_ShiftHeld):
         RefreshShiftedStates() 
+    
+    note = channels.getCurrentStepParam(getCurrChanIdx(), mixer.getSongStepPos(), pPitch)
+    if (PAD_MODE in [MODE_DRUM, MODE_NOTE]):
+        if(_lastNote != note):
+            prn(lvlA, 'last note', _lastNote) 
+            ShowNote(_lastNote, False)
+            if(note > -1) and (note in _NoteMap):
+                prn(lvlA, 'note', note, 'last note', _lastNote) 
+                ShowNote(note, True)
+            _lastNote = note
+  
 def OnMidiMsg(event):
     prn(lvlN, "OnMidiMsg()", event.data1, event.data2)
 def OnUpdateBeatIndicator(value):
@@ -160,8 +182,11 @@ def OnUpdateBeatIndicator(value):
         else:
             SendCC(BeatIndicators[i], SingleColorOff)
 def OnRefresh(flags):
-    prn(lvlE, 'OnRefresh()', flags)
+    prn(lvlA, 'OnRefresh()', flags)
     HW_Dirty_Patterns = 1024
+    
+    if(HW_Dirty_LEDs & flags):
+        RefreshTransport()
 
     if(HW_Dirty_Patterns & flags):
         prn(lvl0, 'pattern event')
@@ -171,6 +196,7 @@ def OnRefresh(flags):
         HandleChannelGroupChanges()    
     if(HW_ChannelEvent & flags):
         prn(lvl0, 'channel event', _ChannelCount, channels.channelCount())
+        UpdateChannelMap()  
         if (PAD_MODE == MODE_DRUM):
             RefreshDrumPads()
         elif(PAD_MODE == MODE_PATTERNS):
@@ -200,6 +226,10 @@ def OnProjectLoad(status):
         RefreshPadModeButtons()        
         UpdatePatternModeData()
         RefreshAll()
+
+def OnSendTempMsg(msg, duration):
+    print('TempMsg', msg, duration)
+
 def OnMidiIn(event):
     global _ShiftHeld
     global _AltHeld
@@ -224,7 +254,7 @@ def OnMidiIn(event):
     if( IDPadFirst <=  ctrlID <= IDPadLast):
         padNum = ctrlID - IDPadFirst
         pMap = _PadMap[padNum]
-        prn(lvl0, 'Pad Detected', padNum)
+        prn(lvlA, 'Pad Detected', padNum, _PadMap[padNum].NoteInfo.MIDINote, _NoteMap[padNum])
 
         if(event.data2 > 0): # pressed
             pMap.Pressed = 1
@@ -462,7 +492,8 @@ def HandleNav(padIdx):
 
     if(PAD_MODE == MODE_DRUM):
         if(padIdx == pdNoteRepeatLength):
-            NavSnap(1)
+            NavNoteRepeatLength(1)
+            prn(lvlA, 'rpt len', BeatLengthNames[_NoteRepeatLengthIdx])
         if(padIdx == pdNoteRepeat):
             _NoteRepeat = not _NoteRepeat
             prn(lvlA, 'Note Repeat: ', _NoteRepeat)
@@ -547,7 +578,7 @@ def HandleNotes(event, padNum):
 
     if(_ShowChords):
         if (padNum in pdChordBar):
-            prn(lvlA, 'Chords', padNum)
+            #prn(lvlA, 'Chords', padNum)
             chordNum = pdChordBar.index(padNum)+1
             noteOn = (event.data2 > 0)
             noteVelocity = event.data2
@@ -989,11 +1020,10 @@ def HandleChord(chan, chordNum, noteOn, noteVelocity, play7th, playInverted):
                 chordName += '7 '
                 PlayMIDINote(chan, note7, noteVelocity)                 
 
-        RefreshNotes()
+        # RefreshNotes()
+        RefreshChordType()
         #prn(lvlA, '..............chord', chordName, play7th, playInverted )
-        #DisplayTextTop('Chord:')
-        #DisplayTimedText(chordName) 
-        #DisplayTextBottom(chordinv)
+        DisplayTimedText2('Chord:',  chordName, chordinv)
 
     else:
         # turn off the chord
@@ -1204,8 +1234,9 @@ def RefreshPageLights(clearOnly = False):
             SendCC(IDTrackSel4, SingleColorFull)
 def RefreshNotes():
     global _PadMap
+    global _NoteMap
 
-    prn(lvlA, 'RefreshNotes()', 'isChomatic', isChromatic(), 'SHowChords', _ShowChords)
+    #prn(lvlA, 'RefreshNotes()', 'isChomatic', isChromatic(), 'SHowChords', _ShowChords)
 
     #if(_ShowChords) and (not isChromatic()):
     RefreshPageLights()
@@ -1226,7 +1257,7 @@ def RefreshNotes():
         #prn(lvl0, utils.GetNoteName(_PadMap[p].NoteInfo.MIDINote), _PadMap[p].NoteInfo.IsRootNote )
         if(isChromatic()): #chromatic,
             if(len(utils.GetNoteName(_PadMap[p].NoteInfo.MIDINote) ) > 2): # is black key?
-                color = cOff
+                color = cDimWhite-1
             else:
                 color = cWhite 
         else: #non chromatic
@@ -1244,16 +1275,8 @@ def RefreshNotes():
             else:
                 SetPadColor(p, color, dimDefault)
 
-            if(_Chord7th):
-                SetPadColor(pd7th, cYellow, dimBright)
-            else:
-                SetPadColor(pd7th, cYellow, dimDefault-2) # extra dim
-            if(_ChordInvert == 1):
-                SetPadColor(pdInv1, cWhite, dimDefault)
-            elif(_ChordInvert == 2):
-                SetPadColor(pdInv2, cWhite, dimDefault)
-            else:
-                SetPadColor(pdNormal, cWhite, dimDefault)
+            RefreshChordType()
+
         else:
             SetPadColor(p, color, dimDefault)
                 
@@ -1263,6 +1286,18 @@ def RefreshNotes():
     RefreshMacros() 
     RefreshNavPads()
     RefreshDisplay()
+
+def RefreshChordType():
+    if(_Chord7th):
+        SetPadColor(pd7th, cYellow, dimBright)
+    else:
+        SetPadColor(pd7th, cYellow, 4) # extra dim
+    if(_ChordInvert == 1):
+        SetPadColor(pdInv1, cWhite, dimDefault)
+    elif(_ChordInvert == 2):
+        SetPadColor(pdInv2, cWhite, dimDefault)
+    else:
+        SetPadColor(pdNormal, cWhite, dimDefault)
 
 def RefreshDrumPads():
     global _PadMap
@@ -1291,6 +1326,7 @@ def RefreshDrumPads():
             #prn(lvl0, fpcpadIdx, 'semitone', semitone , 'color', color)
             _PadMap[p].FPCColor = FLColorToPadColor(color)
             _PadMap[p].NoteInfo.MIDINote = semitone 
+            _NoteMap[p] = semitone 
             SetPadColor(p, _PadMap[p].FPCColor, dim)
             fpcpadIdx += 1 # NOTE! will be 16 when we exit the for loop, the proper first value for the B Pads loop...
         # FPC B Pads
@@ -1299,6 +1335,7 @@ def RefreshDrumPads():
             semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, fpcpadIdx) 
             _PadMap[p].FPCColor = FLColorToPadColor(color)
             _PadMap[p].NoteInfo.MIDINote = semitone 
+            _NoteMap[p] = semitone 
             SetPadColor(p, _PadMap[p].FPCColor, dim)
             fpcpadIdx += 1 # continue 
     else:
@@ -1693,9 +1730,12 @@ def CopyPattern(FLPattern):
     prn(lvl0, '---- copy pattern')
 def ResetPadMaps(bUpdatePads = False):
     global _PadMap
+    global _NoteMap
     _PadMap.clear()
+    _NoteMap.clear()
     for padIdx in range(0, 64):
         _PadMap.append(TnfxPadMap(padIdx, -1, 0x000000, ""))
+        _NoteMap.append(-1)
     if(bUpdatePads):
         RefreshPads()
 def isChromatic():
@@ -1706,6 +1746,7 @@ def GetScaleGrid(newModeIdx=0, rootNote=0, startOctave=2):
     global _ScaleNotes 
     global _ScaleDisplayText
     global _ScaleIdx
+    global _NoteMap
 
 
     _faveNoteIdx = rootNote
@@ -1745,6 +1786,8 @@ def GetScaleGrid(newModeIdx=0, rootNote=0, startOctave=2):
             else:
                 _PadMap[padIdx].NoteInfo.MIDINote = noteVal
                 _PadMap[padIdx].NoteInfo.ChordNum = -1
+            
+            _NoteMap[padIdx] = noteVal
 
             _PadMap[padIdx].NoteInfo.IsRootNote = (colOffset % notesInScale) == 0 # (colOffset == 0) or (colOffset == notesInScale)
 
@@ -1756,9 +1799,10 @@ def PlayMIDINote(chan, note, velocity):
     if(chan > -1):
         if(velocity > 0):
             channels.midiNoteOn(chan, note, velocity)
-            #ShowNote(note, True)
+            ShowNote(note, True)
         else:
             channels.midiNoteOn(chan, note, 0)
+            ShowNote(note, False)
 
 #endregion 
 
@@ -1858,8 +1902,17 @@ def NavSnap(val):
         _SnapIdx = 0
     newMode = SnapModesList[_SnapIdx]
     setSnapMode( newMode )  
-    DisplayTimedText('Snap:' + SnapModes[newMode])   
+    DisplayTextAll('Snap:', SnapModes[newMode], '')   
+def NavNoteRepeatLength(val):
+    global _NoteRepeatLengthIdx
+    _NoteRepeatLengthIdx += val
+    if(_NoteRepeatLengthIdx > (len(BeatLengthDivs) -1) ):
+        _NoteRepeatLengthIdx = 0
+    elif(_NoteRepeatLengthIdx < 0):
+        _NoteRepeatLengthIdx = len(BeatLengthDivs) - 1
+    DisplayTimedText2('Repeat Note', BeatLengthNames[_NoteRepeatLengthIdx], '')
 #endregion
+
 
 #region UI Helpers
 def ShowPianoRoll(showVal, bSave, bUpdateDisplay = False):
@@ -2107,3 +2160,15 @@ def prn(lvl, *objects):
 def SetPlaylistTop():
     ui.scrollWindow(widPlaylist, 1)
     ui.scrollWindow(widPlaylist, 1, 1)
+
+def ShowNote(note, isOn = True):
+    print('ShowNote', note, isOn)
+    if(note == -1):
+        return
+    if(note in _NoteMap):
+        padIdx = _NoteMap.index(note)
+        dim = dimDefault
+        if(isOn):
+            dim = dimFull
+        SetPadColor(padIdx,  getPadColor(padIdx), dim)
+ 

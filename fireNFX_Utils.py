@@ -14,6 +14,9 @@ for p in range(64):
     colorMap = TnfxColorMap(p, 0, 0)
     _ColorMap.append(colorMap)
 
+def getPadColor(padIdx):
+    return _ColorMap[padIdx].PadColor
+
 def TestColorMap():
     global _ColorMap
 
@@ -187,7 +190,7 @@ RepeatSnapIdx = 4 # for repeat mode
 
 BeatLengthNames = ['Bar/Whole', 'Half', 'Quarter', 'Dotted 8th', '8th', '16th', '32nd', '64th']
 BeatLengthDivs  = [0, .5, 1, 1.33333, 2, 4, 8, 16]
-BeatLengthsOffs = 6 #  offset of above 
+BeatLengthsDefaultOffs = 6 #  offset of above 
 def GetBeatLenInMS(div):
     #   0 = 1 bar whole not
     #   0.5 = half
@@ -207,6 +210,7 @@ def GetBeatLenInMS(div):
     barlen = playlist.getVisTimeTick()
     print('tempo', tempo, 'div', div, 'beatlen', beatlen, 'output', timeval, 'Barlen', barlen) 
     return int(timeval)
+
 
 
 def ShowPluginInfo(chanIdx):

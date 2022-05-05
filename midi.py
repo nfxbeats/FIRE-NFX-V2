@@ -81,7 +81,8 @@ HW_Dirty_Mixer_Controls = 4
 HW_Dirty_RemoteLinks = 16 # links have changed
 HW_Dirty_FocusedWindow = 32 # needed for controllers that reflect generic links
 HW_Dirty_Performance = 64 # performance layout (not playing state!) has changed
-HW_Dirty_LEDs = 256
+HW_Dirty_LEDs = 256 # various changes in FL which require update of controller leds
+                    #update status leds (play/stop/record/active window/.....) on this flag
 HW_Dirty_RemoteLinkValues = 512
 HW_Dirty_Patterns = 1024 # selected pattern is changed or pattern self is changed
 HW_Dirty_Tracks  = 2048 # tracks changes

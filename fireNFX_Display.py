@@ -60,16 +60,6 @@ def DisplayBar2(Text, Value, ValueStr, Bipolar):
     DisplayText(Font6x16 , JustifyCenter, ROWBOT, ValueStr, True)
     screen.update()
 
-
-
-
-def DisplayTimedText2(Text1, Text2, Text3):
-    screen.displayTimedText(Text1, ROWTOP)
-    screen.displayTimedText(Text2, ROWMID)
-    screen.displayTimedText(Text3, ROWBOT)
-    screen.update()
-
-
 def DisplayTimedText(Text):
     screen.displayTimedText(Text, 2) #TimedTextRow)
     screen.update()
@@ -90,6 +80,19 @@ def DisplayTextAll(textTop, textMid, textBot):
     DisplayTextMiddle(textMid)
     DisplayTextBottom(textBot)
     screen.update
+
+def DisplayTimedText2(Text1, Text2, Text3):
+    DisplayTextCenter(Text1, ROWTOP)
+    screen.displayTimedText(Text2, ROWMID)
+    DisplayTextCenter(Text3, ROWBOT)
+    screen.update()
+
+def AddText(text):
+    screen.addTextLine(text, 1)
+
+
+def DisplayTextCenter(text, row):
+    DisplayText(Font6x16 , JustifyCenter, row, text, True)
 
 def DisplayTextTop(text):
     DisplayText(Font6x16 , JustifyLeft, ROWTOP, text, True)
