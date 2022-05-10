@@ -1,4 +1,5 @@
 from fireNFX_Colors import *
+from fireNFX_Utils import *
 from fireNFX_Classes import TnfxMacro
 from fireNFX_DEFAULTS import DEFAULT_DIM_BRIGHT, DEFAULT_DIM_FACTOR
 
@@ -68,8 +69,9 @@ pdUDLR = [pdEsc, pdUp, pdEnter, pdLeft, pdDown, pdRight]
 pdShowChanEditor = 44
 pdShowChanPianoRoll = 60
 pdShowChanPads = [pdShowChanEditor, pdShowChanPianoRoll]
-colShowChanPads = [cWhite, cDimWhite]
+colShowChanPads = [cWhite, cWhite]
 
+dimDim = 4
 dimDefault = DEFAULT_DIM_FACTOR
 dimBright = DEFAULT_DIM_BRIGHT
 dimFull = 0
@@ -92,7 +94,7 @@ colPresetNav = [cWhite, cDimWhite]
 pdNoteRepeat = 46
 colNoteRepeat = cOrange
 pdNoteRepeatLength = 62
-colNoteRepeatLength = cMagentaLight
+colNoteRepeatLength = getShade(cMagenta, shLight)
 
 #nav for NOTES
 pdRootNotePrev = 45
@@ -102,7 +104,8 @@ pdOctaveNext = 62
 pdScalePrev = 47
 pdScaleNext = 63
 pdNoteFuncs = [pdScalePrev, pdScaleNext, pdRootNotePrev, pdRootNoteNext, pdOctavePrev, pdOctaveNext]
-colNoteFuncs = [cGreenLight, cGreen, cPurpleLight, cPurple, cBlueMed, cBlue]
+colNoteFuncs = [getShade(cGreen, shLight), cGreen, getShade(cPurple, shLight), cPurple, 
+    getShade(cBlue, shLight), cBlue]
 
 
 

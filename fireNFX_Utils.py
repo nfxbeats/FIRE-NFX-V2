@@ -1,12 +1,69 @@
+import math
 import device
-from fireNFX_Classes import TnfxColorMap, TnfxParameter
+from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxPlugin
 import utils
 import plugins
 import mixer
 import playlist
 import ui
 from midi import *
+from fireNFX_Colors import *
 from fireNFX_Defs import *
+
+
+
+# enum code from https://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
+def enum(**enums):
+    return type('Enum', (), enums)
+ 
+
+# snap defs are in MIDI.py aka Snap_Cell, Snap_line, etc
+SnapModes = enum(   Line = 0,
+                    Cell = 1,
+                    NoSnap = 3, #  "None" is a Python built-in constant so I use "NoSnap" instead
+                    Step_6th = 4,
+                    Step_4th = 5,
+                    Step_3rd = 6,
+                    Step_Half = 7,
+                    Step = 8,
+                    Beat_6th = 9,
+                    Beat_4th = 10,
+                    Beat_3rd = 11,
+                    Beat_Half = 12,
+                    Beat = 13,
+                    Bar = 14
+                )
+class SnapModesOld:  # no enums :(
+    Line = 0
+    Cell = 1
+    NoSnap = 3
+    Step_6th = 4
+    Step_4th = 5
+    Step_3rd = 6
+    Step_Half = 7
+    Step = 8
+    Beat_6th = 9
+    Beat_4th = 10
+    Beat_3rd = 11
+    Beat_Half = 12
+    Beat = 13
+    Bar = 14
+
+SnapModesText = ["Line", "Cell", "?", "None",
+              "1/6 Step", "1/4 Step", "1/3 Step", "1/2 Step", "Step",
+              "1/6 Beat", "1/4 Beat", "1/3 Beat", "1/2 Beat", "Beat",
+              "Bar"]
+
+#define your list of snap modes to cycle through.
+SnapModesList = [0,1,3,4,5,6,7,8,9,10,11,12,13,14]
+InitialSnapIndex = 0 #initial value - index of above - 0-based
+RepeatSnapIdx = 7 # for repeat mode
+
+
+BeatLengthNames = ['Bar/Whole', 'Half', 'Quarter', 'Dotted 8th', '8th', '16th', '32nd', '64th']
+BeatLengthDivs  = [0, .5, 1, 1.33333, 2, 4, 8, 16]
+BeatLengthSnap  = [Snap_Beat, Snap_Beat, Snap_Beat, Snap_ThirdBeat, Snap_FourthBeat, Snap_Step, Snap_HalfStep, Snap_FourthStep]
+BeatLengthsDefaultOffs = 6 #  offset of above 
 
 # init the color map
 _ColorMap = list()
@@ -158,39 +215,21 @@ def getPluginParam(chanIdx, paramIdx):
     caption = plugins.getParamName(paramIdx, chanIdx, -1) # -1 denotes not mixer
     value = plugins.getParamValue(paramIdx, chanIdx, -1) 
     valuestr = plugins.getParamValueString(paramIdx, chanIdx, -1)
-    bipolar = False
+    if(value == .5):
+        bipolar = True 
+    else:
+        bipolar = False
     print('     Param', paramIdx, caption )
     print('     Value', paramIdx, value )
     print('    ValStr', paramIdx, valuestr )
     print('    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
     print('    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
     print('----------------------')
-    return TnfxParameter(caption, paramIdx, value, valuestr, bipolar)
+    return TnfxParameter(paramIdx, caption, value, valuestr, bipolar)
 
-def setSnapMode(newmode):
-    mode = ui.getSnapMode()
-    while(mode < newmode):
-        ui.snapMode(1)  # inc by 1
-        mode = ui.getSnapMode()
-    while(mode > newmode):
-        ui.snapMode(-1)  # inc by 1
-        mode = ui.getSnapMode()
+
+            
         
-# snap defs are in MIDI.py aka Snap_Cell, Snap_line, etc
-SnapModes = ["Default", "Line", "?", "Cell", "None",
-              "1/6 Step", "1/4 Step", "1/3 Step", "1/2 Step", "Step",
-              "1/6 Beat", "1/4 Beat", "1/3 Beat", "1/2 Beat", "Beat",
-              "Bar"]
-
-#define your list of snap modes to cycle through.
-SnapModesList = [Snap_Beat, Snap_HalfBeat, Snap_ThirdBeat, Snap_Step, Snap_HalfStep, Snap_ThirdStep, Snap_None]
-InitialSnapIndex = 1 #initial value - index of above - 0-based
-RepeatSnapIdx = 4 # for repeat mode
-
-
-BeatLengthNames = ['Bar/Whole', 'Half', 'Quarter', 'Dotted 8th', '8th', '16th', '32nd', '64th']
-BeatLengthDivs  = [0, .5, 1, 1.33333, 2, 4, 8, 16]
-BeatLengthsDefaultOffs = 6 #  offset of above 
 def GetBeatLenInMS(div):
     #   0 = 1 bar whole not
     #   0.5 = half
@@ -208,10 +247,21 @@ def GetBeatLenInMS(div):
     else: #when div = 0...
         timeval = beatlen * 4000 # one bar aka whole note.
     barlen = playlist.getVisTimeTick()
-    print('tempo', tempo, 'div', div, 'beatlen', beatlen, 'output', timeval, 'Barlen', barlen) 
+    #print('tempo', tempo, 'div', div, 'beatlen', beatlen, 'output', timeval, 'Barlen', barlen) 
     return int(timeval)
 
+def getPluginInfo(chanIdx):
+    res = TnfxPlugin(plugins.getPluginName(chanIdx, -1, 0))
+    res.Parameters.clear()
 
+    print('   PluginName: ', res.Name)
+    pCnt = plugins.getParamCount(chanIdx, -1)
+    print('   ParamCount: ', pCnt)
+    for paramIdx in range(0, pCnt):
+        if(plugins.getParamName(paramIdx, chanIdx, -1) != ''):
+            param = getPluginParam(chanIdx, paramIdx)
+            res.Parameters.append(param)
+    return res 
 
 def ShowPluginInfo(chanIdx):
     print('   PluginName: ', plugins.getPluginName(chanIdx, -1, 0))
@@ -220,4 +270,116 @@ def ShowPluginInfo(chanIdx):
     for param in range(0, pCnt):
         if(plugins.getParamName(param, chanIdx, -1) != ''):
             getPluginParam(chanIdx, param)
+
+
+
+def ColorToRGB(Color):
+    return (Color >> 16) & 0xFF, (Color >> 8) & 0xFF, Color & 0xFF
+
+def RGBToColor(R,G,B):
+    return (R << 16) | (G << 8) | B
+
+def ColorTest():
+    Shades(cBlue,0)
+    Shades(cPurple, 16)
+    Shades(cMagenta, 32)
+    Shades(cRed, 48)
+    Shades(cOrange, 4)
+    Shades(cYellow, 20)
+    Shades(cGreen, 36)
+    Shades(cCyan, 52)
+
+
+shDim = 0
+shDark = 1
+shNorm = 2
+shLight = 3
+
+
+def getShade(baseColor, shadeOffs):
+    multLighten = 1.33
+    multDarken = .23
+    if(shadeOffs == shDim):
+        return Shade(baseColor, multDarken, 2)    # dim
+    elif(shadeOffs == shDark):
+        return Shade(baseColor, multDarken, 1)    # dark
+    elif(shadeOffs == shNorm):
+        return baseColor                           # norm
+    elif(shadeOffs == shLight):
+        return Shade(baseColor, multLighten, 1)   # light
+    else: 
+        return baseColor
+
+def Shades(color, padOffs=0):
+    SetPadColor(0+padOffs, getShade(color, shDim), 0)
+    SetPadColor(1+padOffs, getShade(color, shDark), 0)
+    SetPadColor(2+padOffs, getShade(color, shNorm), 0)
+    SetPadColor(3+padOffs, getShade(color, shLight), 0)
+
+
+def Shade(color, mul = 1.1, offs = 0):
+    color1 = color
+    for i in range(3):
+        if(i > 0):
+            color = ColorMult(color, mul)
+            color1 = ColorMult2(color, mul)
+        if(i == offs):
+            return color1
+
+
+
+
+def CycleColors(len = 64, steps = 8, freq = 0.5):
+    center = 128
+    amplitude = 127
+    for inc in range(len):
+        # value = Math.sin(frequency*increment)*amplitude + center;
+        rPhase =  0 
+        gPhase =  2 * math.pi/2
+        bPhase =  4 * math.pi/steps
+        rFreq = 2 * math.pi/steps
+        gFreq = 2 * math.pi/steps
+        bFreq = 2 * math.pi/steps
+        red = int( math.sin(rFreq * inc + rPhase) * amplitude + center )
+        green = int( math.sin(gFreq * inc + gPhase) * amplitude + center )
+        blue = int( math.sin(bFreq * inc + bPhase) * amplitude + center )
+        col = RGBToColor(red, green, blue)
+        print(inc % 64, "color =",hex(col), '#', col,  'rgb', red, green, blue)
+        #if(inc < 64):
+        SetPadColor(inc % 64, col, 0)
+        #time.sleep(0.001)
+
+def ColorMult(color, mul):
+    r, g, b = ColorToRGB(color)
+    r *= mul
+    g *= mul
+    b *= mul
+    r2, g2, b2 = redistribute_rgb(r, g, b)
+    return RGBToColor(r2, g2, b2)
+
+def ColorMult2(color, mul):
+    r, g, b = ColorToRGB(color)
+    r *= mul
+    g *= mul
+    b *= mul
+    r2, g2, b2 = clamp_rgb(r, g, b)
+    return RGBToColor(r2, g2, b2)
+
+
+def clamp_rgb(r, g, b):
+    # from https://stackoverflow.com/questions/141855/programmatically-lighten-a-color
+    return min(127, int(r)), min(127, int(g)), min(127, int(b))
+
+def redistribute_rgb(r, g, b):
+    # from https://stackoverflow.com/questions/141855/programmatically-lighten-a-color
+    threshold = 255.999
+    m = max(r, g, b)
+    if m <= threshold:
+        return int(r), int(g), int(b)
+    total = r + g + b
+    if total >= 3 * threshold:
+        return int(threshold), int(threshold), int(threshold)
+    x = (3 * threshold - total) / (3 * m - total)
+    gray = threshold - x * m
+    return int(gray + x * r), int(gray + x * g), int(gray + x * b)
 

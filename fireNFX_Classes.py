@@ -66,17 +66,6 @@ class TnfxPlaylistTrack:
         self.Muted = -1
         self.Selected = False 
         
-
-
-class TnfxColorMap:
-    def __init__(self, padIndex, color, dimFactor):
-        self.PadIndex = padIndex
-        self.PadColor = color
-        self.DimFactor = dimFactor
-        self.R = 0
-        self.G = 0
-        self.B = 0
-
 class TnfxNoteInfo:
     def __init__(self):
         self.MIDINote = -1          # the midi Note for this pad
@@ -99,7 +88,14 @@ class TnfxMacro:
     def __init__(self, name, color):
         self.Name = name
         self.PadIndex = -1
-        self.Color = color 
+        self.PadColor = color 
 
-
+class TnfxColorMap:
+    def __init__(self, padIndex, color, dimFactor):
+        self.PadIndex = padIndex
+        self.PadColor = color
+        self.DimFactor = dimFactor
+        self.R = 0
+        self.G = 0
+        self.B = 0
     

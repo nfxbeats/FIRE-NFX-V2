@@ -3,6 +3,7 @@
 # most of this is copied from the Image-Line device_Fire code
 from harmonicScales import *
 
+
 MODE_PATTERNS = 0 # was MODE_STEP
 MODE_NOTE = 1
 MODE_DRUM = 2
