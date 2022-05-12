@@ -197,6 +197,10 @@ def OnRefresh(flags):
         prn(lvlA, 'todo', 'handle focus window change')
         UpdateWindowStates()
 
+    if(HW_Dirty_Performance & flags): # called when new channels or patterns added
+        RefreshChannelStrip()
+        RefreshPatternStrip()
+        
     if(HW_Dirty_Patterns & flags):
         prn(lvlA, 'pattern event')
         HandlePatternChanges()
@@ -540,7 +544,8 @@ def HandleMacros(macIdx):
     macro = _MacroList[macIdx]
 
     if(macIdx == 4):
-        CycleColors(64)
+        ui.undo()
+        #CycleColors(64)
         #ShowPluginInfo(chanNum)
     elif(macIdx == 1):
         ShowChannelRack(-1)        
@@ -1018,7 +1023,7 @@ def HandleChord(chan, chordNum, noteOn, noteVelocity, play7th, playInverted):
         note3inv = _ScaleNotes[offset - 5] 
         note5inv = _ScaleNotes[offset - 3] 
         chordName = NotesList[note % 12]
-        chordName += chordTypes[ ((_ScaleIdx + chordNum) % 7)-1 ]
+        chordName += chordTypes[ ((_ScaleIdx + chordNum) % 7)-2 ]
 
     if(noteOn):
         #
@@ -2254,7 +2259,7 @@ def UpdateWindowStates():
     
     if(chanIdx >= len(_ChannelMap)):
         UpdateChannelMap()
-        
+
     _ShowChannelEditor = _ChannelMap[chanIdx].ShowChannelEditor
     _ShowCSForm = _ChannelMap[chanIdx].ShowCSForm
 
