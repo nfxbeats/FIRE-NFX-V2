@@ -94,7 +94,14 @@ colPresetNav = [cWhite, cDimWhite]
 pdNoteRepeat = 46
 colNoteRepeat = cOrange
 pdNoteRepeatLength = 62
-colNoteRepeatLength = getShade(cMagenta, shLight)
+colNoteRepeatLength = getShade(cOrange, shLight)
+
+
+pdSnapUp = 45
+pdSnapDown = 61
+pdSnapNav = [pdSnapUp, pdSnapDown]
+colSnapUp = getShade(cYellow, shNorm)
+colSnapDown = getShade(cYellow, shDark)
 
 #nav for NOTES
 pdRootNotePrev = 45

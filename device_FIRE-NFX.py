@@ -1,4 +1,4 @@
-# name=FIRE-NFX
+# name=FIRE-NFX-V2
 # supportedDevices=FL STUDIO FIRE
 
 import device
@@ -494,6 +494,7 @@ def HandlePads(event, padNum, pMap):
     return True
 def HandleNav(padIdx):
     global _NoteRepeat
+    global _SnapIdx
     #prn(lvlH, 'HandleNav', padIdx)
     if(PAD_MODE == MODE_NOTE):
         if(padIdx in pdShowChanPads):
@@ -509,6 +510,11 @@ def HandleNav(padIdx):
                     ui.previous()
                 elif(padIdx == pdPresetNext):
                     ui.next()
+            
+            #handle snap nav
+            if(padIdx in pdSnapNav):
+                HandleSnapNav(padIdx)
+
         else:    
             if(padIdx == pdOctaveNext):
                 NavOctavesList(-1)
@@ -528,30 +534,53 @@ def HandleNav(padIdx):
         if(padIdx == pdNoteRepeatLength):
             NavNoteRepeatLength(1)
             #prn(lvlA, 'rpt len', BeatLengthNames[_NoteRepeatLengthIdx])
+
         if(padIdx == pdNoteRepeat):
             _NoteRepeat = not _NoteRepeat
-            #prn(lvlA, 'Note Repeat: ', _NoteRepeat)
             DisplayTimedText('Note Rpt: ' + _showText[_NoteRepeat])
             if(_isRepeating):
                 device.stopRepeatMidiEvent()
+
         if(padIdx in pdShowChanPads):
             if(padIdx == pdShowChanEditor):
                 ShowChannelEditor(-1, True)
             elif(padIdx == pdShowChanPianoRoll):
                 ShowPianoRoll(-1, True)
+
+        #handle snap nav
+        if(padIdx in pdSnapNav):
+            HandleSnapNav(padIdx)
+
         RefreshDrumPads()
     if(PAD_MODE == MODE_PATTERNS):
-        if(padIdx in pdUDLR):
-            HandleUDLR(padIdx)
-        if(padIdx in pdPresetNav):
-            ShowChannelEditor(1, True)
-            if(padIdx == pdPresetPrev):
-                ui.previous()
-            elif(padIdx == pdPresetNext):
-                ui.next()
+        if(_isAltMode):
+            if(padIdx in pdUDLR):
+                HandleUDLR(padIdx)
+        else:
+            if(padIdx in pdPresetNav):
+                ShowChannelEditor(1, True)
+                if(padIdx == pdPresetPrev):
+                    ui.previous()
+                elif(padIdx == pdPresetNext):
+                    ui.next()
+
+            #handle snap nav
+            if(padIdx in pdSnapNav):
+                HandleSnapNav(padIdx)
+
         RefreshDisplay()
     
     return True 
+
+def HandleSnapNav(padIdx):
+    if(padIdx == pdSnapUp):
+        ui.snapMode(-1)  # dec by 1
+    else:
+        ui.snapMode(1)  # inc by 1
+    _SnapIdx = SnapModesList.index(ui.getSnapMode())
+    DisplayTextTop('Snap:')
+    DisplayTimedText(SnapModesText[_SnapIdx])
+
 def HandleMacros(macIdx):
     chanNum = channels.selectedChannel(0, 0, 0)
     macro = _MacroList[macIdx]
@@ -1223,6 +1252,7 @@ def RefreshNavPads():
     showNoteRepeat = False
     showUDLRNav = False
     showChanWinNav = False
+    showSnapNav = False 
 
     for pad in pdNav :
         SetPadColor(pad, cOff, dimDefault)
@@ -1230,6 +1260,7 @@ def RefreshNavPads():
     if(PAD_MODE == MODE_NOTE):
         if(_isAltMode):
             showPresetNav = True 
+            showSnapNav = True 
         else:
             for pad in pdNoteFuncs:
                 idx = pdNoteFuncs.index(pad)
@@ -1238,11 +1269,17 @@ def RefreshNavPads():
         showChanWinNav = True
     elif (PAD_MODE == MODE_DRUM):
         showPresetNav = True
+        showSnapNav = True
         showNoteRepeat = True
         showChanWinNav = True
     elif (PAD_MODE == MODE_PATTERNS):    
-        showPresetNav = True
-        RefreshUDLR()
+        if(_isAltMode):
+            RefreshUDLR()
+        else:
+            showSnapNav = True
+            showPresetNav = True
+            showSnapNav = True
+            showNoteRepeat = True
 
     if(showPresetNav):
         for pad in pdPresetNav :
@@ -1260,6 +1297,11 @@ def RefreshNavPads():
             SetPadColor(pdNoteRepeat, colNoteRepeat, dimBright)
         else:
             SetPadColor(pdNoteRepeat, colNoteRepeat, dimDim)
+            SetPadColor(pdNoteRepeatLength, colNoteRepeatLength, dimDefault)
+
+    if(showSnapNav):
+        SetPadColor(pdSnapUp, colSnapUp, dimDefault)
+        SetPadColor(pdSnapDown, colSnapDown, dimDefault)
 
 def RefreshPageLights(clearOnly = False):
     prn(lvlR, 'RefreshPageLights(',clearOnly,')', _ShowChords, _PatternPage, _ChannelPage)
@@ -1558,7 +1600,7 @@ def RefreshPatternStrip():
     prn(lvlR, 'RefreshPatternStrip', _PatternPage)
     if (PAD_MODE != MODE_PATTERNS):
         return 
-        
+
     patternsPerPage = len(pdPatternStripA) 
     for i in range(0, patternsPerPage):
         padIdx = pdPatternStripA[i]
