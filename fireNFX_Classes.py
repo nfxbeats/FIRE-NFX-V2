@@ -16,6 +16,12 @@ class TnfxParameter:
         self.StepSize = stepsize
         self.MaxValue = maxvalue
 
+class TnfxMarker:
+    def __init__(self, number, name, time):
+        self.Number = number
+        self.Name = name
+        self.time = time
+
 class TnfxMixer:
     def __init__(self, flIdx, name):
         self.Name = name 

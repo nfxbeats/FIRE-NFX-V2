@@ -17,7 +17,8 @@ pdPlaylistStripB = [ 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43]     # third
 pdPlaylistMutesB = [ 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]     # fourth row, first 12
 
 
-pdProgress = [12, 13, 14, 15, 31, 47, 63, 62, 61, 60, 44, 28]  
+pdProgress = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63] 
+pdMarkers  = [ 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
 
 # these are defined in "FPC" order. Bottom Left FPC Pad is first value in index
 # so I define them bottom to top order for each set.

@@ -219,12 +219,20 @@ def getPluginParam(chanIdx, paramIdx):
         bipolar = True 
     else:
         bipolar = False
-    print('     Param', paramIdx, caption )
-    print('     Value', paramIdx, value )
-    print('    ValStr', paramIdx, valuestr )
-    print('    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
-    print('    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
-    print('----------------------')
+
+    name = plugins.getPluginName(chanIdx)
+    varName =  "pl" + name 
+    print("\t" + varName + ".Parameters.append( TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
+
+
+
+    #print('TnfxParameter')
+    #print('     Param', paramIdx, caption )
+    #print('     Value', paramIdx, value )
+    #print('    ValStr', paramIdx, valuestr )
+    #print('    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
+    #print('    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
+    #print('----------------------')
     return TnfxParameter(paramIdx, caption, value, valuestr, bipolar)
 
 
@@ -257,10 +265,15 @@ def getPluginInfo(chanIdx):
     print('   PluginName: ', res.Name)
     pCnt = plugins.getParamCount(chanIdx, -1)
     print('   ParamCount: ', pCnt)
+    name = plugins.getPluginName(chanIdx)
+    varName =  "pl" + name 
+    print('-----------------------------------------------------------------')
+    print(varName + " = TnfxPlugin('" + name + "')")
     for paramIdx in range(0, pCnt):
         if(plugins.getParamName(paramIdx, chanIdx, -1) != ''):
             param = getPluginParam(chanIdx, paramIdx)
             res.Parameters.append(param)
+    print('-----------------------------------------------------------------')            
     return res 
 
 def ShowPluginInfo(chanIdx):
