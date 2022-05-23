@@ -155,7 +155,7 @@ def OnIdle():
         if(_isAltMode):
             RefreshProgress()
 
-    if(False): # this is note playback, make true to enable
+    if(DEFAULT_SHOW_PLAYBACK_NOTES): # this is note playback, make true to enable
         note = channels.getCurrentStepParam(getCurrChanIdx(), mixer.getSongStepPos(), pPitch)
         if (PAD_MODE in [MODE_DRUM, MODE_NOTE]):
             if(_lastNote != note):
@@ -295,10 +295,13 @@ def OnMidiIn(event):
             pMap.Pressed = 0
             SetPadColor(padNum, -1, dimDefault) # -1 will rever to the _ColorMap color
 
+        #PROGRESS BAR
         if(_isAltMode):
-            if(padNum in pdProgress) and (pMap.Pressed == 1):
-                event.handled = HandleProgressBar(padNum)
-                return 
+            if(PAD_MODE == MODE_PERFORM):
+                if(padNum in pdProgress) and (pMap.Pressed == 1):
+                    event.handled = HandleProgressBar(padNum)
+                    return 
+
 
         # always handle macros
         if(padNum in pdMacros) and (pMap.Pressed): 
@@ -306,7 +309,7 @@ def OnMidiIn(event):
             RefreshMacros()
             return 
 
-        # always handle macros
+        # always handle nav
         if(padNum in pdNav) and (pMap.Pressed): 
             event.handled = HandleNav(padNum)
             return 
@@ -633,9 +636,7 @@ def HandleMacros(macIdx):
     macro = _MacroList[macIdx]
 
     if(macIdx == 4):
-        ui.undo()
-        #CycleColors(64)
-        #ShowPluginInfo(chanNum)
+        general.undoUp()
     elif(macIdx == 1):
         ShowChannelRack(-1)        
     elif(macIdx == 2):
@@ -646,10 +647,16 @@ def HandleMacros(macIdx):
         DisplayTimedText('Reset Windows')
         transport.globalTransport(FPT_F12, 1)  # close all...
         # enable the following lines to have it re-open windows 
-        #ShowBrowser(1)
-        ShowChannelRack(0)
-        ShowPlaylist(0)
-        ShowMixer(0)
+        if(DEFAULT_REOPEN_WINDOWS_AFTER_CLOSE_ALL):
+            #ShowBrowser(1)
+            ShowMixer(1)
+            ShowChannelRack(1)
+            ShowPlaylist(1)
+        else:
+            ShowMixer(0)
+            ShowChannelRack(0)
+            ShowPlaylist(0)
+
     elif(macIdx == 5):
         DisplayTimedText('Copy')
         ui.copy()
@@ -1177,7 +1184,11 @@ def HandleChord(chan, chordNum, noteOn, noteVelocity, play7th, playInverted):
         PlayMIDINote(chan, note7, noteVelocity)
 def HandleUDLR(padIndex):
     prn(lvlA, 'HandleUDLR', padIndex)
-    if(padIndex == pdUp):
+    if(padIndex == pdTab):
+        ui.selectWindow(0)
+    elif(padIndex == pdShiftTab):
+        ui.selectWindow(1)
+    elif(padIndex == pdUp):
         ui.up()
     elif(padIndex == pdDown):
         ui.down()
@@ -1759,7 +1770,11 @@ def RefreshDisplay():
     prn(lvlD, '  |-------------------------------------')
 def RefreshUDLR():
     for pad in pdUDLR:
-        if(pad == pdEsc):
+        if(pad == pdShiftTab):
+            SetPadColor(pad, cCyan, dimDefault)
+        elif(pad == pdTab):
+            SetPadColor(pad, cCyan, dimBright)
+        elif(pad == pdEsc):
             SetPadColor(pad, cRed, dimDefault)
         elif(pad == pdEnter):
             SetPadColor(pad, cGreen, dimDefault)

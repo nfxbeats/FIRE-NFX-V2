@@ -33,7 +33,7 @@ DEFAULT_OCTAVE = 3
 #   2 = DORIAN              3 = PHRYGIAN
 #   4 = LYDIAN              5 = MIXOLYDIAN
 #   6 = AEOLIAN/Minor       7 = LOCRIAN
-#   8 = Major Pentatonic   9 = Minor Pentatonic
+#   8 = Major Pentatonic    9 = Minor Pentatonic
 DEFAULT_SCALE = 0
 
 
@@ -41,5 +41,9 @@ DEFAULT_SCALE = 0
 # other channels that share the same mixer routing
 #
 DEFAULT_SHOW_CHANNEL_WITH_SHARED_MIXER_CHANNELS = True 
+
+DEFAULT_SHOW_PLAYBACK_NOTES = False
+
+DEFAULT_REOPEN_WINDOWS_AFTER_CLOSE_ALL = False 
 
 
