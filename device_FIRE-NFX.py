@@ -383,7 +383,7 @@ def HandleChannelStrip(padNum, isChannelStripB):
     pMap = _PadMap[padNum]
     newChanIdx = pMap.FLIndex
 
-    prn(lvlA, 'HandleChannelStrip', prevChanIdx, newChanIdx)
+    prn(lvlA, 'HandleChannelStrip', prevChanIdx, newChanIdx, _ShowPianoRoll)
     if (newChanIdx > -1): #is it a valid chan number?
         if(newChanIdx == prevChanIdx): # if it's already on the channel, toggle the windows
             #prn(lvlA, 'sameChan', newChanIdx, _ChannelMap[prevChanIdx].ShowChannelEditor)
@@ -405,12 +405,7 @@ def HandleChannelStrip(padNum, isChannelStripB):
             if(_ShowChannelEditor):
                 ShowChannelEditor(0, True)
 
-            channels.deselectAll
-            
-            channels.selectOneChannel(newChanIdx)
-            mixerTrk = channels.getTargetFxTrack(newChanIdx)
-            ui.crDisplayRect(0, newChanIdx, 0, 1, 5000, CR_ScrollToView + CR_HighlightChannels)
-            ui.miDisplayRect(mixerTrk, mixerTrk, 5000, CR_ScrollToView)
+            SelectAndShowChannel(newChanIdx)
             #if (_PreviousChannel == newChanIdx): # what to activate on second press 
             #    if (isChannelStripB):
             ##        ShowPianoRoll(-1, True)
@@ -420,8 +415,20 @@ def HandleChannelStrip(padNum, isChannelStripB):
 
     _CurrentChannel = getCurrChanIdx() # channels.channelNumber()
     _ChannelCount = channels.channelCount()
+
     RefreshDisplay()
     return True
+
+def SelectAndShowChannel(newChanIdx):
+    channels.deselectAll
+    if(ui.getVisible(widPianoRoll)):
+        ShowPianoRoll(0, True)
+    ShowChannelEditor(0, True)
+    channels.selectOneChannel(newChanIdx)
+    mixerTrk = channels.getTargetFxTrack(newChanIdx)
+    mixer.setTrackNumber(mixerTrk, curfxScrollToMakeVisible)
+    ui.crDisplayRect(0, newChanIdx, 0, 1, 5000, CR_ScrollToView + CR_HighlightChannels)
+    ui.miDisplayRect(mixerTrk, mixerTrk, 5000, CR_ScrollToView)
 
 def HandlePatternStrip(padNum):
     prn(lvlH, 'HandlePatternStrip()')
@@ -761,7 +768,10 @@ def HandleDrums(event, padNum):
         return False # false to continue processing
 
     elif(chanNum > -1):
-        channels.selectOneChannel(chanNum)
+        SelectAndShowChannel(chanNum)
+        #channels.selectOneChannel(chanNum)
+        #mxChan = channels.getTargetFxTrack(chanNum)
+        #mixer.setTrackNumber(mxChan, curfxScrollToMakeVisible)
         ShowChannelEditor(1, False)
         RefreshDisplay()
         return True 
@@ -857,6 +867,7 @@ def HandleKnobMode():
     NextKnobMode()
     RefreshDisplay()
     return True
+
 def HandleKnob(event, ctrlID):
     event.inEv = event.data2
     if event.inEv >= 0x40:
@@ -1544,7 +1555,8 @@ def RefreshDrumPads():
             if(_ChannelMap[chan].ChannelType == CT_GenPlug):
                 if(plugins.getPluginName(chan, -1, 0) == "FPC"):
                     if(not isFPC): #if an FPC is not selected, choose the first one
-                        channels.selectOneChannel(chan)
+                        SelectAndShowChannel(chan)
+                        #channels.selectOneChannel(chan)
                         isFPC = True
                     padNum = pdFPCChannels[idx]
                     padColor = FLColorToPadColor(channels.getChannelColor(chan))
@@ -1653,7 +1665,7 @@ def RefreshChannelStrip(): # was (patMap: TnfxPattern, nfxMixer):
             SetPadColor(padIdx, cDimWhite, dimDefault)
 
     currChan = getCurrChanIdx() # channels.channelNumber()
-    prn(lvlA, 'RfereshChanStrip', currChan)
+    prn(lvlA, 'RefreshChanStrip', currChan)
     
   #  if(channels.getChannelType in [CT_Sampler, CT_Hybrid, CT_GenPlug, CT_AudioClip]):
     mixerIdx = channels.getTargetFxTrack(currChan)
@@ -1683,6 +1695,7 @@ def RefreshChannelStrip(): # was (patMap: TnfxPattern, nfxMixer):
             SetPadColor(padNum, padColor, dim)
             SetPadColor(mutepadIdx, muteColor, dim) 
             idx += 1
+            
 def RefreshPatternStrip():
     prn(lvlR, 'RefreshPatternStrip', _PatternPage)
     if (PAD_MODE != MODE_PATTERNS):
@@ -2096,6 +2109,7 @@ def SetPadMode(newPadMode):
         UpdateMarkerMap()
         if(PAD_MODE == MODE_PATTERNS):
             UpdatePatternModeData()
+            
         RefreshPadModeButtons() # lights the button
 
     RefreshAll()
@@ -2113,7 +2127,7 @@ def getCurrChanIdx():
 #region Nav helpers
 def NextKnobMode():
     global _KnobMode
-    prn(lvl0, 'next knob mode. was', _KnobMode)
+    #prn(lvl0, 'next knob mode. was', _KnobMode)
 
     _KnobMode += 1
     
@@ -2202,8 +2216,16 @@ def ShowPianoRoll(showVal, bSave, bUpdateDisplay = False):
     if(len(_PatternMap) > 0):
         selPat = GetPatternMapActive() # _PatternMap[_CurrentPattern-1]  # 0 based
         currVal = selPat.ShowPianoRoll
+    
+    isShowing = ui.getVisible(widPianoRoll)
+    isFocused = ui.getFocused(widPianoRoll)
 
-    ShowChannelRack
+    if(showVal <= 0) and (isShowing):
+        ui.hideWindow(widPianoRoll)
+
+    if(showVal == 1):
+        ShowChannelRack(1, True)
+    
     #ui.showWindow(widChannelRack)
     #chanNum = channels.selectedChannel(0, 0, 0)
 #    ui.openEventEditor(channels.getRecEventId(
@@ -2273,7 +2295,6 @@ def ShowChannelEditor(showVal, bSave, bUpdateDisplay = False):
     showCSForm = _ChannelMap[chanNum].ShowCSForm
     prn(lvlA, 'ShowChanEditor', showVal, showEditor, showCSForm)
     
-
     if( chanType in [CT_Hybrid, CT_GenPlug] ):
         currVal = showEditor
     elif(chanType in [CT_Layer, CT_AudioClip, CT_Sampler, CT_AutoClip]):
@@ -2305,16 +2326,18 @@ def ShowChannelEditor(showVal, bSave, bUpdateDisplay = False):
 
 def ShowPlaylist(showVal, bUpdateDisplay = False):
     global _ShowPlaylist
+    
+    prn(lvlA, 'ShowPlaylist', showVal, bUpdateDisplay)
 
     isShowing = ui.getVisible(widPlaylist)
     isFocused = ui.getFocused(widPlaylist)
 
-    if(showVal == -1): # toggle
+    #if(showVal == -1): # toggle
         #if(_ShowMixer == 1):
-        if(isShowing == 1) and (isFocused == 1):
-            showVal = 0
-        else:
-            showVal = 1
+    if(isShowing == 1) and (isFocused == 1) and (showVal <= 0):
+        showVal = 0
+    else:
+        showVal = 1
     
     if(showVal == 1):        
         ui.showWindow(widPlaylist)
@@ -2333,12 +2356,12 @@ def ShowMixer(showVal, bUpdateDisplay = False):
     isShowing = ui.getVisible(widMixer)
     isFocused = ui.getFocused(widMixer)
 
-    if(showVal == -1): # toggle
+    #if(showVal == -1): # toggle
         #if(_ShowMixer == 1):
-        if(isShowing == 1) and (isFocused == 1):
-            showVal = 0
-        else:
-            showVal = 1
+    if(isShowing == 1) and (isFocused == 1) and (showVal <= 0):
+        showVal = 0
+    else:
+        showVal = 1
 
     if(showVal == 1):
         ui.showWindow(widMixer)
@@ -2359,7 +2382,7 @@ def ShowChannelRack(showVal, bUpdateDisplay = False):
 
     if(showVal == -1): #toggle
         #if(_ShowChanRack == 1) and (isFocused): #if not focused, activate it
-        if(isShowing) and (isFocused): # only hide when has focus to allow us to activate windows  for copy/cut/paste
+        if(isShowing) and (isFocused) and (showVal == 0): # only hide when has focus to allow us to activate windows  for copy/cut/paste
             showVal = 0
         else:
             showVal = 1
