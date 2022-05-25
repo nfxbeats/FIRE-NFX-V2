@@ -16,6 +16,20 @@ class TnfxParameter:
         self.StepSize = stepsize
         self.MaxValue = maxvalue
 
+class TnfxPadMode:
+    def __init__(self, name, mode, btnId = IDStepSeq,  isAlt = False):
+        self.Name = name 
+        self.Mode = mode
+        self.ButtonID = btnId
+        self.IsAlt = isAlt 
+        self.ChanNav = False
+        self.ScaleNav = False
+        self.SnapNav = False
+        self.NoteRepeat = False
+        self.PresetNav = False
+        self.UDLRNav = False 
+        
+
 class TnfxMarker:
     def __init__(self, number, name, time):
         self.Number = number

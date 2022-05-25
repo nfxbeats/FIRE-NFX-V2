@@ -55,7 +55,7 @@ SnapModesText = ["Line", "Cell", "?", "None",
               "Bar"]
 
 #define your list of snap modes to cycle through.
-SnapModesList = [0,1,3,4,5,6,7,8,9,10,11,12,13,14]
+SnapModesList = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
 InitialSnapIndex = 0 #initial value - index of above - 0-based
 RepeatSnapIdx = 7 # for repeat mode
 
