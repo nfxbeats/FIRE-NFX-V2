@@ -238,7 +238,7 @@ def getPluginParam(chanIdx, paramIdx):
 
             
         
-def GetBeatLenInMS(div):
+def getBeatLenInMS(div):
     #   0 = 1 bar whole not
     #   0.5 = half
     #   1 = Quarter

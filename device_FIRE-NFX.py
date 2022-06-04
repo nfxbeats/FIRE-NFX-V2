@@ -46,6 +46,8 @@ _ChannelMap = list()
 _PlaylistMap = list()
 _PlaylistSelectedMap = list()
 _MarkerMap = list()
+_ProgressMapSong = list()
+_ProgressMapPatterns = list()
 _ShowMixer = 1
 _ShowChanRack = 1
 _ShowPlaylist = 1
@@ -59,6 +61,12 @@ _ShowMenu = 0
 _menuItems = ['Option 1','Option 2','Option 3','Option 4','Option 5']
 _selectedItem = 0
 _menuItemSelected = _selectedItem
+
+
+_menu_ProgressPadLen = ['1 beat', '1 bar', '2 bars', '4 bars']
+_ProgressPadLenIdx = 1 
+
+
 #notes/scales
 _ScaleIdx = DEFAULT_SCALE
 _ScaleDisplayText = ""
@@ -122,7 +130,10 @@ modeDrum.PresetNav = True
 modeDrumAlt = TnfxPadMode('Drum Alt', MODE_DRUM, IDDrum, True)
 
 modePerform = TnfxPadMode('Perform', MODE_PERFORM, IDPerform, False)
+modePerform.MacroNav = False 
+
 modePerformAlt = TnfxPadMode('Perform Alt', MODE_PERFORM, IDPerform, True)
+modePerformAlt.MacroNav = False 
 
 _PadMode = modePattern
 
@@ -179,15 +190,24 @@ def OnDoFullRefresh():
     prn(lvlA, 'OnDoFullRefresh')    
 
 
-
+_SongLen  = -1
 def OnIdle():
     global _lastNote
+    global _SongLen
+
+    currSongLen = transport.getSongLength(SONGLENGTH_BARS)
+    lenChanged = (currSongLen != _SongLen)
+    _SongLen = currSongLen
+    
     if(_ShiftHeld):
         RefreshShiftedStates() 
     
     if(PAD_MODE == MODE_PERFORM):
         if(_isAltMode):
+            if(lenChanged):
+                UpdateProgressMap(True)
             RefreshProgress()
+    
 
     if(DEFAULT_SHOW_PLAYBACK_NOTES): # this is note playback, make true to enable
         note = channels.getCurrentStepParam(getCurrChanIdx(), mixer.getSongStepPos(), pPitch)
@@ -199,7 +219,7 @@ def OnIdle():
                     ##prn(lvlA, 'note', note, 'last note', _lastNote) 
                     ShowNote(note, True)
                 _lastNote = note
-  
+    
 def OnMidiMsg(event):
     prn(lvlN, "OnMidiMsg()", event.data1, event.data2)
 
@@ -287,8 +307,9 @@ def OnProjectLoad(status):
     if(status == 0):
         DisplayTextAll('Project Loading', '-', 'Please Wait...')
     if(status >= 100): #finished loading
-        UpdateMarkerMap()
-        PAD_MODE = MODE_PATTERNS
+        SetPadMode(MODE_PATTERNS)
+        #UpdateMarkerMap()
+        #PAD_MODE = MODE_PATTERNS
         RefreshPadModeButtons()        
         UpdatePatternModeData()
         RefreshAll()
@@ -542,12 +563,21 @@ def HandlePlaylist(event, padNum):
 
 def HandleProgressBar(padNum):
     padOffs = pdProgress.index(padNum)
-    newSongPos = padOffs / len(pdProgress)
-    transport.setSongPos(newSongPos)
+    
+    # 0..1  
+    # newSongPos = padOffs / len(pdProgress)
+
+    # ABS Ticks
+    # newSongPos = _ProgressMapSong[padOffs].SongPosAbsTicks
+    # transport.setSongPos(newSongPos, SONGLENGTH_ABSTICKS)
+
+    # bar number
+    newSongPos = _ProgressMapSong[padOffs].BarNumber 
+    transport.setSongPos(newSongPos, SONGLENGTH_BARS)
 
     if(_AltHeld):
-        offs = pdProgress.index(padNum) + 1
-        arrangement.addAutoTimeMarker(arrangement.currentTime(1), "#" + str(offs))
+        markerOffs = padOffs + 1
+        arrangement.addAutoTimeMarker(arrangement.currentTime(1), "FIRE-" + str(markerOffs))
 
     return True
 
@@ -721,8 +751,11 @@ def DisplaySnap(_SnapIdx):
 
 def HandleMacros(macIdx):
 
-    if(PAD_MODE == MODE_PERFORM): # not used by this mode
-        return
+    if(_PadMode.MacroNav == False):
+        return 
+    
+    #if(PAD_MODE == MODE_PERFORM): # not used by this mode
+    #    return
 
     chanNum = channels.selectedChannel(0, 0, 0)
     macro = _MacroList[macIdx]
@@ -823,7 +856,7 @@ def HandleDrums(event, padNum):
                 device.stopRepeatMidiEvent()
                 _isRepeating = False
             elif(not _isRepeating):
-                ms = GetBeatLenInMS(BeatLengthDivs[_NoteRepeatLengthIdx])
+                ms = getBeatLenInMS(BeatLengthDivs[_NoteRepeatLengthIdx])
                 snap = BeatLengthSnap[_NoteRepeatLengthIdx]
                 prn(lvlA, 'rpt', _NoteRepeatLengthIdx, BeatLengthNames[_NoteRepeatLengthIdx], ms, snap)
                 setSnapMode(snap)
@@ -1043,6 +1076,25 @@ def HandlePage(event, ctrlID):
             _ShowChords = False
             # make the mute led turn red
         RefreshNotes()
+
+    elif(_PadMode.Mode == MODE_PERFORM):
+        if(_isAltMode):        
+            pdLen = len(pdProgress)
+            songLen = transport.getSongLength(SONGLENGTH_BARS)
+            if(ctrlID == IDPage0):
+                _ProgressPadLenIdx = 0 
+                
+            elif(ctrlID == IDPage1):
+                _ProgressPadLenIdx = 1
+            elif(ctrlID == IDPage2):
+                _ProgressPadLenIdx = 2
+            elif(ctrlID == IDPage3):
+                _ProgressPadLenIdx = 3
+
+            UpdateProgressMap(False)
+            RefreshProgress()
+        
+        
 
     RefreshPageLights()
     RefreshDisplay()
@@ -1303,6 +1355,7 @@ def RefreshAll():
     RefreshDisplay()
     #FlushColorMap()
     return 
+
 def RefreshModes():
     prn(lvlR, 'RefreshModes()')
     if(PAD_MODE == MODE_DRUM):
@@ -1316,6 +1369,9 @@ def RefreshModes():
     elif(PAD_MODE == MODE_PERFORM):
         UpdatePlaylistMap(_isAltMode)
         RefreshPlaylist()
+        if(_isAltMode):
+            UpdateProgressMap()
+            UpdateMarkerMap()
          
 def RefreshPadModeButtons():
     SendCC(IDStepSeq, DualColorOff)
@@ -1395,6 +1451,10 @@ def RefreshPadsFromPadMap():
     for pad in range(0,64):
         SetPadColor(pad, _PadMap[pad].Color, dimDefault) 
 def RefreshMacros():
+
+    if(_PadMode.MacroNav == False):
+        return 
+
     for pad in pdMacros:
         idx = pdMacros.index(pad)
         #color =  colMacros[idx]
@@ -1465,10 +1525,13 @@ def RefreshPageLights(clearOnly = False):
     if(clearOnly):
         return 
 
-    if(PAD_MODE == MODE_NOTE):
+    if(_PadMode.Mode == MODE_NOTE):
         if(_ShowChords):
             SendCC(IDPage0, SingleColorHalfBright)
-    elif(PAD_MODE == MODE_PATTERNS):
+    elif(_PadMode.Mode == MODE_PERFORM):
+        if(_PadMode.IsAlt):
+            SendCC(IDPage0 + _ProgressPadLenIdx, SingleColorHalfBright)
+    elif(_PadMode.Mode == MODE_PATTERNS):
         #pattern page
         if(_PatternPage > 0):
             SendCC(IDPage0, SingleColorFull)
@@ -1558,11 +1621,15 @@ def RefreshChordType():
 def RefreshDrumPads():
     global _PadMap
 
+    #do this first to force it to change to an FPC instance if available.
+    RefreshFPCSelector()
+
     chanIdx = getCurrChanIdx() # channels.channelNumber()
-    cMap = _ChannelMap[chanIdx]
-    isFPC = False
-    if(cMap.ChannelType == CT_GenPlug):
-        isFPC = (plugins.getPluginName(chanIdx, -1, 0) == "FPC")
+     #cMap = _ChannelMap[chanIdx]
+    #isFPC = False
+    #if(cMap.ChannelType == CT_GenPlug):
+    #    isFPC = (plugins.getPluginName(chanIdx, -1, 0) == "FPC")
+    isFPC = isFPCActive()
 
     if( isFPC ):  # Show Custom FPC Colors
         PAD_Count =	0	#Retrieve number of pad parameters supported by plugin
@@ -1603,8 +1670,13 @@ def RefreshDrumPads():
             _PadMap[p].Color = cOff
 
 
+    RefreshMacros() 
+    RefreshNavPads()
+
+def RefreshFPCSelector():
     # refresh the 'channel area' where fpc instances are shown
     idx = 0
+
     #clear the existing channel area
     for p in pdFPCChannels:
         SetPadColor(p, cOff, dimDefault)
@@ -1616,9 +1688,8 @@ def RefreshDrumPads():
         if(idx < len(pdFPCChannels)): 
             if(_ChannelMap[chan].ChannelType == CT_GenPlug):
                 if(plugins.getPluginName(chan, -1, 0) == "FPC"):
-                    if(not isFPC): #if an FPC is not selected, choose the first one
+                    if(not isFPCActive()): #if an FPC is not selected, choose the first one
                         SelectAndShowChannel(chan)
-                        isFPC = True
                     padNum = pdFPCChannels[idx]
                     padColor = FLColorToPadColor(channels.getChannelColor(chan))
                     if(getCurrChanIdx()  == chan):
@@ -1628,8 +1699,6 @@ def RefreshDrumPads():
                     _PadMap[padNum].Color = padColor
                     _PadMap[padNum].ItemIndex = chan 
                     idx += 1
-    RefreshMacros() 
-    RefreshNavPads()
     #RefreshDisplay()
 
 def RefreshKnobMode():
@@ -1857,6 +1926,26 @@ def RefreshUDLR():
 
 
 def RefreshProgress():
+    progMap = list()
+    if(transport.getLoopMode == 0): # PATTERN
+        progMap.extend(_ProgressMapPatterns)
+    else:
+        progMap.extend(_ProgressMapSong)
+    
+    for pPad in progMap:
+        #if(pPad.SongPosAbsTicks <= transport.getSongPos(SONGLENGTH_ABSTICKS)):
+        if(pPad.BarNumber <= transport.getSongPos(SONGLENGTH_BARS)):
+            if(transport.isPlaying()):
+                SetPadColor(pPad.PadIndex, pPad.Color, dimBright)
+        else:
+            if(pPad.BarNumber <= transport.getSongLength(SONGLENGTH_BARS)):
+                SetPadColor(pPad.PadIndex, pPad.Color, dimDefault)
+            else:
+                SetPadColor(pPad.PadIndex, cOff, dimDefault)
+
+
+
+def RefreshProgressOrig():
     
     colorOn = cWhite
     colorDim = cDimWhite
@@ -1867,6 +1956,7 @@ def RefreshProgress():
 #    if(transport.isPlaying()):
     progressLen = len(pdProgress)
     songPos = transport.getSongPos()
+    songPosTicks = transport.getSongPos()
     progressPos = int(progressLen * songPos)
 
     for p in range(progressLen):
@@ -1989,6 +2079,58 @@ def UpdatePatternMap(pattNum):
         _PatternMap.append(patMap)
     _CurrentPattern = patterns.patternNumber()
 
+
+
+def UpdateProgressMap(autodetect = True):
+    global _ProgressMapSong
+    global _ProgressMapPatterns
+    global _ProgressPadLenIdx
+
+    newMap = list()
+
+    #todo: need to be aware of song pode/patt mode here?
+    progressLen = len(pdProgress) 
+
+    songLenAbsTicks = transport.getSongLength(SONGLENGTH_ABSTICKS)
+    padLen = 1/progressLen 
+    padAbsLen = songLenAbsTicks/progressLen
+
+
+    songLenBars = transport.getSongLength(SONGLENGTH_BARS)
+    if(autodetect):
+        if(songLenBars <= 16):
+            _ProgressPadLenIdx = 1
+        elif(songLenBars <= 32):
+            _ProgressPadLenIdx = 2
+        elif(songLenBars <= 64):
+            _ProgressPadLenIdx = 3
+
+    padBarLen = 1
+    if(_ProgressPadLenIdx == 0): # 1 beat
+        padBarLen = 0 #getBeatLenInMS(1)
+    elif(_ProgressPadLenIdx == 1): # 1 bars
+        padBarLen = 1
+    elif(_ProgressPadLenIdx == 2): # 2 bars
+        padBarLen = 2
+    elif(_ProgressPadLenIdx == 3): # 4 bars
+        padBarLen = 4
+
+    for padIdx in range(progressLen):
+        progressPos = int(padIdx * padLen) # shoudl return 0..(1 - padLen)
+        progressPosAbsTicks = int(padIdx * padAbsLen) # returns 0..SONGLENGTH_ABSTICKS
+        progBarNumber = 1 + (padBarLen * padIdx) # 
+        progPad = TnfxProgressStep(pdProgress[padIdx], cWhite, progressPos, progressPosAbsTicks, progBarNumber)
+        newMap.append(progPad)
+
+    if(transport.getLoopMode() == 0): # pattern mode
+        _ProgressMapPatterns.clear()
+        _ProgressMapPatterns.extend(newMap)
+    else: # song mode
+        _ProgressMapSong.clear()
+        _ProgressMapSong.extend(newMap)
+
+
+
 def UpdateMarkerMap():
     global _MarkerMap
 
@@ -2005,7 +2147,7 @@ def UpdateMarkerMap():
 
     while(markerNum > prevNum):
         markerName = arrangement.getMarkerName(markerNum)
-        markerTime = arrangement.currentTime()
+        markerTime = arrangement.currentTime(1) # returns in ticks
         m = TnfxMarker(markerNum, markerName, markerTime)
         _MarkerMap.append(m)
         prevNum = markerNum
@@ -2040,6 +2182,11 @@ def ResetBeatIndicators():
 #endregion 
 
 #region Helper function 
+def isFPCChannel(chanIdx):
+    if(_ChannelMap[chanIdx].ChannelType == CT_GenPlug):
+        pluginName = plugins.getPluginName(chanIdx, -1, 0)      
+        return (pluginName == 'FPC')     
+
 def isFPCActive():
     chanIdx = getCurrChanIdx() # channels.channelNumber()
     if(_ChannelMap[chanIdx].ChannelType == CT_GenPlug):
@@ -2167,10 +2314,14 @@ def SetPadMode(newPadMode):
 
     if(oldPadMode != newPadMode):
         PAD_MODE = newPadMode
-        UpdateMarkerMap()
+
         if(PAD_MODE == MODE_PATTERNS):
             UpdatePatternModeData()
-            
+        elif(PAD_MODE == MODE_PERFORM):
+            if(_isAltMode):
+                UpdateMarkerMap()
+                UpdateProgressMap()
+
         RefreshPadModeButtons() # lights the button
 
     RefreshAll()
@@ -2527,12 +2678,17 @@ def ShowNote(note, isOn = True):
     #print('ShowNote', note, isOn)
     if(note == -1):
         return
+    
     if(note in _NoteMap):
         padIdx = _NoteMap.index(note)
-        dim = dimDefault
-        if(isOn):
-            dim = dimFull
-        SetPadColor(padIdx,  getPadColor(padIdx), dim)
+
+    for n in range(len(_NoteMap)):
+        if (_NoteMap[n] == note):
+            padIdx = n 
+            dim = dimDefault
+            if(isOn):
+                dim = dimFull
+            SetPadColor(padIdx,  getPadColor(padIdx), dim)
  
 def UpdateWindowStates():
     global _ShowPlaylist

@@ -16,6 +16,8 @@ class TnfxParameter:
         self.StepSize = stepsize
         self.MaxValue = maxvalue
 
+
+
 class TnfxPadMode:
     def __init__(self, name, mode, btnId = IDStepSeq,  isAlt = False):
         self.Name = name 
@@ -28,13 +30,23 @@ class TnfxPadMode:
         self.NoteRepeat = False
         self.PresetNav = False
         self.UDLRNav = False 
+        self.MacroNav = True 
         
 
+class TnfxProgressStep:
+    def __init__(self, padIdx, color, songpos, abspos, barnum, selected = False):
+        self.PadIndex = padIdx
+        self.Color = color
+        self.SongPos = songpos
+        self.SongPosAbsTicks = abspos
+        self.Selected = selected
+        self.BarNumber = barnum 
+
 class TnfxMarker:
-    def __init__(self, number, name, time):
+    def __init__(self, number, name, ticks):
         self.Number = number
         self.Name = name
-        self.time = time
+        self.SongPosTicks = ticks
 
 class TnfxMixer:
     def __init__(self, flIdx, name):
@@ -57,6 +69,7 @@ class TnfxChannel:
         self.ShowChannelEditor = -1
         self.ShowCSForm = -1
         self.ShowPianoRoll = -1
+        
 
 class TnfxPattern:
     def __init__(self, flIdx, name):
