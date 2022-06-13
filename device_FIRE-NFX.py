@@ -205,6 +205,7 @@ def OnIdle():
     if(PAD_MODE == MODE_PERFORM):
         if(_isAltMode):
             if(lenChanged):
+                UpdateMarkerMap()
                 UpdateProgressMap(True)
             RefreshProgress()
     
@@ -563,22 +564,30 @@ def HandlePlaylist(event, padNum):
 
 def HandleProgressBar(padNum):
     padOffs = pdProgress.index(padNum)
+    prgMap = _ProgressMapSong[padOffs]
     
     # 0..1  
     # newSongPos = padOffs / len(pdProgress)
 
     # ABS Ticks
-    # newSongPos = _ProgressMapSong[padOffs].SongPosAbsTicks
-    # transport.setSongPos(newSongPos, SONGLENGTH_ABSTICKS)
-
-    # bar number
-    newSongPos = _ProgressMapSong[padOffs].BarNumber 
-    transport.setSongPos(newSongPos, SONGLENGTH_BARS)
+    if(_ProgressPadLenIdx == 0):
+        newSongPos = _ProgressMapSong[padOffs].SongPosAbsTicks
+        transport.setSongPos(newSongPos, SONGLENGTH_ABSTICKS)
+    else:
+        # bar number
+        prn(lvlA, prgMap.BarNumber, _ProgressPadLenIdx)
+        #newSongPos = prgMap.BarNumber * getBeatLenInMS(0)
+        #transport.setSongPos(newSongPos, SONGLENGTH_MS)
+        newSongPos = getAbsTicksFromBar(prgMap.BarNumber) 
+        transport.setSongPos(newSongPos, SONGLENGTH_ABSTICKS)
 
     if(_AltHeld):
         markerOffs = padOffs + 1
-        arrangement.addAutoTimeMarker(arrangement.currentTime(1), "FIRE-" + str(markerOffs))
+        arrangement.addAutoTimeMarker(prgMap.SongPosAbsTicks, DEFAULT_MARKER_PREFIX_TEXT + str(markerOffs))
 
+    if(_ShiftHeld):
+        prn(lvlA, '', 'Selecting bars..')    
+        
     return True
 
 def HandlePads(event, padNum, pMap):  
@@ -1048,11 +1057,14 @@ def HandleKnobReal(recEventIDIndex, value, Name, Bipolar):
     #DisplayTextTop('Value: ' + valstr )
     DisplayBar2(Name, currVal, valstr, Bipolar)
     return True
+
 def HandlePage(event, ctrlID):
     prn(lvlH, 'HandlePage()', ctrlID)
     global _ShowChords
     global _PatternPage
     global _ChannelPage
+    global _ProgressPadLenIdx
+
     #differnt modes use these differently   
     if(PAD_MODE == MODE_PATTERNS):
         if(ctrlID == IDPage0): # Pat page 0
@@ -1083,14 +1095,13 @@ def HandlePage(event, ctrlID):
             songLen = transport.getSongLength(SONGLENGTH_BARS)
             if(ctrlID == IDPage0):
                 _ProgressPadLenIdx = 0 
-                
             elif(ctrlID == IDPage1):
                 _ProgressPadLenIdx = 1
             elif(ctrlID == IDPage2):
                 _ProgressPadLenIdx = 2
             elif(ctrlID == IDPage3):
                 _ProgressPadLenIdx = 3
-
+            UpdateMarkerMap()                
             UpdateProgressMap(False)
             RefreshProgress()
         
@@ -1151,6 +1162,9 @@ def HandlePadMode(event):
             ClearAllPads()
             newPadMode = MODE_PERFORM
             _PadMode = modePerformAlt
+            UpdateMarkerMap()
+            UpdateProgressMap()
+            RefreshProgress()
 
     elif(_AltHeld) and (_ShiftHeld): # Shift modes
         _isShiftMode = True 
@@ -1370,8 +1384,9 @@ def RefreshModes():
         UpdatePlaylistMap(_isAltMode)
         RefreshPlaylist()
         if(_isAltMode):
-            UpdateProgressMap()
             UpdateMarkerMap()
+            UpdateProgressMap()
+
          
 def RefreshPadModeButtons():
     SendCC(IDStepSeq, DualColorOff)
@@ -1551,6 +1566,8 @@ def RefreshPageLights(clearOnly = False):
             SendCC(IDPage3, SingleColorFull)
         if(_ChannelPage > 3):
             SendCC(IDTrackSel4, SingleColorFull)
+        
+            
 def RefreshNotes():
     global _PadMap
     global _NoteMap
@@ -1576,7 +1593,7 @@ def RefreshNotes():
         #prn(lvl0, utils.GetNoteName(_PadMap[p].NoteInfo.MIDINote), _PadMap[p].NoteInfo.IsRootNote )
         if(isChromatic()): #chromatic,
             if(len(utils.GetNoteName(_PadMap[p].NoteInfo.MIDINote) ) > 2): # is black key?
-                color = cDimWhite-1
+                color = cDimWhite #-1
             else:
                 color = cWhite 
         else: #non chromatic
@@ -1927,21 +1944,17 @@ def RefreshUDLR():
 
 def RefreshProgress():
     progMap = list()
+
     if(transport.getLoopMode == 0): # PATTERN
         progMap.extend(_ProgressMapPatterns)
     else:
         progMap.extend(_ProgressMapSong)
-    
+
     for pPad in progMap:
-        #if(pPad.SongPosAbsTicks <= transport.getSongPos(SONGLENGTH_ABSTICKS)):
-        if(pPad.BarNumber <= transport.getSongPos(SONGLENGTH_BARS)):
-            if(transport.isPlaying()):
-                SetPadColor(pPad.PadIndex, pPad.Color, dimBright)
-        else:
-            if(pPad.BarNumber <= transport.getSongLength(SONGLENGTH_BARS)):
-                SetPadColor(pPad.PadIndex, pPad.Color, dimDefault)
-            else:
-                SetPadColor(pPad.PadIndex, cOff, dimDefault)
+        if(pPad.SongPosAbsTicks <= transport.getSongPos(SONGLENGTH_ABSTICKS)): #which pads have 'played'?
+            SetPadColor(pPad.PadIndex, getShade(pPad.Color, shNorm), dimBright)
+        else: # not yet played
+            SetPadColor(pPad.PadIndex, getShade(pPad.Color, shNorm), dimDim)
 
 
 
@@ -2093,16 +2106,16 @@ def UpdateProgressMap(autodetect = True):
 
     songLenAbsTicks = transport.getSongLength(SONGLENGTH_ABSTICKS)
     padLen = 1/progressLen 
-    padAbsLen = songLenAbsTicks/progressLen
+    
 
 
     songLenBars = transport.getSongLength(SONGLENGTH_BARS)
     if(autodetect):
-        if(songLenBars <= 16):
+        if(songLenBars <= 32):
             _ProgressPadLenIdx = 1
-        elif(songLenBars <= 32):
-            _ProgressPadLenIdx = 2
         elif(songLenBars <= 64):
+            _ProgressPadLenIdx = 2
+        elif(songLenBars <= 128):
             _ProgressPadLenIdx = 3
 
     padBarLen = 1
@@ -2115,11 +2128,39 @@ def UpdateProgressMap(autodetect = True):
     elif(_ProgressPadLenIdx == 3): # 4 bars
         padBarLen = 4
 
+    if(_ProgressPadLenIdx == 0):
+        padAbsLen = songLenAbsTicks/progressLen
+    else:
+        padAbsLen = getAbsTicksFromBar(2) * padBarLen # get the start of bar 2 aka the length of 1 bar in ticks times the number of bars
+
     for padIdx in range(progressLen):
         progressPos = int(padIdx * padLen) # shoudl return 0..(1 - padLen)
         progressPosAbsTicks = int(padIdx * padAbsLen) # returns 0..SONGLENGTH_ABSTICKS
-        progBarNumber = 1 + (padBarLen * padIdx) # 
+        nextAbsTick = int( (padIdx+1) * padAbsLen )
+        progBarNumber = (padBarLen * padIdx) + 1 # 
+
         progPad = TnfxProgressStep(pdProgress[padIdx], cWhite, progressPos, progressPosAbsTicks, progBarNumber)
+        
+
+        if(progressPosAbsTicks < songLenAbsTicks ):
+            prn(lvlA, 'added progress pad', padIdx, progressPos, nextAbsTick, progBarNumber)
+
+            #determine what markers are in this range.
+            for marker in _MarkerMap:
+                if(progressPosAbsTicks <= marker.SongPosAbsTicks < nextAbsTick):
+                    if(progressPosAbsTicks == marker.SongPosAbsTicks) or ((progressPosAbsTicks+1 == marker.SongPosAbsTicks)):
+                        progPad.Color = cGreen
+                    else:
+                        progPad.Color = cOrange
+
+                    progPad.Markers.append(marker)
+                    prn(lvlA, 'added marker to pad', padIdx, '...',  progressPosAbsTicks, ' >= ', marker.SongPosAbsTicks, ' < ', nextAbsTick)
+
+        else:
+            progPad.BarNumber = -1
+            progPad.Color = getShade(cRed, shDark)
+            progPad.SongPosAbsTicks = -1
+        
         newMap.append(progPad)
 
     if(transport.getLoopMode() == 0): # pattern mode
@@ -2140,18 +2181,30 @@ def UpdateMarkerMap():
 
     _MarkerMap.clear()
     transport.stop()
-    transport.setSongPos(1)
+    transport.setSongPos(1) # 3nd of song will force the marker to restart at beginning
     
     prevNum = -1
-    markerNum = arrangement.jumpToMarker(1, False)
+    markerCount = 0
+    for i in range(100):
+        if(arrangement.getMarkerName(i) != ""):
+            markerCount += 1
+        else:
+            break
 
-    while(markerNum > prevNum):
-        markerName = arrangement.getMarkerName(markerNum)
-        markerTime = arrangement.currentTime(1) # returns in ticks
-        m = TnfxMarker(markerNum, markerName, markerTime)
-        _MarkerMap.append(m)
-        prevNum = markerNum
-        markerNum = arrangement.jumpToMarker(1, False)
+    if(markerCount > 0):
+        transport.setSongPos(1)
+        for m in range(markerCount):
+            markerNum = arrangement.jumpToMarker(1, False)
+            while (markerNum > m): #workaround
+                markerNum = arrangement.jumpToMarker(-1, False)
+
+        #while(markerNum > prevNum):
+            markerName = arrangement.getMarkerName(markerNum)
+            markerTime = arrangement.currentTime(1) # returns in ticks
+            m = TnfxMarker(markerNum, markerName, markerTime)
+            _MarkerMap.append(m)
+        #    prevNum = markerNum
+        #   markerNum = arrangement.jumpToMarker(1, False)
 
     
 def UpdateChannelMap():
@@ -2359,6 +2412,7 @@ def PatternPageNav(moveby):
     if(0 <= pageOffs <= _PatternCount ): # allow next page when there are patterns to show
         _PatternPage = newPage
     RefreshPageLights()
+
 def ChannelPageNav(moveby):
     global _ChannelPage
     pageSize = len(pdPatternStripA)
@@ -2459,6 +2513,7 @@ def ShowPianoRoll(showVal, bSave, bUpdateDisplay = False):
 
 def ShowChannelSettings(showVal, bSave, bUpdateDisplay = False):
     global _PatternMap
+    global _ShowCSForm
     currVal = 0
 
     if(len(_PatternMap) > 0):
@@ -2475,6 +2530,9 @@ def ShowChannelSettings(showVal, bSave, bUpdateDisplay = False):
     channels.showCSForm(chanNum, showVal)
     if(showVal == 0): # make CR active
         ShowChannelRack(_ShowChanRack)
+        _ShowCSForm = False
+    else:
+        _ShowCSForm = True
 
     if(bUpdateDisplay):
         DisplayTimedText('Chan Sett: ' + _showText[showVal])
@@ -2485,6 +2543,7 @@ def ShowChannelSettings(showVal, bSave, bUpdateDisplay = False):
 
 def ShowChannelEditor(showVal, bSave, bUpdateDisplay = False):
     global _ChannelMap
+    global _ShowChannelEditor
 
     if(len(_ChannelMap) <= 0):
         return
@@ -2504,8 +2563,10 @@ def ShowChannelEditor(showVal, bSave, bUpdateDisplay = False):
     if(showVal == -1):  # toggle
         if(currVal <= 0): #might be -1 initially
             showVal = 1
+            _ShowChannelEditor = True 
         else:
             showVal = 0
+            _ShowChannelEditor = False 
 
     if( chanType in [CT_Hybrid, CT_GenPlug] ):
         channels.showEditor(chanNum, showVal)

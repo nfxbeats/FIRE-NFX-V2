@@ -41,12 +41,15 @@ class TnfxProgressStep:
         self.SongPosAbsTicks = abspos
         self.Selected = selected
         self.BarNumber = barnum 
+        self.Markers = list()
 
 class TnfxMarker:
     def __init__(self, number, name, ticks):
         self.Number = number
         self.Name = name
-        self.SongPosTicks = ticks
+        self.SongPosAbsTicks = ticks
+    def __str__(self):
+        return "Marker #{}, {}, SongPos: {}".format(self.Number, self.Name, self.SongPosAbsTicks)
 
 class TnfxMixer:
     def __init__(self, flIdx, name):

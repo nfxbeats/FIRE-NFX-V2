@@ -6,6 +6,7 @@ import plugins
 import mixer
 import playlist
 import ui
+import general 
 from midi import *
 from fireNFX_Colors import *
 from fireNFX_Defs import *
@@ -395,4 +396,11 @@ def redistribute_rgb(r, g, b):
     x = (3 * threshold - total) / (3 * m - total)
     gray = threshold - x * m
     return int(gray + x * r), int(gray + x * g), int(gray + x * b)
+
+def getBarFromAbsTicks(absticks):
+    return ( absticks / general.getRecPPB() ) + 1
+
+def getAbsTicksFromBar(bar):
+    # thx to HDSQ from https://forum.image-line.com/viewtopic.php?p=1740588#p1740588
+    return (bar - 1) * general.getRecPPB() 
 
