@@ -3,20 +3,19 @@
 # most of this is copied from the Image-Line device_Fire code
 from harmonicScales import *
 
-
+# PAD Modes
 MODE_PATTERNS = 0 # was MODE_STEP
 MODE_NOTE = 1
 MODE_DRUM = 2
 MODE_PERFORM = 3
 
-PAD_MODE = MODE_PATTERNS
+#PAD_MODE = MODE_PATTERNS
 
-UM_CHANNEL = 0
-UM_MIXER = 1
-UM_USER1 = 2
-UM_USER2 = 3
-
-USER_MODE = UM_CHANNEL 
+# Knob Modes
+KM_CHANNEL = 0
+KM_MIXER = 1
+KM_USER1 = 2
+KM_USER2 = 3
 
 #Fire specific
 ManufacturerIDConst = 0x47

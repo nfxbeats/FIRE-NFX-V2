@@ -1,4 +1,5 @@
 import math
+import time 
 import device
 from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxPlugin
 import utils
@@ -78,9 +79,9 @@ def getPadColor(padIdx):
 def TestColorMap():
     global _ColorMap
 
-    for r in range(127):
-        for g in range(127):
-            for b in range(127):
+    for r in range(0, 127, 16):
+        for g in range(0, 127, 16):
+            for b in range(0, 127, 16):
                 for cMap in _ColorMap:
                     cMap.R = r
                     cMap.G = g
@@ -125,6 +126,8 @@ def FlushColorMap():
         bufOffs += 4
     SendMessageToDevice(MsgIDSetRGBPadLedState, len(dataOut), dataOut)
 
+def getColorMap():
+    return _ColorMap
 
 def SetPadColor(idx, col, dimFactor, bSaveColor = True):
     global _ColorMap
@@ -143,7 +146,7 @@ def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True):
     g = (col & 0x007F00) >> 8
     b = (col & 0x7F)
 
-    # reduce brightness by half time dimFactor
+    # reduce brightness by half times dimFactor
     if(dimFactor > 0):
         for i in range(dimFactor):
             r = r >> 1
@@ -271,7 +274,8 @@ def getPluginInfo(chanIdx):
     print('-----------------------------------------------------------------')
     print(varName + " = TnfxPlugin('" + name + "')")
     for paramIdx in range(0, pCnt):
-        if(plugins.getParamName(paramIdx, chanIdx, -1) != ''):
+        #if(plugins.getParamName(paramIdx, chanIdx, -1) != ''):
+        if(True):
             param = getPluginParam(chanIdx, paramIdx)
             res.Parameters.append(param)
     print('-----------------------------------------------------------------')            
@@ -292,6 +296,19 @@ def ColorToRGB(Color):
 
 def RGBToColor(R,G,B):
     return (R << 16) | (G << 8) | B
+
+def GradTest():
+    #def Gradient(color1, color2, stepsize, padOffs=0):
+    stepsize = 5 # 255//5
+    Gradient(cBlue, cOff, stepsize, 0)
+    Gradient(cPurple, cOff, stepsize, 16)
+    Gradient(cMagenta, cOff, stepsize, 32)
+    Gradient(cRed, cOff, stepsize, 48)
+    Gradient(cOrange, cOff, stepsize, 4)
+    Gradient(cYellow, cOff, stepsize, 20)
+    Gradient(cGreen, cOff, stepsize, 36)
+    Gradient(cCyan, cOff, stepsize, 52)
+
 
 def ColorTest():
     Shades(cBlue,0)
@@ -324,11 +341,19 @@ def getShade(baseColor, shadeOffs):
     else: 
         return baseColor
 
+
 def Shades(color, padOffs=0):
     SetPadColor(0+padOffs, getShade(color, shDim), 0)
     SetPadColor(1+padOffs, getShade(color, shDark), 0)
     SetPadColor(2+padOffs, getShade(color, shNorm), 0)
     SetPadColor(3+padOffs, getShade(color, shLight), 0)
+
+def Gradient(color1, color2, stepsize, padOffs=0):
+    for pad in range(4):
+        step = (255//stepsize) * pad
+        col = FadeColor(color1, color2, step)
+        SetPadColor(pad+padOffs, col, 0)
+
 
 
 def Shade(color, mul = 1.1, offs = 0):
@@ -340,7 +365,25 @@ def Shade(color, mul = 1.1, offs = 0):
         if(i == offs):
             return color1
 
+def AnimOff(padIdx, color, steps = 16, wait = 0.1):
+    OrigColor = _ColorMap[padIdx].PadColor 
+    Color1 = cWhite # getShade(color, shLight)
+    Color2 = cOff # getShade(color, shDim)
+    for step in range(steps):
+        stepSize = 255//steps
+        col = FadeColor(OrigColor, Color2, step * stepSize)
+        SetPadColor(padIdx, col, 0)    
+        time.sleep(wait)
 
+def AnimOn(padIdx, color, steps = 16, wait = 0.1):
+    OrigColor = _ColorMap[padIdx].PadColor 
+    Color1 = cWhite # getShade(color, shLight)
+    Color2 = cOff # getShade(color, shDim)
+    for step in range(steps):
+        stepSize = 255//steps
+        col = FadeColor(Color2, OrigColor, step * stepSize)
+        SetPadColor(padIdx, col, 0)    
+        time.sleep(wait)
 
 
 def CycleColors(len = 64, steps = 8, freq = 0.5):
@@ -398,9 +441,18 @@ def redistribute_rgb(r, g, b):
     return int(gray + x * r), int(gray + x * g), int(gray + x * b)
 
 def getBarFromAbsTicks(absticks):
-    return ( absticks / general.getRecPPB() ) + 1
+    return ( absticks // general.getRecPPB() ) + 1
 
 def getAbsTicksFromBar(bar):
     # thx to HDSQ from https://forum.image-line.com/viewtopic.php?p=1740588#p1740588
     return (bar - 1) * general.getRecPPB() 
 
+#from the original AKAI script
+def FadeColor(StartColor, EndColor, Value):
+  rStart, gStart, bStart = ColorToRGB(StartColor)
+  rEnd, gEnd, bEnd = ColorToRGB(EndColor)
+  ratio = Value / 255
+  rEnd = round(rStart * (1 - ratio) + (rEnd * ratio))
+  gEnd = round(gStart * (1 - ratio) + (gEnd * ratio))
+  bEnd = round(bStart * (1 - ratio) + (bEnd * ratio))
+  return RGBToColor(rEnd, gEnd, bEnd)

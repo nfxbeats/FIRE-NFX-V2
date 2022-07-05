@@ -2,12 +2,13 @@ from fireNFX_Colors import *
 from fireNFX_Defs import NotesListFlats, NotesListSharps
 
 
+#   valid colors are: cWhite, cBlue, cGreen, cRed, cYellow, cCyan, cPurple, cOrange, cMagenta and cOff 
+#
+
 # color of pads when pressed.
-# valid colors are: cWhite, cBlue, cGreen, cRed, cYellow, cCyan, cPurple, cOrange, cMagenta and cOff 
 DEFAULT_PAD_PRESSED_COLOR = cYellow
 
 # color of pads when pressed.
-# valid colors are: cWhite, cBlue, cGreen, cRed, cYellow, cCyan, cPurple, cOrange, cMagenta and cOff 
 # use  cChannel to use the channel color
 DEFAULT_ROOT_NOTE_COLOR = cBlue 
 
@@ -36,16 +37,19 @@ DEFAULT_OCTAVE = 3
 #   8 = Major Pentatonic    9 = Minor Pentatonic
 DEFAULT_SCALE = 0
 
+DEFAULT_SHOW_ALL_MATCHING_CHORD_NOTES = False # when True, it will show all pads that have the same note mappings.
+
 
 # Whether or not to light the channel strip will indicate
 # other channels that share the same mixer routing
 #
-DEFAULT_SHOW_CHANNEL_WITH_SHARED_MIXER_CHANNELS = True 
+DEFAULT_SHOW_CHANNEL_WITH_SHARED_MIXER_CHANNELS = True # will display the channels that have a common mixer number with the selected channel
 
-DEFAULT_SHOW_PLAYBACK_NOTES = True 
+DEFAULT_SHOW_PLAYBACK_NOTES = True # in NOTE mode, this will show what note is playing on playback (limited to mono - ie one note at a time)
 
-DEFAULT_REOPEN_WINDOWS_AFTER_CLOSE_ALL = False 
+DEFAULT_REOPEN_WINDOWS_AFTER_CLOSE_ALL = False # after a close all you have the core windows re-open automatically
 
-DEFAULT_MARKER_PREFIX_TEXT = "Fire#"  
+DEFAULT_MARKER_PREFIX_TEXT = "nfx#"  # markers created by the script will have this prefix 
 
+DEFAULT_SHOW_PRN = True # shows extra info I use when debugging. may affect performance when True
 

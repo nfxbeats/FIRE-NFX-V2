@@ -52,8 +52,14 @@ def DisplayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime = 0
     except:
         return 
     
+def DisplayBar3(p1, p2, Text, Value, Bipolar):    
+    screen.displayBar(p1, p2, Text, Value, Bipolar)
+
 def DisplayBar(Text, Value, Bipolar):
     screen.displayBar(0, TextRowHeight * TimedTextRow, Text, Value, Bipolar)
+
+def barTest(p1, p2):
+    DisplayBar3(p1, p2, "TEST", .75, False)
 
 def DisplayBar2(Text, Value, ValueStr, Bipolar):
     screen.displayBar(0, TextRowHeight * ROWTOP, Text, Value, Bipolar)

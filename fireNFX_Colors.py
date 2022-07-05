@@ -11,8 +11,8 @@ cSilver     = 0X606060
 cDimWhite   = 0x101010
 
 cBlue       = 0x0106ca 
-cPurple     = 0x9000e0
-cMagenta    = 0xFF00FF
+cPurple     = 0x1700ef # 0x9000e0
+cMagenta    = 0xcF00cF # 0xFF00FF
 cRed        = 0xFF0000
 cOrange     = 0xd5a001 #0xFFA500
 cYellow     = 0xFFFF00
