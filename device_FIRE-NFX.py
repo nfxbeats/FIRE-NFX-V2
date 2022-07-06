@@ -109,6 +109,7 @@ _MacroList = [macCloseAll, macTogChanRack, macTogPlaylist, macTogMixer, macUndo,
 # list of notes that are mapped to pads
 _NoteMap = list()
 _NoteMapDict = {}
+_FPCNotesDict = {}
 
 
 _SongLen  = -1
@@ -192,7 +193,7 @@ def OnIdle():
                 #prn(lvlA, 'last note', _lastNote) 
                 ShowNote(_lastNote, False)
                 if(note > -1) and (note in _NoteMap):
-                    ##prn(lvlA, 'note', note, 'last note', _lastNote) 
+                    #prn(lvlA, 'note', note, 'last note', _lastNote) 
                     ShowNote(note, True)
                 _lastNote = note
     
@@ -665,8 +666,8 @@ def HandleNav(padIdx):
     hNoteRepeat = _PadMode.NavSet.NoteRepeat
     hScaleNav = _PadMode.NavSet.ScaleNav
 
-    if(_PadMode.Mode == MODE_PERFORM): # not used by this mode
-        return
+    #if(_PadMode.Mode == MODE_PERFORM): # not used by this mode
+    #    return
 
     if(hChanPads):
         if(padIdx in pdShowChanPads):
@@ -762,10 +763,10 @@ def HandleMacros(macIdx):
             ShowMixer(1)
             ShowChannelRack(1)
             ShowPlaylist(1)
-        else:
-            ShowMixer(0)
+        #else:
+        #    ShowMixer(0)
             ShowChannelRack(0)
-            ShowPlaylist(0)
+        #    ShowPlaylist(0)
 
     elif(macIdx == 5):
         DisplayTimedText('Copy')
@@ -991,6 +992,7 @@ def HandleGridLR(ctrlID):
             NavSetList(-1)
         elif(ctrlID == IDBankR):
             NavSetList(1)
+        RefreshModes()
     return True
 
 def HandleKnobMode():
@@ -1181,7 +1183,7 @@ def HandlePadMode(event):
         if(ctrlID == IDNote):
             _PadMode = modeNoteAlt
         if(ctrlID == IDDrum):
-            _PadMode = modeDrum
+            _PadMode = modeDrumAlt
         if(ctrlID == IDPerform): #force a refresh on the pl tack bar A to clear it
             _PadMode = modePerformAlt
 
@@ -1410,6 +1412,7 @@ def RefreshModes():
             UpdateMarkerMap()
             UpdateProgressMap()
 
+
          
 def RefreshPadModeButtons():
     SendCC(IDStepSeq, DualColorOff)
@@ -1424,6 +1427,7 @@ def RefreshPadModeButtons():
         SendCC(IDDrum, DualColorFull2)
     elif(_PadMode.Mode == MODE_PERFORM):
         SendCC(IDPerform, DualColorFull2)
+
 def RefreshShiftAlt():
     if(_AltHeld):
         SendCC(IDAlt, SingleColorFull)
@@ -1492,7 +1496,8 @@ def RefreshPadsFromPadMap():
 
 def RefreshMacros():
 
-    if(_PadMode.NavSet.MacroNav == False):
+    if(_PadMode.NavSet.MacroNav == False) or (_PadMode.NavSet.HideNav):
+
         return 
 
     for pad in pdMacros:
@@ -1516,22 +1521,24 @@ def RefreshNavPads():
     showChanWinNav = _PadMode.NavSet.ChanNav
     showSnapNav = _PadMode.NavSet.SnapNav
     showScaleNav = _PadMode.NavSet.ScaleNav
+    
+    RefreshGridLR()        
+
+    if(_PadMode.NavSet.HideNav):
+        return
 
     for pad in pdNav :
         SetPadColor(pad, cOff, dimDefault)
-
-    #if(_NavSetIdx == nsNone):
-    #    return
     
     if(showUDLRNav):
         RefreshUDLR()
         return 
-    
+
     if(showScaleNav):
         for idx, pad in enumerate(pdNoteFuncs):
             color = colNoteFuncs[idx]
             SetPadColor(pad, color, dimDefault)
-    
+
     if(showPresetNav):
         for idx, pad in enumerate(pdPresetNav):
             color = colPresetNav[idx]
@@ -1671,6 +1678,7 @@ def RefreshDrumPads():
 
     chanIdx = getCurrChanIdx() 
     isFPC = isFPCActive()
+    _FPCNotesDict.clear()
 
     if( isFPC ):  # Show Custom FPC Colors
         PAD_Count =	0	#Retrieve number of pad parameters supported by plugin
@@ -1685,6 +1693,12 @@ def RefreshDrumPads():
         for p in pdFPCA:
             color = plugins.getPadInfo(chanIdx, -1, PAD_Color, fpcpadIdx) # plugins.getColor(chanIdx, -1, GC_Semitone, fpcpadIdx)
             semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, fpcpadIdx)
+
+            if(semitone in _FPCNotesDict):
+                _FPCNotesDict[semitone].append(p)
+            else:
+                _FPCNotesDict[semitone] = [p]
+
             #prn(lvl0, fpcpadIdx, 'semitone', semitone , 'color', color)
             _PadMap[p].FPCColor = FLColorToPadColor(color)
             _PadMap[p].NoteInfo.MIDINote = semitone 
@@ -1695,6 +1709,12 @@ def RefreshDrumPads():
         for p in pdFPCB: #NOTE! fpcpadIdx s/b 16 when entering this loop
             color = plugins.getPadInfo(chanIdx, -1, PAD_Color, fpcpadIdx) 
             semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, fpcpadIdx) 
+
+            if(semitone in _FPCNotesDict):
+                _FPCNotesDict[semitone].append(p)
+            else:
+                _FPCNotesDict[semitone] = [p]
+                
             _PadMap[p].FPCColor = FLColorToPadColor(color)
             _PadMap[p].NoteInfo.MIDINote = semitone 
             _NoteMap[p] = semitone 
@@ -1749,8 +1769,24 @@ def RefreshPlaylist():
     prn(lvlA, 'RefreshPlaylist()')
     #global _PlaylistMap
     global _PadMap
+    global pdPlaylistStripA
+    global pdPlaylistStripB
+    global pdPlaylistMutesA
+    global pdPlaylistMutesB 
 
     plPage = 0
+
+    pdPlaylistStripA = pdWorkAreaRowA
+    pdPlaylistMutesA = pdWorkAreaRowB
+    pdPlaylistStripB = pdWorkAreaRowC
+    pdPlaylistMutesB = pdWorkAreaRowD
+
+    if(_PadMode.NavSet.HideNav):
+        pdPlaylistStripA = pdRowA
+        pdPlaylistMutesA = pdRowB
+        pdPlaylistStripB = pdRowC
+        pdPlaylistMutesB = pdRowD
+
 
     plLen = len(pdPlaylistStripA)
     plMapToShow = _PlaylistMap
@@ -1767,8 +1803,8 @@ def RefreshPlaylist():
 
     for padOffs in range(plLen): #gives me 0..12 or 0..selected when less than 12
         padTrackA = pdPlaylistStripA[padOffs]
-        padTrackB = pdPlaylistStripB[padOffs]
         padMuteA  = pdPlaylistMutesA[padOffs]
+        padTrackB = pdPlaylistStripB[padOffs]
         padMuteB  = pdPlaylistMutesB[padOffs]
         dimA = dimDefault
         dimB = dimDefault
@@ -2663,9 +2699,23 @@ def NavSetList(val):
 
     _PadMode.NavSet = TnfxNavigationSet( _PadMode.AllowedNavSets[newNavSetIdx])
     _PadMode.AllowedNavSetIdx = newNavSetIdx 
+    RefreshGridLR()
 
     RefreshMacros()
     RefreshNavPads()
+
+def RefreshGridLR():
+    navSet = _PadMode.NavSet.Index
+    SendCC(IDLeft, SingleColorOff)
+    SendCC(IDRight, SingleColorOff)
+
+    if(navSet == nsDefault):
+        SendCC(IDLeft, SingleColorFull)
+    elif(navSet == nsScale):
+        SendCC(IDRight, SingleColorFull)
+    elif(navSet == nsUDLR):
+        SendCC(IDLeft, SingleColorFull)
+        SendCC(IDRight, SingleColorFull)
     
 
 
@@ -2974,8 +3024,12 @@ def ShowNote(note, isOn = True):
     if(isOn):
         dim = dimFull
     
-    if(note in _NoteMapDict):
-        pads = _NoteMapDict[note]
+    noteDict = _NoteMapDict
+    if(_PadMode.Mode == MODE_DRUM) and (isFPCActive()):
+        noteDict = _FPCNotesDict
+    
+    if(note in noteDict):
+        pads = noteDict[note]
         for pad in pads:
             SetPadColor(pad,  getPadColor(pad), dim)
 
@@ -3084,14 +3138,14 @@ def InititalizePadModes():
     modeDrum.NavSet = TnfxNavigationSet(nsDefault)
     modeDrum.AllowedNavSets = [nsDefault, nsUDLR]
 
-    modeDrumAlt.NavSet = TnfxNavigationSet(nsDefault)
+    modeDrumAlt.NavSet = TnfxNavigationSet(nsNone)
     modeDrumAlt.AllowedNavSets = [nsDefault, nsUDLR]
 
     modePerform.NavSet = TnfxNavigationSet(nsNone)
-    modePerform.AllowedNavSets = [nsNone]
+    modePerform.AllowedNavSets = [nsNone, nsDefault, nsUDLR]
 
     modePerformAlt = TnfxNavigationSet(nsNone)
-    modePerformAlt.AllowedNavSets = [nsNone]
+    modePerformAlt.AllowedNavSets = [nsNone, nsDefault, nsUDLR]
 
     _PadMode = modePattern
 

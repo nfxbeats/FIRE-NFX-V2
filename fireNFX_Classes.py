@@ -90,6 +90,7 @@ nsUDLR = 3
 
 class TnfxNavigationSet:
     def __init__(self, navSet):
+        self.Index = navSet
         self.ChanNav = False
         self.ScaleNav = False
         self.SnapNav = False
@@ -97,6 +98,7 @@ class TnfxNavigationSet:
         self.PresetNav = False
         self.UDLRNav = False 
         self.MacroNav = True 
+        self.HideNav = False
         if navSet == nsDefault:
             self.ChanNav = True
             self.SnapNav = True
@@ -109,6 +111,7 @@ class TnfxNavigationSet:
             self.UDLRNav = True
         elif(navSet == nsNone):
             self.MacroNav = False
+            self.HideNav = True 
         
 
 

@@ -26,15 +26,22 @@ pdBankD = [12, 13, 14, 15,
            44, 45, 46, 47,
            60, 61, 62, 63 ]
 
+pdWorkAreaRowA = [  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11]      # top row, first 12
+pdWorkAreaRowB = [ 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]      # second row, first 12
+pdWorkAreaRowC = [ 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43]     # third row, first 12
+pdWorkAreaRowD = [ 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]     # fourth row, first 12
+
+#full width
+pdRowA = [ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15]     
+pdRowB = [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+pdRowC = [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
+pdRowD = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63] 
+
+
 pdPatternStripA = [ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11]      # top row, first 12
 pdPatternStripB = [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]      # second row, first 12
 pdChanStripA    = [ 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43]     # third row, first 12
 pdChanStripB    = [ 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]     # fourth row, first 12
-
-pdPlaylistStripA = [ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11]      # top row, first 12
-pdPlaylistMutesA = [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]      # second row, first 12
-pdPlaylistStripB = [ 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43]     # third row, first 12
-pdPlaylistMutesB = [ 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]     # fourth row, first 12
 
 #full size for alt mode
 pdPlaylistSelStripA = [ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15]     
@@ -42,6 +49,14 @@ pdPlaylistSelMutesA = [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 3
 pdMarkers  = [ 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
 pdProgress = [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 
               48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63] 
+
+
+pdPlaylistStripA = pdWorkAreaRowA
+pdPlaylistMutesA = pdWorkAreaRowB
+pdPlaylistStripB = pdWorkAreaRowC
+pdPlaylistMutesB = pdWorkAreaRowD
+
+
 
 # these are defined in "FPC" order. Bottom Left FPC Pad is first value in index
 # so I define them bottom to top order for each set.

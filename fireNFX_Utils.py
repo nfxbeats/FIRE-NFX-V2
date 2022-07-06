@@ -209,9 +209,10 @@ def SendMessageToDevice(ID, l, data):
     device.midiOutSysex(bytes(msg))
 
 def FLColorToPadColor(FLColor):
-    r = ((FLColor >> 16) & 0xFF) // 2
-    b = (FLColor & 0xFF) // 2
-    g = ((FLColor >> 8) & 0xFF) // 2
+    andVal = 0xC7 # was 0xFF
+    r = ((FLColor >> 16) & andVal) // 2
+    g = ((FLColor >> 8) & andVal) // 2
+    b = (FLColor & andVal) // 2
     return utils.RGBToColor(r, g, b)
 
 def getPluginParam(chanIdx, paramIdx):

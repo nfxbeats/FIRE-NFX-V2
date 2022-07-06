@@ -47,7 +47,7 @@ DEFAULT_SHOW_CHANNEL_WITH_SHARED_MIXER_CHANNELS = True # will display the channe
 
 DEFAULT_SHOW_PLAYBACK_NOTES = True # in NOTE mode, this will show what note is playing on playback (limited to mono - ie one note at a time)
 
-DEFAULT_REOPEN_WINDOWS_AFTER_CLOSE_ALL = False # after a close all you have the core windows re-open automatically
+DEFAULT_REOPEN_WINDOWS_AFTER_CLOSE_ALL = True # after a close all you have the core windows re-open automatically
 
 DEFAULT_MARKER_PREFIX_TEXT = "nfx#"  # markers created by the script will have this prefix 
 
