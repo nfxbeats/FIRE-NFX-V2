@@ -136,6 +136,7 @@ def SetPadColor(idx, col, dimFactor, bSaveColor = True):
 
 def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True):
     global _ColorMap
+    global _PadMap 
 
     if(col == -1):
         col = _ColorMap[idx].PadColor
@@ -155,6 +156,8 @@ def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True):
 
     SetPadRGB(idx, r, g, b)
 
+    _PadMap[idx].Color = col 
+    
     if(bSaveColor):
         _ColorMap[idx].PadColor = col 
         _ColorMap[idx].DimFactor = dimFactor
@@ -311,7 +314,7 @@ def GradTest():
     Gradient(cCyan, cOff, stepsize, 52)
 
 
-def ColorTest():
+def ColorTest(arg1):
     Shades(cBlue,0)
     Shades(cPurple, 16)
     Shades(cMagenta, 32)

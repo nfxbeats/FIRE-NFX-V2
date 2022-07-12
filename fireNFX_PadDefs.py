@@ -1,11 +1,12 @@
 from fireNFX_Colors import *
 from fireNFX_Utils import *
 from fireNFX_Classes import TnfxMacro
-from fireNFX_DEFAULTS import DEFAULT_DIM_BRIGHT, DEFAULT_DIM_FACTOR
+from fireNFX_DEFAULTS import DEFAULT_DIM_BRIGHT, DEFAULT_DIM_FACTOR, DEFAULT_ALT_DRUM_MODE_BANKS
 
 # defines the pads when used as a set from 0..63
-pdAllPads = [0 for i in range(64)] 
+pdAllPads = [i for i in range(64)] 
 
+#Banks are in reverse order - ie bottom row to top
 pdBankA = [48, 49, 50, 51,
           32, 33, 34, 35, 
           16, 17, 18, 19,
@@ -16,15 +17,15 @@ pdBankB = [52, 53, 54, 55,
           20, 21, 22, 23,
            4,  5,  6,  7]
 
-pdBankC = [ 8,  9, 10, 11,
-           24, 25, 26, 27,
-           40, 41, 42, 43,
-           56, 57, 58, 59 ]
+pdBankC = [56, 57, 58, 59,
+          40, 41, 42, 43,
+          24, 25, 26, 27,
+          8,  9, 10, 11]
 
-pdBankD = [12, 13, 14, 15, 
-           28, 29, 30, 31,
+pdBankD = [60, 61, 62, 63, 
            44, 45, 46, 47,
-           60, 61, 62, 63 ]
+           28, 29, 30, 31,
+           12, 13, 14, 15 ]
 
 pdWorkAreaRowA = [  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11]      # top row, first 12
 pdWorkAreaRowB = [ 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]      # second row, first 12
@@ -72,12 +73,37 @@ pdFPCB = pdBankB
          # 20, 21, 22, 23,
           # 4,  5,  6,  7]
 
-# quick slect FPC channels in drum mode
-pdFPCChannels = pdBankC
-                # [ 8,  9, 10, 11,
-                # 24, 25, 26, 27,
-                # 40, 41, 42, 43,
-                # 56, 57, 58, 59 ]
+# quick slect FPC channels in drum mode - note unlike banks, these are in top to bottom order
+pdFPCChannels = [ 8,  9, 10, 11,
+                 24, 25, 26, 27,
+                 40, 41, 42, 43,
+                 56, 57, 58, 59 ]
+
+#helper to get the pads needed to map to notes.
+def getDrumPads(isAlt, noNav):
+    pads = []
+    if(not isAlt): # FPC Pads
+        pads.extend(pdFPCA)
+        pads.extend(pdFPCB)
+    else: #ALT Drum mode 
+        if(DEFAULT_ALT_DRUM_MODE_BANKS): # bank style
+            pads.extend(pdBankA)
+            pads.extend(pdBankB)
+            pads.extend(pdBankC)
+            if(noNav):
+                pads.extend(pdBankD)
+        else: # note style
+            if(noNav):
+                pads.extend(pdRowD)
+                pads.extend(pdRowC)
+                pads.extend(pdRowB)
+                pads.extend(pdRowA)
+            else:
+                pads.extend(pdWorkAreaRowD)
+                pads.extend(pdWorkAreaRowC)
+                pads.extend(pdWorkAreaRowB)
+                pads.extend(pdWorkAreaRowA)
+    return pads 
 
 pdChordBar =   [ 0, 1, 2,  3,  4,  5,  6 ]
 
@@ -155,9 +181,13 @@ pdOctavePrev = 46
 pdOctaveNext = 62
 pdScalePrev = 47
 pdScaleNext = 63
+
+colOctavePrev = getShade(cBlue, shLight)
+colOctaveNext = cBlue
+
 pdNoteFuncs = [pdScalePrev, pdScaleNext, pdRootNotePrev, pdRootNoteNext, pdOctavePrev, pdOctaveNext]
 colNoteFuncs = [getShade(cGreen, shLight), cGreen, getShade(cPurple, shLight), cPurple, 
-    getShade(cBlue, shLight), cBlue]
+    colOctavePrev, colOctaveNext]
 
 
 

@@ -87,6 +87,7 @@ nsNone = 0
 nsDefault = 1
 nsScale = 2
 nsUDLR = 3
+nsDefault2 = 4
 
 class TnfxNavigationSet:
     def __init__(self, navSet):
@@ -95,14 +96,20 @@ class TnfxNavigationSet:
         self.ScaleNav = False
         self.SnapNav = False
         self.NoteRepeat = False
+        self.OctaveNav = False
         self.PresetNav = False
         self.UDLRNav = False 
         self.MacroNav = True 
-        self.HideNav = False
+        self.NoNav = False
         if navSet == nsDefault:
             self.ChanNav = True
             self.SnapNav = True
             self.NoteRepeat = True
+            self.PresetNav = True
+        if navSet == nsDefault2:
+            self.ChanNav = True
+            self.SnapNav = True
+            self.OctaveNav = True
             self.PresetNav = True
         elif(navSet == nsScale):
             self.ChanNav = True
@@ -111,7 +118,7 @@ class TnfxNavigationSet:
             self.UDLRNav = True
         elif(navSet == nsNone):
             self.MacroNav = False
-            self.HideNav = True 
+            self.NoNav = True 
         
 
 

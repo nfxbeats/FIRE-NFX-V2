@@ -15,6 +15,9 @@ import plugins
 import playlist
 import arrangement
 
+#import sys 
+
+
 
 from harmonicScales import *
 
@@ -109,7 +112,7 @@ _MacroList = [macCloseAll, macTogChanRack, macTogPlaylist, macTogMixer, macUndo,
 # list of notes that are mapped to pads
 _NoteMap = list()
 _NoteMapDict = {}
-_FPCNotesDict = {}
+#_FPCNotesDict = {}
 
 
 _SongLen  = -1
@@ -373,19 +376,12 @@ def OnMidiIn(event):
                     event.handled = HandleProgressBar(padNum)
                     return 
 
-
-        # always handle macros
-        if(padNum in pdMacros) and (pMap.Pressed): 
-            event.handled = HandleMacros(pdMacros.index(padNum))
-            RefreshMacros()
-            return 
-
-        # always handle nav
-        if(padNum in pdNav) and (pMap.Pressed): 
-            event.handled = HandleNav(padNum)
-            return 
-
-        if(padNum in pdWorkArea):
+        padsToHandle = pdWorkArea
+        if(isNoNav()):
+            padsToHandle = pdAllPads
+        
+        #if(padNum in pdWorkArea):
+        if(padNum in padsToHandle):
             if(_PadMode.Mode == MODE_DRUM): # handles on and off for PADS
                 event.handled = HandlePads(event, padNum, pMap)
                 return 
@@ -405,6 +401,18 @@ def OnMidiIn(event):
                 else:
                     event.handled = True #prevents a note off message
                     return 
+
+        # always handle macros
+        if(padNum in pdMacros) and (pMap.Pressed): 
+            event.handled = HandleMacros(pdMacros.index(padNum))
+            RefreshMacros()
+            return 
+
+        # always handle nav
+        if(padNum in pdNav) and (pMap.Pressed): 
+            event.handled = HandleNav(padNum)
+            return 
+
 
     # handle other "non" Pads
     prn(lvl0, 'Non Pad detected')
@@ -619,7 +627,7 @@ def HandlePads(event, padNum, pMap):
     # 'perfomance'  pads will need a pressed AND release...
 
     if(_PadMode.Mode == MODE_DRUM):
-        if (padNum in pdFPCA) or (padNum in pdFPCB):
+        if (padNum in DrumPads()):
             return HandleDrums(event, padNum)
 
     elif(_PadMode.Mode == MODE_NOTE):
@@ -665,6 +673,7 @@ def HandleNav(padIdx):
     hSnapNav = _PadMode.NavSet.SnapNav
     hNoteRepeat = _PadMode.NavSet.NoteRepeat
     hScaleNav = _PadMode.NavSet.ScaleNav
+    hOctaveNav = _PadMode.NavSet.OctaveNav 
 
     #if(_PadMode.Mode == MODE_PERFORM): # not used by this mode
     #    return
@@ -698,22 +707,28 @@ def HandleNav(padIdx):
         if(padIdx in pdUDLR):
             HandleUDLR(padIdx)
 
-    if(hScaleNav):
+    if(hOctaveNav) or (hScaleNav):
+        #print('handle octave')
         if(padIdx == pdOctaveNext):
             NavOctavesList(-1)
         elif(padIdx == pdOctavePrev):
             NavOctavesList(1)
-        elif(padIdx == pdScaleNext):
-            NavScalesList(1)
-        elif(padIdx == pdScalePrev):
-            NavScalesList(-1)
-        elif(padIdx == pdRootNoteNext):
-            NavNotesList(-1)
-        elif(padIdx == pdRootNotePrev):
-            NavNotesList(1)            
-        RefreshNotes()
+        if(hScaleNav):
+            if(padIdx == pdScaleNext):
+                NavScalesList(1)
+            elif(padIdx == pdScalePrev):
+                NavScalesList(-1)
+            elif(padIdx == pdRootNoteNext):
+                NavNotesList(-1)
+            elif(padIdx == pdRootNotePrev):
+                NavNotesList(1)         
 
+    if(_PadMode.Mode == MODE_NOTE):
+        RefreshNotes()
+    elif(_PadMode.Mode == MODE_DRUM):
+        RefreshDrumPads()
     RefreshNavPads()
+    
     return True 
 
 def ToggleRepeat():
@@ -832,42 +847,44 @@ def HandleNotes(event, padNum):
 
 def HandleDrums(event, padNum):
     global _isRepeating
-    chanNum = _PadMap[padNum].ItemIndex
-    #prn(lvlA, 'handle drums', 'in', event.data1, 'out', _PadMap[padNum].NoteInfo.MIDINote, 'Note Rpt', _NoteRepeat, _isRepeating)
-    if(padNum in pdFPCA) or (padNum in pdFPCB):
+    prn(lvlA, 'handle drums', 'in', event.data1, 'out', _PadMap[padNum].NoteInfo.MIDINote, 'Note Rpt', _NoteRepeat, _isRepeating)
+    
+    # even out some velocities
+    if(90 > event.data2 > 1 ):
+        event.data2 = 90
+    elif(110 > event.data2 > 64):
+        event.data2 = 110
+    elif(event.data2 > 110):
+        event.data2 = 120
 
-        # do the note repeat BEFORE changing the note.
-        if(_NoteRepeat):
-            if(event.data2 < 32): # min velocity is 32, so anything below that s/b note off
-                device.stopRepeatMidiEvent()
-                _isRepeating = False
-            elif(not _isRepeating):
-                ms = getBeatLenInMS(BeatLengthDivs[_NoteRepeatLengthIdx])
-                snap = BeatLengthSnap[_NoteRepeatLengthIdx]
-                prn(lvlA, 'rpt', _NoteRepeatLengthIdx, BeatLengthNames[_NoteRepeatLengthIdx], ms, snap)
-                setSnapMode(snap)
-                device.repeatMidiEvent(event, ms, ms)
-                _isRepeating = True
+    # do the note repeat BEFORE changing the note so the note is retriggered properly
+    if(_NoteRepeat):
+        if(event.data2 < 32): # min velocity is 32, so anything below that s/b note off
+            device.stopRepeatMidiEvent()
+            _isRepeating = False
+        elif(not _isRepeating):
+            ms = getBeatLenInMS(BeatLengthDivs[_NoteRepeatLengthIdx])
+            snap = BeatLengthSnap[_NoteRepeatLengthIdx]
+            prn(lvlA, 'rpt', _NoteRepeatLengthIdx, BeatLengthNames[_NoteRepeatLengthIdx], ms, snap)
+            setSnapMode(snap)
+            device.repeatMidiEvent(event, ms, ms)
+            _isRepeating = True
+    
+    # FPC Quick select
+    if(not _isAltMode) and (padNum in pdFPCChannels):
+        chanNum = _PadMap[padNum].ItemIndex
+        if(chanNum > -1): # it's an FPC quick select
+            SelectAndShowChannel(chanNum)
+            ShowChannelEditor(1, False)
+            RefreshDisplay()
 
-        #set the note to the one used by FPC Pad
+    #shoudl return the pads list
+    pads = DrumPads() 
+
+    if(padNum in pads):
+        prn(lvlA, 'updating note value')
         event.data1 = _PadMap[padNum].NoteInfo.MIDINote
-
-        # even out some velocities
-        if(90 > event.data2 > 1 ):
-            event.data2 = 90
-        elif(110 > event.data2 > 64):
-            event.data2 = 110
-        elif(event.data2 > 110):
-            event.data2 = 120
-
-
-        return False # false to continue processing
-
-    elif(chanNum > -1):
-        SelectAndShowChannel(chanNum)
-        ShowChannelEditor(1, False)
-        RefreshDisplay()
-        return True 
+        return False
     else:
         return True # mark as handled to prevent processing
 
@@ -947,7 +964,7 @@ def HandlePatternChanges():
     RefreshDisplay()
 
 def HandlePattUpDn(ctrlID):
-    prn(lvlA, 'HandlePattUpDn()', ctrlID, _ShiftHeld, _AltHeld, _CurrentChannel)
+    #prn(lvlA, 'HandlePattUpDn()', ctrlID, _ShiftHeld, _AltHeld, _CurrentChannel)
 
     moveby = 1
     if(ctrlID == IDPatternUp):
@@ -967,8 +984,8 @@ def HandlePattUpDn(ctrlID):
             ui.verZoom(-2)
             SetPlaylistTop()
     else:
-        newPattern = _CurrentPattern + moveby
-        if( 0 <= newPattern <= _PatternCount):   #if it's a valid spot then move it
+        newPattern = patterns.patternNumber() + moveby
+        if( 0 <= newPattern <= patterns.patternCount()):   #if it's a valid spot then move it
             patterns.jumpToPattern(newPattern)
     
     RefreshDisplay()
@@ -1160,7 +1177,7 @@ def HandlePadMode(event):
     global _isShiftMode
     global _PadMode 
 
-    prn(lvlH, 'HandlePadMode')
+    #prn(lvlH, 'HandlePadMode')
     ctrlID = event.data1 
     newPadMode = _PadMode.Mode
 
@@ -1186,6 +1203,8 @@ def HandlePadMode(event):
             _PadMode = modeDrumAlt
         if(ctrlID == IDPerform): #force a refresh on the pl tack bar A to clear it
             _PadMode = modePerformAlt
+            print(_PadMode.Name)
+            
 
     elif(_AltHeld) and (_ShiftHeld): # Shift modes
         _isShiftMode = True 
@@ -1419,6 +1438,9 @@ def RefreshPadModeButtons():
     SendCC(IDNote, DualColorOff)
     SendCC(IDDrum, DualColorOff)
     SendCC(IDPerform, DualColorOff)
+
+
+
     if(_PadMode.Mode == MODE_PATTERNS):
         SendCC(IDStepSeq, DualColorFull2)
     elif(_PadMode.Mode == MODE_NOTE):
@@ -1495,15 +1517,14 @@ def RefreshPadsFromPadMap():
         SetPadColor(pad, _PadMap[pad].Color, dimDefault) 
 
 def RefreshMacros():
-
-    if(_PadMode.NavSet.MacroNav == False) or (_PadMode.NavSet.HideNav):
-
+    if isNoMacros():
         return 
 
     for pad in pdMacros:
         idx = pdMacros.index(pad)
         #color =  colMacros[idx]
         SetPadColor(pad, _MacroList[idx].PadColor, dimDefault)
+
     UpdateWindowStates()
     RefreshWindowStates()
 
@@ -1521,10 +1542,12 @@ def RefreshNavPads():
     showChanWinNav = _PadMode.NavSet.ChanNav
     showSnapNav = _PadMode.NavSet.SnapNav
     showScaleNav = _PadMode.NavSet.ScaleNav
+    showOctaveNav = _PadMode.NavSet.OctaveNav
+    
     
     RefreshGridLR()        
 
-    if(_PadMode.NavSet.HideNav):
+    if(isNoNav()):
         return
 
     for pad in pdNav :
@@ -1538,6 +1561,10 @@ def RefreshNavPads():
         for idx, pad in enumerate(pdNoteFuncs):
             color = colNoteFuncs[idx]
             SetPadColor(pad, color, dimDefault)
+    elif(showOctaveNav) and (not showNoteRepeat): 
+        SetPadColor(pdOctaveNext, colOctaveNext, dimDefault)
+        SetPadColor(pdOctavePrev, colOctavePrev, dimDefault)
+        
 
     if(showPresetNav):
         for idx, pad in enumerate(pdPresetNav):
@@ -1551,6 +1578,7 @@ def RefreshNavPads():
     if(showNoteRepeat):
         if(_NoteRepeat):
             SetPadColor(pdNoteRepeat, colNoteRepeat, dimBright)
+            SetPadColor(pdNoteRepeatLength, colNoteRepeatLength, dimBright)
         else:
             SetPadColor(pdNoteRepeat, colNoteRepeat, dimDim)
             SetPadColor(pdNoteRepeatLength, colNoteRepeatLength, dimDefault)
@@ -1672,65 +1700,76 @@ def RefreshChordType():
 
 def RefreshDrumPads():
     global _PadMap
-
-    #do this first to force it to change to an FPC instance if available.
-    RefreshFPCSelector()
-
+    global _NoteMapDict
+    _NoteMapDict.clear()
     chanIdx = getCurrChanIdx() 
-    isFPC = isFPCActive()
-    _FPCNotesDict.clear()
+    pads = DrumPads()
 
-    if( isFPC ):  # Show Custom FPC Colors
-        PAD_Count =	0	#Retrieve number of pad parameters supported by plugin
-        PAD_Semitone =	1	#Retrieve semitone for pad specified by padIndex
-        PAD_Color =	2	#Retrieve color for pad specified by padIndex    
+    if(_isAltMode): # function in NON FPC mode
+        colors = [cWhite, cCyan, cBlue, cOrange]
+        changeEvery = 16
+            
+        if(DEFAULT_ALT_DRUM_MODE_BANKS == False):
+            changeEvery = 12
 
-        # FPC A Pads
-        fpcpadIdx = 0
-        semitone = 0
-        color = cOff
-        dim =  dimDefault
-        for p in pdFPCA:
-            color = plugins.getPadInfo(chanIdx, -1, PAD_Color, fpcpadIdx) # plugins.getColor(chanIdx, -1, GC_Semitone, fpcpadIdx)
-            semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, fpcpadIdx)
+        for idx, p in enumerate(pads):
+            rootNote = 12 # 12 = C1 ?
+            startnote = rootNote + (OctavesList[_OctaveIdx] * 12) 
+            MapNoteToPad(p, startnote + idx)
+            colIdx =  idx//changeEvery
+            SetPadColor(p, colors[colIdx], dimDefault)
 
-            if(semitone in _FPCNotesDict):
-                _FPCNotesDict[semitone].append(p)
-            else:
-                _FPCNotesDict[semitone] = [p]
+    else: # FPC mode
+        #do this first to force it to change to an FPC instance if available.
+        RefreshFPCSelector()
+        # _FPCNotesDict.clear()
+        
+        if( isFPCActive()):  # Show Custom FPC Colors
+            PAD_Semitone =	1	#Retrieve semitone for pad specified by padIndex
+            PAD_Color =	2	#Retrieve color for pad specified by padIndex    
 
-            #prn(lvl0, fpcpadIdx, 'semitone', semitone , 'color', color)
-            _PadMap[p].FPCColor = FLColorToPadColor(color)
-            _PadMap[p].NoteInfo.MIDINote = semitone 
-            _NoteMap[p] = semitone 
-            SetPadColor(p, _PadMap[p].FPCColor, dim)
-            fpcpadIdx += 1 # NOTE! will be 16 when we exit the for loop, the proper first value for the B Pads loop...
-        # FPC B Pads
-        for p in pdFPCB: #NOTE! fpcpadIdx s/b 16 when entering this loop
-            color = plugins.getPadInfo(chanIdx, -1, PAD_Color, fpcpadIdx) 
-            semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, fpcpadIdx) 
-
-            if(semitone in _FPCNotesDict):
-                _FPCNotesDict[semitone].append(p)
-            else:
-                _FPCNotesDict[semitone] = [p]
-                
-            _PadMap[p].FPCColor = FLColorToPadColor(color)
-            _PadMap[p].NoteInfo.MIDINote = semitone 
-            _NoteMap[p] = semitone 
-            SetPadColor(p, _PadMap[p].FPCColor, dim)
-            fpcpadIdx += 1 # continue 
-    else:
-        for p in pdFPCA:
-            SetPadColor(p, cOff, dimDefault)
-            _PadMap[p].Color = cOff
-        for p in pdFPCB:
-            SetPadColor(p, cOff, dimDefault)
-            _PadMap[p].Color = cOff
-
+            # FPC A Pads
+            #fpcpadIdx = 0
+            semitone = 0
+            color = cOff
+            dim =  dimDefault
+            for idx, p in enumerate(pads): #pdFPCA:
+                color = plugins.getPadInfo(chanIdx, -1, PAD_Color, idx) #fpcpadIdx) # plugins.getColor(chanIdx, -1, GC_Semitone, fpcpadIdx)
+                semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, idx) #fpcpadIdx)
+                MapNoteToPad(p, semitone)
+                SetPadColor(p, FLColorToPadColor(color), dim)
+            #     fpcpadIdx += 1 # NOTE! will be 16 when we exit the for loop, the proper first value for the B Pads loop...
+            # # FPC B Pads
+            # for p in pdFPCB: #NOTE! fpcpadIdx s/b 16 when entering this loop
+            #     color = plugins.getPadInfo(chanIdx, -1, PAD_Color, fpcpadIdx) 
+            #     semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, fpcpadIdx) 
+            #     MapNoteToPad(p, semitone)
+            #     #_PadMap[p].NoteInfo.MIDINote = semitone 
+            #     #_NoteMap[p] = semitone 
+            #     SetPadColor(p, FLColorToPadColor(color), dim)
+            #     fpcpadIdx += 1 # continue 
+        else: # 
+            for p in pads:
+                SetPadColor(p, cOff, dimDefault)
+                _PadMap[p].Color = cOff
 
     RefreshMacros() 
     RefreshNavPads()
+
+def MapNoteToPad(padNum, note):
+    global _NoteMap
+    global _PadMap
+    global _NoteMapDict
+
+    if(note in _NoteMapDict):
+        _NoteMapDict[note].append(padNum)
+    else:
+        _NoteMapDict[note] = [padNum]
+    
+    # maintain these here for now
+    _PadMap[padNum].NoteInfo.MIDINote = note
+    _NoteMap[padNum] = note
+    
 
 def RefreshFPCSelector():
     # refresh the 'channel area' where fpc instances are shown
@@ -1740,6 +1779,7 @@ def RefreshFPCSelector():
     for p in pdFPCChannels:
         SetPadColor(p, cOff, dimDefault)
         _PadMap[p].Color = cOff
+        _PadMap[p].ItemIndex = -1
 
     #find the fpc channels
     for chan in range(channels.channelCount()):
@@ -1781,7 +1821,7 @@ def RefreshPlaylist():
     pdPlaylistStripB = pdWorkAreaRowC
     pdPlaylistMutesB = pdWorkAreaRowD
 
-    if(_PadMode.NavSet.HideNav):
+    if(isNoNav()):
         pdPlaylistStripA = pdRowA
         pdPlaylistMutesA = pdRowB
         pdPlaylistStripB = pdRowC
@@ -2121,7 +2161,7 @@ def RefreshUDLR():
         elif(pad == pdEnter):
             SetPadColor(pad, cGreen, dimDefault)
         else:
-            SetPadColor(pad, cDimWhite, dimDefault)
+            SetPadColor(pad, cWhite, dimDefault)
 
 
 def RefreshProgress():
@@ -2535,14 +2575,18 @@ def GetScaleGrid(newModeIdx=0, rootNote=0, startOctave=2):
     _ScaleIdx = newModeIdx
     harmonicScale = ScalesList[_ScaleIdx][0]
     noteHighlight = ScalesList[_ScaleIdx][1]
+    gridlen = 12
+
     _ScaleNotes.clear()
 
+    if(_isAltMode) and (_PadMode.Mode == MODE_DRUM):
+        harmonicScale = ScalesList[0]
+        gridlen = 64
+
     # get lowest octave line
-    gridlen = 12
-    lineGrid = [[0] for y in range(gridlen)]
+    lineGrid = [[0] for y in range(gridlen)] # init with 0
     notesInScale = GetScaleNoteCount(harmonicScale)
-    
-    
+       
     #build the lowest <gridlen> notes octave and transpose up from there
     BuildNoteGrid(lineGrid, gridlen, 1, rootNote, startOctave, harmonicScale)
 
@@ -2554,36 +2598,55 @@ def GetScaleGrid(newModeIdx=0, rootNote=0, startOctave=2):
     # next I fill in the notes from the bottom to top
     _NoteMapDict.clear()
 
-    for colOffset in range(0, gridlen):
-        for row in range(0, 4): # 3
-            if(notesInScale < 6): 
-                noteVal = lineGrid[colOffset][0] + (24*row) # for pentatonic scales 
-            else:
-                noteVal = lineGrid[colOffset][0] + (12*row)
-            revRow = 3-row  # reverse to go from bottom to top
-            rowOffset = 16 * revRow  # rows start on 0,16,32,48
-            padIdx = rowOffset + colOffset
+    if(_PadMode.Mode == MODE_NOTE):
+        for colOffset in range(0, gridlen):
+            for row in range(0, 4): # 3
+                
+                if(notesInScale < 6): 
+                    noteVal = lineGrid[colOffset][0] + (24*row) # for pentatonic scales 
+                else:
+                    noteVal = lineGrid[colOffset][0] + (12*row)
+                revRow = 3-row  # reverse to go from bottom to top
+                rowOffset = 16 * revRow  # rows start on 0,16,32,48
+                padIdx = rowOffset + colOffset
 
-            if(row == 3): # and (GetScaleNoteCount(scale) == 7): #chord row
-                _PadMap[padIdx].NoteInfo.MIDINote = noteVal
-                _PadMap[padIdx].NoteInfo.ChordNum = colOffset + 1
-            else:
-                _PadMap[padIdx].NoteInfo.MIDINote = noteVal
-                _PadMap[padIdx].NoteInfo.ChordNum = -1
+                MapNoteToPad(padIdx, noteVal)
+                if(row == 3): # and (GetScaleNoteCount(scale) == 7): #chord row
+                    # MapNoteToPad(padIdx, noteVal)
+                    #_PadMap[padIdx].NoteInfo.MIDINote = noteVal
+                    _PadMap[padIdx].NoteInfo.ChordNum = colOffset + 1
+                else:
+                    #MapNoteToPad(padIdx, noteVal)
+                    #_PadMap[padIdx].NoteInfo.MIDINote = noteVal
+                    _PadMap[padIdx].NoteInfo.ChordNum = -1
+                
+                _NoteMap[padIdx] = noteVal
+
+                if(_PadMap[padIdx].NoteInfo.ChordNum < 0): # not a chord pad, so its ok
+                    if(noteVal not in _NoteMapDict.keys()): 
+                        _NoteMapDict[noteVal] = [padIdx]
+                    elif(DEFAULT_SHOW_ALL_MATCHING_CHORD_NOTES):
+                        if(padIdx not in _NoteMapDict[noteVal]):
+                            _NoteMapDict[noteVal].append(padIdx)
+
+                _PadMap[padIdx].NoteInfo.IsRootNote = (colOffset % notesInScale) == 0 # (colOffset == 0) or (colOffset == notesInScale)
+
+        _ScaleDisplayText = NotesList[_faveNoteIdx] + str(startOctave) + " " + HarmonicScaleNamesT[harmonicScale]
+    # elif(_PadMode.Mode == MODE_DRUM):
+    #     pads = DrumPads()
+    #     for noteOffs, padIdx in enumerate(pads):
+    #         noteVal = lineGrid[0][0] + noteOffs
+    #         MapNoteToPad(padIdx, noteVal)
+    #         #_PadMap[padIdx].NoteInfo.MIDInote = noteVal
+    #         _PadMap[padIdx].NoteInfo.IsRootNote = (noteOffs % notesInScale) == 0
             
-            _NoteMap[padIdx] = noteVal
-
-            if(_PadMap[padIdx].NoteInfo.ChordNum < 0): # not a chord pad, so its ok
-                if(noteVal not in _NoteMapDict.keys()): 
-                    _NoteMapDict[noteVal] = [padIdx]
-                elif(DEFAULT_SHOW_ALL_MATCHING_CHORD_NOTES):
-                    if(padIdx not in _NoteMapDict[noteVal]):
-                        _NoteMapDict[noteVal].append(padIdx)
-
-
-            _PadMap[padIdx].NoteInfo.IsRootNote = (colOffset % notesInScale) == 0 # (colOffset == 0) or (colOffset == notesInScale)
-
-    _ScaleDisplayText = NotesList[_faveNoteIdx] + str(startOctave) + " " + HarmonicScaleNamesT[harmonicScale]
+    #         #if(noteVal not in _NoteMapDict.keys()):     # if key dopesnt exist,
+    #         #    _NoteMapDict[noteVal] = [padIdx]        # create it
+    #         #elif(padIdx not in _NoteMapDict[noteVal]):  # else
+    #         #    _NoteMapDict[noteVal].append(padIdx)    # add it to the existing list
+            
+                
+            
     #prn(lvl0, 'Scale:',_ScaleDisplayText)
     #RefreshDisplay() #    DisplayTimedText('Scale: ' + _ScaleDisplayText)
 
@@ -2607,20 +2670,25 @@ def GetChannelMapActive():
     return _ChannelMap[_CurrentChannel-1]
 
 def SetPadMode():
+    
     RefreshShiftAlt()
+    print('ok', _PadMode.Name)
 
     if(_PadMode.Mode == MODE_PATTERNS):
         UpdatePatternModeData()
     elif(_PadMode.Mode == MODE_PERFORM):
         ClearAllPads()
         if(_isAltMode):
+            print('ok2')
             UpdateMarkerMap()
             UpdateProgressMap()
             RefreshProgress()
 
     RefreshPadModeButtons() # lights the button
 
+    print('ok3')
     RefreshAll()
+    print('ok4')
 
 def getCurrChanIdx():
     return channels.selectedChannel()
@@ -3025,8 +3093,8 @@ def ShowNote(note, isOn = True):
         dim = dimFull
     
     noteDict = _NoteMapDict
-    if(_PadMode.Mode == MODE_DRUM) and (isFPCActive()):
-        noteDict = _FPCNotesDict
+    #if(_PadMode.Mode == MODE_DRUM) and (isFPCActive()):
+    #    noteDict = _NoteMapDict
     
     if(note in noteDict):
         pads = noteDict[note]
@@ -3041,6 +3109,9 @@ def UpdateWindowStates():
     global _ShowPianoRoll
     global _ShowChannelEditor
     global _ShowCSForm
+
+    if isNoMacros():
+        return 
 
     chanIdx = getCurrChanIdx()
 
@@ -3059,6 +3130,10 @@ def UpdateWindowStates():
     RefreshWindowStates()
 
 def RefreshWindowStates():
+
+    if isNoMacros():
+        return 
+
     if(_ShowChanRack):
         shd = shDark
         if(ui.getFocused(widChannelRack)):
@@ -3110,6 +3185,23 @@ modeDrumAlt = TnfxPadMode('Drum Alt', MODE_DRUM, IDDrum, True)
 modePerform = TnfxPadMode('Perform', MODE_PERFORM, IDPerform, False)
 modePerformAlt = TnfxPadMode('Perform Alt', MODE_PERFORM, IDPerform, True)
 
+def isNoNav():
+    return _PadMode.NavSet.NoNav
+
+def isNoMacros():
+    return (_PadMode.NavSet.MacroNav == False) or (isNoNav())
+
+
+
+def DrumPads():
+    return getDrumPads(_isAltMode, isNoNav())
+
+def NotePads():
+    if(isNoNav()):
+        return pdAllPads
+    else:
+        return pdWorkArea
+
 def InititalizePadModes():
     global _PadMode 
     global modePattern
@@ -3138,13 +3230,13 @@ def InititalizePadModes():
     modeDrum.NavSet = TnfxNavigationSet(nsDefault)
     modeDrum.AllowedNavSets = [nsDefault, nsUDLR]
 
-    modeDrumAlt.NavSet = TnfxNavigationSet(nsNone)
-    modeDrumAlt.AllowedNavSets = [nsDefault, nsUDLR]
+    modeDrumAlt.NavSet = TnfxNavigationSet(nsDefault2)
+    modeDrumAlt.AllowedNavSets = [nsDefault2, nsDefault, nsUDLR, nsNone]
 
     modePerform.NavSet = TnfxNavigationSet(nsNone)
     modePerform.AllowedNavSets = [nsNone, nsDefault, nsUDLR]
 
-    modePerformAlt = TnfxNavigationSet(nsNone)
+    modePerformAlt.NavSet = TnfxNavigationSet(nsNone)
     modePerformAlt.AllowedNavSets = [nsNone, nsDefault, nsUDLR]
 
     _PadMode = modePattern
