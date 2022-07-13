@@ -156,7 +156,7 @@ def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True):
 
     SetPadRGB(idx, r, g, b)
 
-    _PadMap[idx].Color = col 
+    #_PadMap[idx].Color = col 
     
     if(bSaveColor):
         _ColorMap[idx].PadColor = col 

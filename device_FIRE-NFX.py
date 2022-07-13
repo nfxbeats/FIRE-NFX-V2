@@ -288,7 +288,8 @@ def OnRefresh(flags):
         if (_PadMode.Mode == MODE_DRUM):
             RefreshDrumPads()
         elif(_PadMode.Mode == MODE_PATTERNS):
-            RefreshChannelStrip()
+            scrollTo = _CurrentChannel != channels.channelNumber()
+            RefreshChannelStrip(scrollTo)
         elif(_PadMode.Mode == MODE_NOTE):
             RefreshNotes()
 
@@ -648,7 +649,8 @@ def HandlePads(event, padNum, pMap):
             if(padNum in pdFPCChannels):
                 HandleDrums(event, padNum)
         elif(_PadMode.Mode == MODE_PATTERNS):
-            if(padNum in pdPatternStripA):
+            apads, bpads = getPatternPads()
+            if(padNum in apads): # was in pdPatternStripA
                 if(_AltHeld):
                     CopyPattern(pMap.FLIndex)
                 else:
@@ -903,20 +905,19 @@ def getPatternMap():
 def HandlePatternStrip(padNum):
     global _PatternMap
     global _PatternSelectedMap
-    #patt = _PadMap[padNum].FLIndex
     patternMap = getPatternMap()
     pattIdx = -1
     pattOffset = getPatternOffsetFromPage()
-    
-    if(padNum in pdPatternStripA):
-        pattIdx = pdPatternStripA.index(padNum)
-    elif(padNum in pdPatternStripB):
-        pattIdx = pdPatternStripB.index(padNum)
+    patternStripA, patternStripB = getPatternPads()
+
+    if(padNum in patternStripA):
+        pattIdx = patternStripA.index(padNum)
+    elif(padNum in patternStripB):
+        pattIdx = patternStripB.index(padNum)
 
     pattNum = patternMap[pattIdx + pattOffset].FLIndex 
-    print('pat', pattNum, pattIdx)
     if(patterns.patternNumber() != pattNum): # patt.FLIndex):
-        if(padNum in pdPatternStripA):
+        if(padNum in patternStripA):
             patterns.jumpToPattern(pattNum)
         else:
             if(_isAltMode):
@@ -948,14 +949,19 @@ def HandlePatternChanges():
             prn(lvlA, 'pattern added/removed')
             _PatternCount = patterns.patternCount()
             UpdatePatternModeData() 
+            RefreshPatternStrip()
+
         else:
             prn(lvlA, 'selected pattern changed', patterns.patternNumber())
             if _CurrentPattern != patterns.patternNumber():
                 UpdatePatternModeData(patterns.patternNumber()) 
+                RefreshPatternStrip(True)
             else:
                 UpdatePatternModeData() 
+                RefreshPatternStrip()
+
         _CurrentPattern = patterns.patternNumber()
-        RefreshPatternStrip()
+        
         
 
     if(patterns.patternCount() == 0) and (_CurrentPattern == 1): # empty project, set to 1
@@ -1578,7 +1584,7 @@ def RefreshNavPads():
     if(showNoteRepeat):
         if(_NoteRepeat):
             SetPadColor(pdNoteRepeat, colNoteRepeat, dimBright)
-            SetPadColor(pdNoteRepeatLength, colNoteRepeatLength, dimBright)
+            SetPadColor(pdNoteRepeatLength, 1, dimBright)
         else:
             SetPadColor(pdNoteRepeat, colNoteRepeat, dimDim)
             SetPadColor(pdNoteRepeatLength, colNoteRepeatLength, dimDefault)
@@ -1880,10 +1886,11 @@ def RefreshPlaylist():
         else:
             RefreshProgress()
 
-def RefreshChannelStrip(): # was (patMap: TnfxPattern, nfxMixer):
+def RefreshChannelStrip(scrollToChannel = False): # was (patMap: TnfxPattern, nfxMixer):
     global _ChannelMap
     global _CurrentChannel
     global _PatternMap
+    global _ChannelPage
     global _PadMap
 
     #only run when in paatern mode
@@ -1893,22 +1900,32 @@ def RefreshChannelStrip(): # was (patMap: TnfxPattern, nfxMixer):
     if(len(_ChannelMap) == 0):
         return
 
-    # determine the offset. 
-    channelsPerPage = len(pdPatternStripA)
-    pageOffset = getChannelOffsetFromPage() 
-
     channelMap = _ChannelMap
-
-
-    prn(lvlA, 'RefreshChannelStrip()')
-
     currChan = getCurrChanIdx() # channels.channelNumber()
     currMixerNum = channels.getTargetFxTrack(currChan)
 
+    # determine the offset. 
+    channelsPerPage = getChannelModeLength()
+    pageOffset = getChannelOffsetFromPage() 
+
+    prn(lvlA, 'RefreshChannelStrip()', scrollToChannel, currChan, 'page', _ChannelPage, 'to page', (currChan // channelsPerPage) + 1 )
+
+    channelStripA, channelStripB = getChannelPads()
+
+    # is the current channel visible and do we care?
+    if(scrollToChannel):
+        pageNum = (currChan // channelsPerPage) + 1
+        prn(lvlA, 'scroll to channel', currChan, pageNum, _ChannelPage)
+        if(_ChannelPage != pageNum):
+            _ChannelPage = pageNum 
+            ChannelPageNav(0)
+            pageOffset = getChannelOffsetFromPage()    
+            prn(lvlA, 'scroll to channel', currChan, pageNum, _ChannelPage)
+
     for padOffset in range(channelsPerPage):
         chanIdx = padOffset + pageOffset
-        padAIdx = pdChanStripA[padOffset]
-        padBIdx = pdChanStripB[padOffset]
+        padAIdx = channelStripA[padOffset]
+        padBIdx = channelStripB[padOffset]
         channel = TnfxChannel(-1,'')
         if(chanIdx < len(channelMap)):
             channel = channelMap[chanIdx]
@@ -1929,62 +1946,38 @@ def RefreshChannelStrip(): # was (patMap: TnfxPattern, nfxMixer):
         else:
             SetPadColor(padBIdx, cOff, dimDefault)
 
-
-    # for padIdx in pdChanStripA:
-    #     pMap = _PadMap[padIdx]
-    #     if(pMap.FLIndex < 0):
-    #         SetPadColor(padIdx,cOff , 0)
-    #     else:
-    #         SetPadColor(padIdx, pMap.Color, dimDefault)
-    
-    # for padIdx in pdChanStripB:
-    #     pMap = _PadMap[padIdx]  
-    #     if(pMap.FLIndex < 0):
-    #         SetPadColor(padIdx, cOff , 0)
-    #     else:
-    #         if(currMixerNum == channels.getTargetFxTrack(pMap.FLIndex)):
-    #             SetPadColor(padIdx, cDimWhite, dimBright)
-    #         else:
-    #             SetPadColor(padIdx, cDimWhite, dimDefault)
-
-    prn(lvlA, 'RefreshChanStrip', currChan)
-
     SelectAndShowChannel(currChan)
     RefreshNavPads()
-    
-    # idx = 0
-    # #for chan in range(channels.channelCount()):
-    # for padNum in pdChanStripA:
-    #     pMap = _PadMap[padNum]
-    #     chan = pMap.FLIndex
-    #     # check if there is room on the channel strip
-    #     if(idx <= len(pdChanStripA)): 
-    #         # below needed for HandleChannelStrip()
-    #         dim = dimDefault
-    #         muteColor = cOff  
-    #         padColor = cOff 
-    #         if(chan > -1):
-    #             #if(channels.getChannelType(chan) in [CT_GenPlug, CT_Sampler, CT_Layer]):
-    #             padColor = FLColorToPadColor(channels.getChannelColor(chan))
-    #             muteColor = cDimWhite
-    #             if(channels.isChannelSelected(chan)):
-    #                 dim = dimBright
-    #                 muteColor = cWhite
-    #         pMap.Color = padColor
-    #         mutepadIdx = pdChanStripB[idx]
-    #         SetPadColor(padNum, padColor, dim)
-    #         SetPadColor(mutepadIdx, muteColor, dim) 
-    #         idx += 1
 
 def getChannelOffsetFromPage():
     # returns the index of the first pattern to show on the pattern strip based on the active page
-    return (_ChannelPage-1) * len(pdChanStripA)
+    chanAStrip, chanBStrip = getChannelPads()
+    return (_ChannelPage-1) * len(chanAStrip)
 
 def getPatternOffsetFromPage():
     # returns the index of the first pattern to show on the pattern strip based on the active page
-    return (_PatternPage-1) * len(pdPatternStripA)
+    pattAStrip, pattBStrip = getPatternPads()
+    return (_PatternPage-1) * len(pattAStrip)
 
-def RefreshPatternStrip():
+def getChannelPads():
+    if(isNoNav()):
+        return pdChanStripANoNav, pdChanStripBNoNav
+    return pdChanStripA, pdChanStripB
+
+def getPatternPads():
+    if(isNoNav()):
+        return pdPatternStripANoNav, pdPatternStripBNoNav
+    return pdPatternStripA, pdPatternStripB
+
+def getPatternModeLength():
+    a, b = getPatternPads()
+    return len(a)
+
+def getChannelModeLength():
+    a, b = getChannelPads()
+    return len(a)
+
+def RefreshPatternStrip(scrollToChannel = False):
     # should rely upon _PatternMap or _PatternMapSelected only. should not trly upon _PadMap
     # should use _PatternPage accordingly 
     global _PatternPage
@@ -1995,23 +1988,32 @@ def RefreshPatternStrip():
     patternMap = getPatternMap()
 
     # determine the offset. 
-    patternsPerPage = len(pdPatternStripA)
-    pageOffset = getPatternOffsetFromPage() #(_PatternPage-1) * patternsPerPage # 
+    pageOffset = getPatternOffsetFromPage() 
+
+    patternStripA, patternStripB = getPatternPads()
+    patternsPerPage = getPatternModeLength()
+
+    # is the current pattern visible and do we care?
+    if(scrollToChannel):
+        currPat = patterns.patternNumber()
+        pageNum = (currPat // (patternsPerPage+1)) + 1
+        prn(lvlA, 'scroll to pattern', currPat, pageOffset, pageNum, _PatternPage)
+        if(_PatternPage != pageNum):
+            _PatternPage = pageNum 
+            PatternPageNav(0)
+            pageOffset = getPatternOffsetFromPage()
+            
 
 
-
-    if(len(patternMap) < pageOffset): #check if we need to reset the paging when something is out of range
-        _PatternPage = 0
-        PatternPageNav(-99999)
-        pageOffset = getPatternOffsetFromPage()  
-
-    #print(*patternMap, sep='\n')
-    #print('pageOffset', pageOffset, len(patternMap))
+    # if(len(patternMap) < pageOffset): #check if we need to reset the paging when something is out of range
+    #     _PatternPage = 0
+    #     PatternPageNav(-99999)
+    #     pageOffset = getPatternOffsetFromPage()  
 
     for padOffset in range(0, patternsPerPage):
         patternIdx = padOffset + pageOffset
-        padIdx = pdPatternStripA[padOffset]
-        mutePadIdx = pdPatternStripB[padOffset]
+        padIdx = patternStripA[padOffset]
+        mutePadIdx = patternStripB[padOffset]
         #print('>>>', padOffset, patternIdx, 'pageOffset', pageOffset)
         if(padOffset < patternsPerPage) and (patternIdx < len(patternMap)): # room to use an available pattern?
             pattern = patternMap[patternIdx] 
@@ -2033,78 +2035,80 @@ def RefreshPatternStrip():
         
 
 
-def RefreshPatternStrip3():
-    # this function should rely upon _PadMap only. _PadMap should be updated - via UpdatePatternMap() - prior to call when needed
-    # 
-    #prn(lvlR, 'RefreshPatternStrip', _PatternPage)
-    if (_PadMode.Mode != MODE_PATTERNS):
-        return 
+# def RefreshPatternStrip3():
+#     # this function should rely upon _PadMap only. _PadMap should be updated - via UpdatePatternMap() - prior to call when needed
+#     # 
+#     #prn(lvlR, 'RefreshPatternStrip', _PatternPage)
+#     if (_PadMode.Mode != MODE_PATTERNS):
+#         return 
+#     patternStripA, patternStripB = getPatternPads()
+#     patternsPerPage = getPatternModeLength()
+#     for i in range(0, patternsPerPage):
+#         padIdx = patternStripA[i]
+#         mutePadIdx = patternStripB[i]
+#         padMap = _PadMap[padIdx] 
+#         patMap = _PatternMap[padMap.FLIndex-1] # 0-based
+#         #prn(lvlA, padIdx, padMap.FLIndex, patMap.FLIndex)
+#         if(patterns.patternNumber() == padMap.FLIndex): #current pattern
+#             SetPadColor(padMap.PadIndex, padMap.Color, dimBright)
+#             SetPadColor(mutePadIdx, cWhite, dimBright)
+#         else:
+#             if(patMap.Selected):
+#                 SetPadColor(padMap.PadIndex, padMap.Color, dimDefault)
+#                 SetPadColor(mutePadIdx, cDimWhite, dimBright)
+#             else:
+#                 if(not _isAltMode):
+#                     SetPadColor(padMap.PadIndex, padMap.Color, dimDim)
+#                     SetPadColor(mutePadIdx, cOff, dimDim)
 
-    patternsPerPage = len(pdPatternStripA)
-    for i in range(0, patternsPerPage):
-        padIdx = pdPatternStripA[i]
-        mutePadIdx = pdPatternStripB[i]
-        padMap = _PadMap[padIdx] 
-        patMap = _PatternMap[padMap.FLIndex-1] # 0-based
-        #prn(lvlA, padIdx, padMap.FLIndex, patMap.FLIndex)
-        if(patterns.patternNumber() == padMap.FLIndex): #current pattern
-            SetPadColor(padMap.PadIndex, padMap.Color, dimBright)
-            SetPadColor(mutePadIdx, cWhite, dimBright)
-        else:
-            if(patMap.Selected):
-                SetPadColor(padMap.PadIndex, padMap.Color, dimDefault)
-                SetPadColor(mutePadIdx, cDimWhite, dimBright)
-            else:
-                if(not _isAltMode):
-                    SetPadColor(padMap.PadIndex, padMap.Color, dimDim)
-                    SetPadColor(mutePadIdx, cOff, dimDim)
-
-def RefreshPatternStripOrig():
+# def RefreshPatternStripOrig():
     
-    #prn(lvlR, 'RefreshPatternStrip', _PatternPage)
-    if (_PadMode.Mode != MODE_PATTERNS):
-        return 
+#     #prn(lvlR, 'RefreshPatternStrip', _PatternPage)
+#     if (_PadMode.Mode != MODE_PATTERNS):
+#         return 
+#     patternStripA, patternStripB = getPatternPads()
+#     patternsPerPage = getPatternModeLength()
+#     for i in range(0, patternsPerPage):
+#         padIdx = patternStripA[i]
+#         mutePadIdx = patternStripB[i]
+#         pMap = _PadMap[padIdx] # 0-based
+#         #prn(lvlA, padIdx, pMap.FLIndex, pMap.Color)
+#         if(patterns.patternNumber() == pMap.FLIndex): #current pattern
+#             SetPadColor(pMap.PadIndex, pMap.Color, dimBright)
+#             SetPadColor(mutePadIdx, cWhite, dimBright)
+#         else:
+#             if(patterns.isPatternSelected(patterns.patternNumber())):
+#                 SetPadColor(pMap.PadIndex, pMap.Color, dimBright)
+#             else:
+#                 SetPadColor(pMap.PadIndex, pMap.Color, dimDim)
+#             if(pMap.Color != cOff):
+#                 SetPadColor(mutePadIdx, cDimWhite, dimDim)
+#             else:
+#                 SetPadColor(mutePadIdx, cOff, dimDim)
 
-    patternsPerPage = len(pdPatternStripA) 
-    for i in range(0, patternsPerPage):
-        padIdx = pdPatternStripA[i]
-        mutePadIdx = pdPatternStripB[i]
-        pMap = _PadMap[padIdx] # 0-based
-        #prn(lvlA, padIdx, pMap.FLIndex, pMap.Color)
-        if(patterns.patternNumber() == pMap.FLIndex): #current pattern
-            SetPadColor(pMap.PadIndex, pMap.Color, dimBright)
-            SetPadColor(mutePadIdx, cWhite, dimBright)
-        else:
-            if(patterns.isPatternSelected(patterns.patternNumber())):
-                SetPadColor(pMap.PadIndex, pMap.Color, dimBright)
-            else:
-                SetPadColor(pMap.PadIndex, pMap.Color, dimDim)
-            if(pMap.Color != cOff):
-                SetPadColor(mutePadIdx, cDimWhite, dimDim)
-            else:
-                SetPadColor(mutePadIdx, cOff, dimDim)
 
+# def RefreshPatternPads2_OBS():
+#     prn(lvlR, 'RefreshPatternPads()', _PatternPage)
+#     patternStripA, patternStripB = getPatternPads()    
+#     patternsPerPage = getPatternModeLength()
+#     for i in range(0, patternsPerPage):
+#         padIdx = patternStripA[i]
+#         mutePadIdx = patternStripB[i]
+#         pMap = _PadMap[padIdx] # 0 based
+#         flPattNum = pMap.FLIndex
+#         color = pMap.Color
+#         padIdx = pMap.PadIndex
+#         #pMap = _PadMap[padIdx] # 0-based
+#         if(patterns.patternNumber() == flPattNum): #current pattern
+#             SetPadColor(padIdx, color, dimBright)
+#             SetPadColor(mutePadIdx, cWhite, dimBright)
+#         else:
+#             SetPadColor(padIdx, color, dimDefault)
+#             if(color != cOff):
+#                 SetPadColor(mutePadIdx, cDimWhite, dimDim)
+#             else:
+#                 SetPadColor(mutePadIdx, cOff, dimDim)
 
-def RefreshPatternPads2_OBS():
-    prn(lvlR, 'RefreshPatternPads()', _PatternPage)
-    patternsPerPage = len(pdPatternStripA) 
-    for i in range(0, patternsPerPage):
-        padIdx = pdPatternStripA[i]
-        mutePadIdx = pdPatternStripB[i]
-        pMap = _PadMap[padIdx] # 0 based
-        flPattNum = pMap.FLIndex
-        color = pMap.Color
-        padIdx = pMap.PadIndex
-        #pMap = _PadMap[padIdx] # 0-based
-        if(patterns.patternNumber() == flPattNum): #current pattern
-            SetPadColor(padIdx, color, dimBright)
-            SetPadColor(mutePadIdx, cWhite, dimBright)
-        else:
-            SetPadColor(padIdx, color, dimDefault)
-            if(color != cOff):
-                SetPadColor(mutePadIdx, cDimWhite, dimDim)
-            else:
-                SetPadColor(mutePadIdx, cOff, dimDim)
 def RefreshDisplay():
     global _menuItemSelected
 
@@ -2231,7 +2235,9 @@ def UpdatePadMapForPatterns():
             ResetPadMaps(False)
 
         # patterns
-        pageLen = len(pdPatternStripA)
+        patternStripA, patternStripB = getPatternPads()
+        chanStripA, chanStripB = getChannelPads()
+        pageLen = getPatternModeLength()
         patPageOffs = (_PatternPage-1) * pageLen # first page will = 0
         chanPageOffset = (_ChannelPage-1) * pageLen # first page will = 0
 
@@ -2241,12 +2247,12 @@ def UpdatePadMapForPatterns():
             padColor = cOff 
             flIdx = -1
 
-            pattAPadIdx = pdPatternStripA[padOffset]    # the pad to light up
-            pattBPadIdx = pdPatternStripB[padOffset]    # the secondary pad
+            pattAPadIdx = patternStripA[padOffset]    # the pad to light up
+            pattBPadIdx = patternStripB[padOffset]    # the secondary pad
             pattIdx = padOffset + patPageOffs           # the pattern in _PatternMap to represent
 
-            chanPadIdxA = pdChanStripA[padOffset]       # the pad to light up
-            chanPadIdxB = pdChanStripB[padOffset]       # the secondary pad
+            chanPadIdxA = chanStripA[padOffset]       # the pad to light up
+            chanPadIdxB = chanStripA[padOffset]       # the secondary pad
             chanIdx = padOffset + chanPageOffset        # the channel to represent at this pad
 
             if(pattIdx <= len(patternMap)): # when true, there is data to use
@@ -2492,7 +2498,7 @@ def UpdateChannelMap():
         chanMap.GlobalIndex = channels.getChannelIndex(chan)
         chanMap.Selected = channels.isChannelSelected(chan)
         _ChannelMap.append(chanMap)
-        print('...added', chanMap)
+        #print('...added', chanMap)
         if(chanMap.Selected):
             _ChannelSelectedMap.append(chanMap)
 
@@ -2711,7 +2717,7 @@ def NextKnobMode():
 
 def PatternPageNav(moveby):
     global _PatternPage
-    pageSize = len(pdPatternStripA)
+    pageSize = getPatternModeLength()
     newPage = _PatternPage + moveby 
     #if(newPage > 4):
     #    newPage = 4
@@ -2724,7 +2730,7 @@ def PatternPageNav(moveby):
 
 def ChannelPageNav(moveby):
     global _ChannelPage
-    pageSize = len(pdPatternStripA)
+    pageSize = getPatternModeLength()
     newPage = _ChannelPage + moveby 
     #if(newPage > 4):
     #    newPage = 4
@@ -2734,8 +2740,10 @@ def ChannelPageNav(moveby):
     prn(lvlA, 'ChannelPageNav', _ChannelCount, pageOffs)
     if(0 <= pageOffs <= _ChannelCount ): # allow next page when there are patterns to show
         _ChannelPage = newPage
-    ui.crDisplayRect(0, pageOffs, 0, pageSize, 5000, CR_ScrollToView + CR_HighlightChannelName)
     RefreshPageLights()
+    ui.crDisplayRect(0, pageOffs, 0, pageSize, 5000, CR_ScrollToView + CR_HighlightChannelName)
+
+
 def NavNotesList(val):
     global _NoteIdx
     _NoteIdx += val
