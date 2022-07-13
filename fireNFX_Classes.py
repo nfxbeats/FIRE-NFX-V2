@@ -28,13 +28,7 @@ class TnfxPadMode:
         self.AltNavSet = TnfxNavigationSet(nsDefault)
         self.AllowedNavSets = [nsDefault]
         self.AllowedNavSetIdx = 0
-        # self.ChanNav = False
-        # self.ScaleNav = False
-        # self.SnapNav = False
-        # self.NoteRepeat = False
-        # self.PresetNav = False
-        # self.UDLRNav = False 
-        # self.MacroNav = True 
+        self.LayoutIdx = 0
         
 
 class TnfxProgressStep:
@@ -87,7 +81,9 @@ nsNone = 0
 nsDefault = 1
 nsScale = 2
 nsUDLR = 3
-nsDefault2 = 4
+nsDefaultDrum = 4
+nsDefaultDrumAlt = 5
+
 
 class TnfxNavigationSet:
     def __init__(self, navSet):
@@ -97,6 +93,7 @@ class TnfxNavigationSet:
         self.SnapNav = False
         self.NoteRepeat = False
         self.OctaveNav = False
+        self.LayoutNav = False
         self.PresetNav = False
         self.UDLRNav = False 
         self.MacroNav = True 
@@ -104,11 +101,15 @@ class TnfxNavigationSet:
         if navSet == nsDefault:
             self.ChanNav = True
             self.SnapNav = True
-            self.NoteRepeat = True
             self.PresetNav = True
-        if navSet == nsDefault2:
+        elif navSet == nsDefaultDrum:
             self.ChanNav = True
             self.SnapNav = True
+            self.NoteRepeat = True
+            self.PresetNav = True
+        elif navSet == nsDefaultDrumAlt:
+            self.ChanNav = True
+            self.LayoutNav = True 
             self.OctaveNav = True
             self.PresetNav = True
         elif(navSet == nsScale):

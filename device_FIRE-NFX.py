@@ -67,13 +67,14 @@ _ShowMenu = 0
 _menuItems = ['Option 1','Option 2','Option 3','Option 4','Option 5']
 _selectedItem = 0
 _menuItemSelected = _selectedItem
-
-
-
-
 _menu_ProgressPadLen = ['1 beat', '1 bar', '2 bars', '4 bars']
 _ProgressPadLenIdx = 1 
 
+
+
+lyBanks = 0
+lyStrips = 1
+_Layouts = ['Banks', 'Strips']
 
 #notes/scales
 _ScaleIdx = DEFAULT_SCALE
@@ -116,12 +117,16 @@ _NoteMapDict = {}
 
 
 _SongLen  = -1
+_ScrollTo = True # used to determine when to scroll to the channel/pattern
 
 #endregion 
 
 #region FL MIDI API Events
 def OnInit():
+    global _ScrollTo 
+
     prn(lvlE, 'OnInit()')
+    _ScrollTo = True
 
     
     ClearAllPads()
@@ -160,6 +165,7 @@ def OnInit():
 
     # Init some data
     RefreshAll()
+    _ScrollTo = False  
 
 def ClearAllPads():
     # clear the Pads
@@ -168,6 +174,7 @@ def ClearAllPads():
     
 def OnDoFullRefresh():
     prn(lvlA, 'OnDoFullRefresh')    
+    RefreshAll() 
 
 
 
@@ -650,16 +657,17 @@ def HandlePads(event, padNum, pMap):
                 HandleDrums(event, padNum)
         elif(_PadMode.Mode == MODE_PATTERNS):
             apads, bpads = getPatternPads()
+            chanapads, chanbpads = getChannelPads()
             if(padNum in apads): # was in pdPatternStripA
                 if(_AltHeld):
                     CopyPattern(pMap.FLIndex)
                 else:
                     event.handled = HandlePatternStrip(padNum)
-            elif(padNum in pdPatternStripB):
+            elif(padNum in bpads):
                 event.handled = HandlePatternStrip(padNum)
-            elif(padNum in pdChanStripA):
+            elif(padNum in chanapads):
                 event.handled = HandleChannelStrip(padNum, False)   
-            elif(padNum in pdChanStripB):
+            elif(padNum in chanbpads):
                 event.handled = HandleChannelStrip(padNum, True)
 
 
@@ -676,6 +684,7 @@ def HandleNav(padIdx):
     hNoteRepeat = _PadMode.NavSet.NoteRepeat
     hScaleNav = _PadMode.NavSet.ScaleNav
     hOctaveNav = _PadMode.NavSet.OctaveNav 
+    hLayoutNav = _PadMode.NavSet.LayoutNav
 
     #if(_PadMode.Mode == MODE_PERFORM): # not used by this mode
     #    return
@@ -698,6 +707,11 @@ def HandleNav(padIdx):
     if(hSnapNav):
         if(padIdx in pdSnapNav):
             HandleSnapNav(padIdx)
+    elif(hLayoutNav):
+        if(padIdx == pdLayoutPrev):
+            NavLayout(-1)
+        elif(padIdx == pdLayoutNext):
+            NavLayout(1)
 
     if(hNoteRepeat):
         if(padIdx == pdNoteRepeatLength):
@@ -1000,6 +1014,7 @@ def HandlePattUpDn(ctrlID):
     return True 
 
 def HandleGridLR(ctrlID):
+    global _ScrollTo
     prn(lvlA, 'HandleGridLR()', ctrlID)
     if(_AltHeld):
         if(ctrlID == IDBankL):
@@ -1015,6 +1030,7 @@ def HandleGridLR(ctrlID):
             NavSetList(-1)
         elif(ctrlID == IDBankR):
             NavSetList(1)
+        _ScrollTo = True
         RefreshModes()
     return True
 
@@ -1421,13 +1437,15 @@ def RefreshAll():
     return 
 
 def RefreshModes():
+    global _ScrollTo
     prn(lvlR, 'RefreshModes()')
     if(_PadMode.Mode == MODE_DRUM):
         RefreshDrumPads()
     elif(_PadMode.Mode == MODE_PATTERNS):
         UpdatePatternModeData(patterns.patternNumber())
-        RefreshPatternStrip() 
-        RefreshChannelStrip()
+        RefreshPatternStrip(_ScrollTo) 
+        RefreshChannelStrip(_ScrollTo)
+        _ScrollTo = False
     elif(_PadMode.Mode == MODE_NOTE):
         RefreshNotes()
     elif(_PadMode.Mode == MODE_PERFORM):
@@ -1549,6 +1567,7 @@ def RefreshNavPads():
     showSnapNav = _PadMode.NavSet.SnapNav
     showScaleNav = _PadMode.NavSet.ScaleNav
     showOctaveNav = _PadMode.NavSet.OctaveNav
+    showLayoutNav = _PadMode.NavSet.LayoutNav
     
     
     RefreshGridLR()        
@@ -1592,6 +1611,10 @@ def RefreshNavPads():
     if(showSnapNav):
         SetPadColor(pdSnapUp, colSnapUp, dimDefault)
         SetPadColor(pdSnapDown, colSnapDown, dimDefault)
+    elif(showLayoutNav):
+        SetPadColor(pdLayoutPrev, colLayoutPrev, dimDefault)
+        SetPadColor(pdLayoutNext, colLayoutNext, dimDefault)
+
 
 def RefreshPageLights(clearOnly = False):
     global _PadMode
@@ -1712,11 +1735,14 @@ def RefreshDrumPads():
     pads = DrumPads()
 
     if(_isAltMode): # function in NON FPC mode
-        colors = [cWhite, cCyan, cBlue, cOrange]
+        colors = [cWhite, cCyan, cBlue, cOrange, cGreen, cYellow]
         changeEvery = 16
-            
-        if(DEFAULT_ALT_DRUM_MODE_BANKS == False):
+
+        if(_PadMode.LayoutIdx  == lyStrips):
             changeEvery = 12
+
+        #if(DEFAULT_ALT_DRUM_MODE_BANKS == False):
+        #    changeEvery = 12
 
         for idx, p in enumerate(pads):
             rootNote = 12 # 12 = C1 ?
@@ -2753,6 +2779,15 @@ def NavNotesList(val):
         _NoteIdx = len(NotesList)-1
     prn(lvl0, 'Root Note: ',  NotesList[_NoteIdx])
 
+
+def NavLayout(val):
+    global _PadMode
+    oldIdx = _PadMode.LayoutIdx
+    newIdx = (oldIdx + val) % len(_Layouts)
+    prn(lvlA, 'Layout was' , oldIdx, ' is now ', newIdx, _Layouts[newIdx])   
+    _PadMode.LayoutIdx = newIdx 
+
+
 def NavOctavesList(val):
     global _OctaveIdx
     _OctaveIdx += val
@@ -2785,14 +2820,13 @@ def RefreshGridLR():
     SendCC(IDLeft, SingleColorOff)
     SendCC(IDRight, SingleColorOff)
 
-    if(navSet == nsDefault):
+    if(navSet in [nsDefault, nsDefaultDrum] ):
         SendCC(IDLeft, SingleColorFull)
-    elif(navSet == nsScale):
+    elif(navSet in [nsScale, nsDefaultDrumAlt]):
         SendCC(IDRight, SingleColorFull)
     elif(navSet == nsUDLR):
         SendCC(IDLeft, SingleColorFull)
         SendCC(IDRight, SingleColorFull)
-    
 
 
 def NavScalesList(val):
@@ -3202,7 +3236,7 @@ def isNoMacros():
 
 
 def DrumPads():
-    return getDrumPads(_isAltMode, isNoNav())
+    return getDrumPads(_isAltMode, isNoNav(), _PadMode.LayoutIdx)
 
 def NotePads():
     if(isNoNav()):
@@ -3224,10 +3258,10 @@ def InititalizePadModes():
 
     # _PadMode will be assigned one of these on mode change
     modePattern.NavSet = TnfxNavigationSet(nsDefault)
-    modePattern.AllowedNavSets = [nsDefault, nsUDLR]
+    modePattern.AllowedNavSets = [nsDefault, nsUDLR, nsNone]
 
     modePatternAlt.NavSet = TnfxNavigationSet(nsDefault)
-    modePatternAlt.AllowedNavSets = [nsDefault, nsUDLR]
+    modePatternAlt.AllowedNavSets = [nsDefault, nsUDLR, nsNone]
 
     modeNote.NavSet = TnfxNavigationSet(nsScale)
     modeNote.AllowedNavSets = [nsScale, nsDefault, nsUDLR]
@@ -3236,10 +3270,10 @@ def InititalizePadModes():
     modeNoteAlt.AllowedNavSets = [nsScale, nsDefault, nsUDLR]
 
     modeDrum.NavSet = TnfxNavigationSet(nsDefault)
-    modeDrum.AllowedNavSets = [nsDefault, nsUDLR]
+    modeDrum.AllowedNavSets = [nsDefaultDrum, nsDefaultDrumAlt, nsUDLR]
 
-    modeDrumAlt.NavSet = TnfxNavigationSet(nsDefault2)
-    modeDrumAlt.AllowedNavSets = [nsDefault2, nsDefault, nsUDLR, nsNone]
+    modeDrumAlt.NavSet = TnfxNavigationSet(nsDefaultDrumAlt)
+    modeDrumAlt.AllowedNavSets = [nsDefaultDrumAlt, nsDefaultDrum, nsUDLR, nsNone]
 
     modePerform.NavSet = TnfxNavigationSet(nsNone)
     modePerform.AllowedNavSets = [nsNone, nsDefault, nsUDLR]

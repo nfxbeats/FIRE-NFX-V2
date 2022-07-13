@@ -88,19 +88,20 @@ pdFPCChannels = [ 8,  9, 10, 11,
                  56, 57, 58, 59 ]
 
 #helper to get the pads needed to map to notes.
-def getDrumPads(isAlt, noNav):
+def getDrumPads(isAlt, noNav, layoutIdx):
     pads = []
     if(not isAlt): # FPC Pads
         pads.extend(pdFPCA)
         pads.extend(pdFPCB)
     else: #ALT Drum mode 
-        if(DEFAULT_ALT_DRUM_MODE_BANKS): # bank style
+        #if(DEFAULT_ALT_DRUM_MODE_BANKS): # bank style
+        if(layoutIdx == 0): # bank style
             pads.extend(pdBankA)
             pads.extend(pdBankB)
             pads.extend(pdBankC)
             if(noNav):
                 pads.extend(pdBankD)
-        else: # note style
+        else: # strip style
             if(noNav):
                 pads.extend(pdRowD)
                 pads.extend(pdRowC)
@@ -181,6 +182,12 @@ pdSnapDown = 61
 pdSnapNav = [pdSnapUp, pdSnapDown]
 colSnapUp = getShade(cYellow, shNorm)
 colSnapDown = getShade(cYellow, shDark)
+
+pdLayoutPrev = 45
+pdLayoutNext = 61
+pdLayoutNav = [pdLayoutPrev, pdLayoutNext]
+colLayoutPrev = getShade(cMagenta, shNorm)
+colLayoutNext = getShade(cMagenta, shDim)
 
 #nav for NOTES
 pdRootNotePrev = 45
