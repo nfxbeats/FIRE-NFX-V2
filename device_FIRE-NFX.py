@@ -70,7 +70,7 @@ _menuItemSelected = _selectedItem
 _menu_ProgressPadLen = ['1 beat', '1 bar', '2 bars', '4 bars']
 _ProgressPadLenIdx = 1 
 
-
+_DirtyChannelFlags = 0
 
 lyBanks = 0
 lyStrips = 1
@@ -86,6 +86,7 @@ _NoteRepeat = False
 _NoteRepeatLengthIdx = BeatLengthsDefaultOffs
 _isRepeating = False
 
+_KnownPlugins = ['Strum GS-2']
 
 _SnapIdx = InitialSnapIndex
 _OctaveIdx = OctavesList.index(DEFAULT_OCTAVE)
@@ -268,6 +269,22 @@ def OnUpdateBeatIndicator(value):
         else:
             SendCC(BeatIndicators[i], SingleColorOff)
 
+def OnDirtyChannel(chan, flags):
+    global _DirtyChannelFlags
+    # Called on channel rack channel(s) change, 
+    # 'index' indicates channel that changed or -1 when all channels changed
+    # NOTE PER DOCS: 
+    #     collect info about 'dirty' channels here but do not handle channels(s) refresh, 
+    #     wait for OnRefresh event with HW_ChannelEvent flag    
+    #
+    # CE_New	0	new channel is added
+    # CE_Delete	1	channel deleted
+    # CE_Replace	2	channel replaced
+    # CE_Rename	3	channel renamed
+    # CE_Select	4	channel selection changed    
+    _DirtyChannelFlags = flags
+    #prn(lvlA, 'Dirty Channel Event', chan, flags)
+
 def OnRefresh(flags):
     prn(lvlA, 'OnRefresh()', flags)
     #HW_Dirty_Patterns = 1024
@@ -290,6 +307,8 @@ def OnRefresh(flags):
         prn(lvlA, 'channel group changed', _ChannelCount, channels.channelCount())
         HandleChannelGroupChanges()    
     if(HW_ChannelEvent & flags):
+        # _DirtyChannelFlags should have the specific CE_xxxx flags if needed
+        # https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/midi_scripting.htm#OnDirtyChannelFlag
         prn(lvlA, 'channel event', _CurrentChannel, channels.channelNumber())
         UpdateChannelMap()  
         if (_PadMode.Mode == MODE_DRUM):
@@ -331,6 +350,12 @@ def OnProjectLoad(status):
 def OnSendTempMsg(msg, duration):
     print('TempMsg', msg, duration)
 
+def isKnownPlugin():
+    pluginName = plugins.getPluginName(getCurrChanIdx())
+    prn(lvlA, 'checking if known', pluginName)
+    return (pluginName in _KnownPlugins)
+
+
 def OnMidiIn(event):
     global _ShiftHeld
     global _AltHeld
@@ -351,7 +376,8 @@ def OnMidiIn(event):
         event.handled = True
         return
 
-    if(ctrlID in KnobCtrls) and (_KnobMode in [KM_USER1, KM_USER2]):
+    if(ctrlID in KnobCtrls) and (_KnobMode in [KM_USER1, KM_USER2]) and (not isKnownPlugin()):
+        prn(lvlA, 'um not known')
         # short cutting these to be processed in OnMidiMsg() to use processMIDICC per the docs
         if (event.status in [MIDI_NOTEON, MIDI_NOTEOFF]): # to prevent the mere touching of the knob generating a midi note event.
             event.handled = True
@@ -428,7 +454,7 @@ def OnMidiIn(event):
     # determine where it's best to handle. For example, the play button should trigger 
     # immediately on press and ignore on release, so we code it that way
 
-    if(event.data2 > 0): # Pressed
+    if(event.data2 > 0) and (not event.handled): # Pressed
         if(_ShiftHeld):
             HandleShifted(event)
 
@@ -1041,6 +1067,8 @@ def HandleKnobMode():
     return True
 
 def HandleKnob(event, ctrlID):
+    prn(lvlA, 'HandleKnob()', event.data1, event.data2, ctrlID, getCurrChanIdx(), _KnobMode)
+
     if(event.isIncrement != 1):
         event.inEv = event.data2
         if event.inEv >= 0x40:
@@ -1051,11 +1079,9 @@ def HandleKnob(event, ctrlID):
 
     value = event.outEv
 
-    prn(lvlH, 'HandleKnob()', event.data1, event.data2, ctrlID, getCurrChanIdx(), _KnobMode)
+    chanNum = getCurrChanIdx() #  channels.channelNumber()
 
     if _KnobMode == KM_CHANNEL :
-        chanNum = getCurrChanIdx() #  channels.channelNumber()
-        
         recEventID = channels.getRecEventId(chanNum)
         if chanNum > -1: # -1 is none selected
             # check if a pad is being held for the FPC params
@@ -1108,21 +1134,43 @@ def HandleKnob(event, ctrlID):
                 return HandleKnobReal(recEventID + REC_Mixer_EQ_Gain,  value, 'Mx EQLo: '+ mixerName, True)
             elif ctrlID == IDKnob4:
                 return HandleKnobReal(recEventID + REC_Mixer_EQ_Gain + 2,  value, 'Mix EQHi: '+ mixerName, True)
-    else: 
+    elif(isKnownPlugin()):
+        recEventID = channels.getRecEventId(getCurrChanIdx())
+        pluginName = plugins.getPluginName(getCurrChanIdx())
+        plugin = getPlugin(pluginName)
+        pOffset = 0
+        
+        if(_KnobMode == KM_USER2):
+            pOffset = 4
+
+        prn(lvlA, 'KM', pOffset, pluginName, len(plugin.Parameters), _KnobMode)
+        for knob in range(4):
+            knobID = IDKnob1 + knob
+            if(ctrlID == knobID):
+                hasParam = (len(plugin.Parameters) >= (knob+pOffset + 1))
+                prn(lvlA, 'KM2, Has Param:', hasParam, 'knobID', knobID )
+                if( hasParam ):
+                    param = plugin.Parameters[knob + pOffset]
+                    prn(lvlA, 'KM3', param.Caption, param.Offset)   
+                    return HandleKnobReal(recEventID + param.Offset,  value,  param.Caption + ': ',  param.Bipolar, param.StepsAfterZero)
+                    # turn HandleKnobReal(recEventID + REC_Mixer_Vol,  value, 'Mx Vol: ' + mixerName , False)
+    else:  #user modes..
         if (event.status in [MIDI_NOTEON, MIDI_NOTEOFF]):
             event.handled = True
         return True # these knobs will be handled in OnMidiMsg prior to this.
 
 
-def HandleKnobReal(recEventIDIndex, value, Name, Bipolar):
+def HandleKnobReal(recEventIDIndex, value, Name, Bipolar, stepsAfterZero = 0):
     knobres = 1/64
+    if(stepsAfterZero > 0):
+        knobres = 1/stepsAfterZero
+        prn(lvlA, 'knobres', knobres, stepsAfterZero)
+
     currVal = device.getLinkedValue(recEventIDIndex)
-    #prn(lvlH, 'HandleKnobReal', Name, value,  recEventIDIndex, Bipolar, currVal, knobres) 
-    #general.processRECEvent(recEventIDIndex, value, REC_MIDIController)
+    #general.processRECEvent(recEventIDIndex, value, REC_MIDIController) #doesnt use knobres
     mixer.automateEvent(recEventIDIndex, value, REC_MIDIController, 0, 1, knobres) 
     currVal = device.getLinkedValue(recEventIDIndex)
     valstr = device.getLinkedValueString(recEventIDIndex)
-    #DisplayTextTop('Value: ' + valstr )
     DisplayBar2(Name, currVal, valstr, Bipolar)
     return True
 
@@ -1313,7 +1361,7 @@ def HandleBrowserButton():
     _ShowMenu = not _ShowMenu
     prn(lvlA, 'Browser (MENU)', _ShowMenu, _menuItems[0], plugins.getName(_CurrentChannel))
     if(_ShowMenu):
-        SendCC(IDBrowser, SingleColorHalfBright) 
+        SendCC(IDBrowser, DualColorFull2)  #SingleColorHalfBright
         if( plugins.getPluginName(_CurrentChannel) == 'Strum GS-2'):
             prn(lvlA, 'Strum GS-2')
             _menuItems = ['Keyboard', 'Guitar', 'Loop']
@@ -1925,6 +1973,9 @@ def RefreshChannelStrip(scrollToChannel = False): # was (patMap: TnfxPattern, nf
 
     if(len(_ChannelMap) == 0):
         return
+    
+    if len(_ChannelMap) != channels.channelCount():
+        UpdateChannelMap()
 
     channelMap = _ChannelMap
     currChan = getCurrChanIdx() # channels.channelNumber()
@@ -2398,7 +2449,7 @@ def UpdateProgressMap(autodetect = True):
     selBarStart = getBarFromAbsTicks(selStart)
     selBarEnd =  getBarFromAbsTicks(selEnd)
     prn(lvlA, 'Selection:', selStart, selEnd, selBarStart , selBarEnd)
-    if(selStart > -1):
+    if(selEnd > -1): #this will be -1 if nothing selected
         songLenAbsTicks = selEnd - selStart
         songLenBars = selBarEnd - selBarStart
     else:
@@ -2416,18 +2467,16 @@ def UpdateProgressMap(autodetect = True):
 
     padBarLen = 1
     if(_ProgressPadLenIdx == 0): # 1 beat
-        padBarLen = 0 #getBeatLenInMS(1)
-    elif(_ProgressPadLenIdx == 1): # 1 bars
-        padBarLen = 1
-    elif(_ProgressPadLenIdx == 2): # 2 bars
-        padBarLen = 2
-    elif(_ProgressPadLenIdx == 3): # 4 bars
-        padBarLen = 4
-
-    if(_ProgressPadLenIdx == 0):
         padAbsLen = songLenAbsTicks/progressLen + 1
+        padBarLen = 0 #getBeatLenInMS(1)
     else:
         padAbsLen = getAbsTicksFromBar(2) * padBarLen # get the start of bar 2 aka the length of 1 bar in ticks times the number of bars
+        if(_ProgressPadLenIdx == 1): # 1 bars
+            padBarLen = 1
+        elif(_ProgressPadLenIdx == 2): # 2 bars
+            padBarLen = 2
+        elif(_ProgressPadLenIdx == 3): # 4 bars
+            padBarLen = 4
 
     for padIdx in range(progressLen):
         progressPosAbsTicks = int(padIdx * padAbsLen)  + selStart # returns 0..SONGLENGTH_ABSTICKS
@@ -3030,10 +3079,13 @@ def ShowChannelRack(showVal, bUpdateDisplay = False):
     isShowing = ui.getVisible(widChannelRack)
     isFocused = ui.getFocused(widChannelRack)
 
+    prn(lvlA, 'ShowChanRack', showVal, isShowing, isFocused)
     if(showVal == -1): #toggle
         #if(_ShowChanRack == 1) and (isFocused): #if not focused, activate it
-        if(isShowing) and (isFocused) and (showVal == 0): # only hide when has focus to allow us to activate windows  for copy/cut/paste
+        if(isShowing):
             showVal = 0
+            if(not isFocused):      # if not focused already, activate it
+                showVal = 1
         else:
             showVal = 1
 
@@ -3283,3 +3335,5 @@ def InititalizePadModes():
 
     _PadMode = modePattern
 
+def SetChannelParam(offset, value):
+    plugins.setParamValue(value, offset, getCurrChanIdx(), -1)

@@ -20,19 +20,19 @@ def getFPCPlugin():
 
 def getStrumGS2Plugin():
     plStrumGS2 = TnfxPlugin('Strum GS-2')
-    plStrumGS2.Parameters.append( TnfxParameter(0, 'Play Mode',   0, 'Guitar',  False)  )
-    plStrumGS2.Parameters.append( TnfxParameter(4, 'Auto Strum',  0, 'Off',     False)  )
+    plStrumGS2.Parameters.append( TnfxParameter(0, 'Play Mode',   0, 'Guitar',  False, 2)  )
+    plStrumGS2.Parameters.append( TnfxParameter(4, 'Auto Strum',  0, 'Off',     False, 1)  )
     plStrumGS2.Parameters.append( TnfxParameter(7, 'Chord Type',  0, 'Movable', False)  )
     plStrumGS2.Parameters.append( TnfxParameter(8, 'Voicing Pos', 0, 'Fret 1',  False)  )
     return plStrumGS2
 
 def getPlugin(pluginName):
-    if(pluginName == 'Strum-GS2'):
+    if(pluginName == 'Strum GS-2'):
         return getStrumGS2Plugin()
     else:
         return TnfxPlugin('Not Found')
 
-_KnownPlugins = ['FPC', 'Strum-GS2']
+
 
 
 

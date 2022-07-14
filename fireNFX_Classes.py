@@ -7,14 +7,14 @@ class TnfxPlugin:
         self.Parameters = list() #
 
 class TnfxParameter:
-    def __init__(self, offset, caption, value, valuestr, bipolar, stepsize = 0, maxvalue = 0):
+    def __init__(self, offset, caption, value, valuestr, bipolar, stepsAfterZero = 1):
         self.Offset = offset 
         self.Caption = caption
         self.Value = value
         self.ValueStr = valuestr
         self.Bipolar = bipolar 
-        self.StepSize = stepsize
-        self.MaxValue = maxvalue
+        self.StepsAfterZero = stepsAfterZero
+        self.StepSize = 1/stepsAfterZero # 0 and 1
 
 
 
