@@ -51,7 +51,7 @@ DEFAULT_REOPEN_WINDOWS_AFTER_CLOSE_ALL = False # after a close all you have the 
 
 DEFAULT_MARKER_PREFIX_TEXT = "nfx#"  # markers created by the script will have this prefix 
 
-DEFAULT_SHOW_PRN = True # shows extra info I use when debugging. may affect performance when True
+DEFAULT_SHOW_PRN = False # shows extra info I use when debugging. may affect performance when True
 
 DEFAULT_ALT_DRUM_MODE_BANKS = True # when true, will display four banks in Al DRUM mode. otherwise it uses Row4..Row1 order
 
