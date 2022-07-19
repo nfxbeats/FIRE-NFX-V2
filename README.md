@@ -1,2 +1,84 @@
 # FIRE-NFX-V2
-see: https://www.youtube.com/watch?v=s-BrgGLYGho
+The most advanced MIDI interface for FL Studio and the Akai FIRE ever created.  
+<br>
+## Intro and Installation
+
+Please read each following section for proper set up and usage. It is vital you can identify the proper folders and can download and copy files to be sucessful at installation.  
+
+This script requires FL Studio 20.9 or greater and an Akai FIRE Midi device.
+
+<br>  
+
+## *User Data Folder*
+
+Before installing this, you must know the location of your **User Data Folder** used by FL Studio. And more specifically you need to know how to get to the **MIDI Hardware Folder** that is located within/below the **User Data Folder**
+
+You can find out how to get your specific **User Data Folder** location from the official [FL Studio documentation on the User Data Folder](https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/envsettings_files.htm#userdata)
+
+I recommend you open a file explorer and navigate to the folder.
+
+For example purposes and to keep it short, I'll refer to example locations using my **User Data Folder** as:  
+
+    C:\users\nfx\image-line\
+
+**Your's will be different**. 
+
+Once you have the location, you need to navigate to the **MIDI Hardware Folder** under the ***User Data Folder\FL Studio\Settings\Hardware***
+
+So using my example, I would go to:
+
+    C:\users\nfx\image-line\FL Studio\Settings\Hardware\
+
+You may see a few folders in this location already for other devices.
+
+Next, inside of the **MIDI Hardware Folder**, you need to create a folder named **FIRE-NFX-V2** if it doesn't already exist.
+
+This is our **Script Destination Folder** for the FIRE-NFX-V2 files (as an example, yours will be different):
+
+    C:\users\nfx\image-line\FL Studio\Settings\Hardware\FIRE-NFX-V2\
+
+If you prefer to leave you file explorer open with this folder open, it might make copying the files easier later.  
+<br>
+
+## *Script File Download*
+Once you have the folder properly identified, you can download the files from the releases page: 
+
+https://github.com/nfxbeats/FIRE-NFX-V2/releases 
+
+Find the ZIP download for the latest version. Download it and open it in a new window.
+
+In the ZIP file you downloaded, you should open it and go into the first folder it may be named something similar to **FIRE-NFX-V2-Beta-1**. Inside this folder you will see several files. The most important file is the script file named **device_FIRE-NFX.py**. If you see this file, this is the correct source folder.
+
+Next, copy all of the files from this ZIP folder to your **Script Destination Folder**  named "FIRE-NFX-V2" you created in the previous step.
+
+In my example, the files would be copied into:
+
+    C:\users\nfx\image-line\FL Studio\Settings\Hardware\FIRE-NFX-V2\
+<br>
+
+## *First Time Activating The Script*
+At this point you should have the files downloaded and copied into the correct folder and are ready to activate the script in FL Studio.
+
+* In FL Studio press **F10** or select *Options>MIDI Settings*.
+
+* Next click the button labelled **Refresh Device List**.
+
+* Highlight the Akai FIRE device named "**FL STUDIO FIRE**" in the Input section.
+
+* click on the **Controller Type** drop down.
+
+* On the drop down's right side should be listed all the "User" scripts. Look for and select "FIRE-NFX-V2 (user)" from the right side of the list
+
+If you don't see the "FIRE-NFX-V2 (user)" device, it means FL Studio does not see the file. You can try restarting FL Studio or double check your **User Data Folder** location. 
+
+If you had no errors, you should be good to go! Remember, you can switch back the original script in the **Controller Type** drop down at anytime.
+
+You can find basic video tutorials on each mode here:  
+* [FIRE-NFX V2.0 Mode Usage Playlist at YouTube](
+https://www.youtube.com/watch?v=OioXZP5parw&list=PLcoTHKe9_nBqurVeWsaSKxhbmhQIU3xRH) (recommended)
+
+* [Google Slideshow used in video presentation](https://docs.google.com/presentation/d/1k-Fgw1TsIK6J4SiKqOlBo5jZJZRIx5ZqUcfcWG0MuSA/edit?usp=sharing) (incomplete but useful)
+
+Please leave me feedback/bug reports on one of the following:  
+* [/r/warbeats subreddit](https://reddit.com/r/warbeats/) (preferred)
+* [Official FL Studio MIDI Scripting Forum Thread](https://forum.image-line.com/viewtopic.php?f=1994&t=284003)
