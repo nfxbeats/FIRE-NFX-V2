@@ -6,8 +6,8 @@ The most advanced MIDI interface for FL Studio and the Akai FIRE ever created.
 Please read each following section for proper set up and usage. It is vital you can identify the proper folders and can download and copy files to be sucessful at installation.  
 
 This script requires FL Studio 20.9 or greater and an Akai FIRE Midi device.
-
-<br>  
+  
+  <br>  
 
 ## *User Data Folder*
 
@@ -45,16 +45,17 @@ Once you have the folder properly identified, you can download the files from th
 
 https://github.com/nfxbeats/FIRE-NFX-V2/releases 
 
-Find the ZIP download for the latest version. Download it and open it in a new window.
+Find the ZIP download for the latest version. It should be the first link labelled as "**Source code (zip)** " on the page.
+
+Download it and open it in a new window.
 
 In the ZIP file you downloaded, you should open it and go into the first folder it may be named something similar to **FIRE-NFX-V2-Beta-1**. Inside this folder you will see several files. The most important file is the script file named **device_FIRE-NFX.py**. If you see this file, this is the correct source folder.
 
-Next, copy all of the files from this ZIP folder to your **Script Destination Folder**  named "FIRE-NFX-V2" you created in the previous step.
+Next, copy/drag all of the files from this ZIP folder to your **Script Destination Folder** named "FIRE-NFX-V2" that you created in the previous step.
 
 In my example, the files would be copied into:
 
     C:\users\nfx\image-line\FL Studio\Settings\Hardware\FIRE-NFX-V2\
-<br>
 
 ## *First Time Activating The Script*
 At this point you should have the files downloaded and copied into the correct folder and are ready to activate the script in FL Studio.
