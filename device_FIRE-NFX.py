@@ -1,5 +1,14 @@
 # name=FIRE-NFX-V2
 # supportedDevices=FL STUDIO FIRE
+#
+# author: Nelson F. Fernandez Jr. <nfxbeats@gmail.com>
+#
+# develoment started:   11/24/2021
+# first public beta:    07/13/2022
+#
+# a lot of thanks to: Miro, HDSQ and Image-Line
+# 
+
 
 import device
 import midi
@@ -286,14 +295,14 @@ def OnDirtyChannel(chan, flags):
     #prn(lvlA, 'Dirty Channel Event', chan, flags)
 
 def OnRefresh(flags):
-    prn(lvlA, 'OnRefresh()', flags)
+    #prn(lvlA, 'OnRefresh()', flags)
     #HW_Dirty_Patterns = 1024
     
     if(HW_Dirty_LEDs & flags):
         RefreshTransport()
         UpdateWindowStates()
     elif(HW_Dirty_FocusedWindow & flags):
-        prn(lvlA, 'todo', 'handle focus window change')
+        #prn(lvlA, 'todo', 'handle focus window change')
         UpdateWindowStates()
 
     if(HW_Dirty_Performance & flags): # called when new channels or patterns added
@@ -301,15 +310,15 @@ def OnRefresh(flags):
         RefreshPatternStrip()
         
     if(HW_Dirty_Patterns & flags):
-        prn(lvlA, 'pattern event')
+        #prn(lvlA, 'pattern event')
         HandlePatternChanges()
     if(HW_Dirty_ChannelRackGroup & flags):
-        prn(lvlA, 'channel group changed', _ChannelCount, channels.channelCount())
+        #prn(lvlA, 'channel group changed', _ChannelCount, channels.channelCount())
         HandleChannelGroupChanges()    
     if(HW_ChannelEvent & flags):
         # _DirtyChannelFlags should have the specific CE_xxxx flags if needed
         # https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/midi_scripting.htm#OnDirtyChannelFlag
-        prn(lvlA, 'channel event', _CurrentChannel, channels.channelNumber())
+        #prn(lvlA, 'channel event', _CurrentChannel, channels.channelNumber())
         UpdateChannelMap()  
         if (_PadMode.Mode == MODE_DRUM):
             RefreshDrumPads()
@@ -320,18 +329,20 @@ def OnRefresh(flags):
             RefreshNotes()
 
     if(HW_Dirty_Colors & flags):
-        prn(lvlA, 'color change event')
+        #prn(lvlA, 'color change event')
         if (_PadMode.Mode == MODE_DRUM):
             RefreshDrumPads()
         elif(_PadMode.Mode == MODE_PATTERNS):
             RefreshChannelStrip()
     if(HW_Dirty_Tracks & flags):
-        prn(lvlA, 'track change event')
+        #prn(lvlA, 'track change event')
         if(_PadMode.Mode == MODE_PERFORM):
             UpdatePlaylistMap(_isAltMode)
             RefreshPlaylist()
     if(HW_Dirty_Mixer_Sel & flags):
-        prn(lvl0, 'mixer sel event')
+        #prn(lvl0, 'mixer sel event')
+        pass
+
 def OnProjectLoad(status):
     #global PA5D_MODE 
 
@@ -348,11 +359,12 @@ def OnProjectLoad(status):
         RefreshAll()
 
 def OnSendTempMsg(msg, duration):
-    print('TempMsg', msg, duration)
+    #print('TempMsg', msg, duration)
+    pass
 
 def isKnownPlugin():
     pluginName = plugins.getPluginName(getCurrChanIdx())
-    prn(lvlA, 'checking if known', pluginName)
+    #prn(lvlA, 'checking if known', pluginName)
     return (pluginName in _KnownPlugins)
 
 
@@ -377,7 +389,6 @@ def OnMidiIn(event):
         return
 
     if(ctrlID in KnobCtrls) and (_KnobMode in [KM_USER1, KM_USER2]) and (not isKnownPlugin()):
-        prn(lvlA, 'um not known')
         # short cutting these to be processed in OnMidiMsg() to use processMIDICC per the docs
         if (event.status in [MIDI_NOTEON, MIDI_NOTEOFF]): # to prevent the mere touching of the knob generating a midi note event.
             event.handled = True
@@ -392,7 +403,7 @@ def OnMidiIn(event):
         cMap = getColorMap()
         col = cMap[padNum].PadColor
         if (col == cOff):
-            col = cRed
+            col = DEFAULT_PAD_PRESSED_COLOR
 
         if(event.data2 > 0): # pressed
             pMap.Pressed = 1
@@ -449,7 +460,7 @@ def OnMidiIn(event):
 
 
     # handle other "non" Pads
-    prn(lvl0, 'Non Pad detected')
+    # prn(lvl0, 'Non Pad detected')
     # here we will get a message for on (press) and off (release), so we need to
     # determine where it's best to handle. For example, the play button should trigger 
     # immediately on press and ignore on release, so we code it that way
@@ -480,15 +491,17 @@ def OnMidiIn(event):
         event.handled = True 
 
 def OnNoteOn(event):
-    prn(lvlA, 'OnNoteOn()', utils.GetNoteName(event.data1),event.data1,event.data2)
+    #prn(lvlA, 'OnNoteOn()', utils.GetNoteName(event.data1),event.data1,event.data2)
+    pass
 
 def OnNoteOff(event):
-    prn(lvlA, 'OnNoteOff()', utils.GetNoteName(event.data1),event.data1,event.data2)
+    #prn(lvlA, 'OnNoteOff()', utils.GetNoteName(event.data1),event.data1,event.data2)
+    pass
 
 #endregion 
 
 #region Handlers
-def HandleChannelStrip(padNum, isChannelStripB):
+def HandleChannelStrip(padNum): #, isChannelStripB):
     global _PatternMap
     global _ChannelMap
     global _CurrentChannel 
@@ -498,31 +511,42 @@ def HandleChannelStrip(padNum, isChannelStripB):
     prevChanIdx = getCurrChanIdx() # channels.channelNumber()
     pageOffset = getChannelOffsetFromPage()
     padOffset = 0
+#    print('HandleChannelStrip', padNum, isChannelStripB)
 
-    if(padNum in pdChanStripA):
-        padOffset = pdChanStripA.index(padNum)
-    elif(padNum in pdChanStripB):
-        padOffset = pdChanStripB.index(padNum)
-    
+    chanApads, chanBPads = getChannelPads()
+
+    if(padNum in chanApads):
+        padOffset = chanApads.index(padNum)
+        isChannelStripB = False
+    elif(padNum in chanBPads):
+        padOffset = chanBPads.index(padNum)
+        isChannelStripB = True
+
     chanIdx = padOffset + pageOffset
     channelMap = getChannelMap()
     channel = TnfxChannel(-1, "")
     if(chanIdx < len(channelMap) ):
         channel = channelMap[chanIdx]
+
+    #print('HandleChannelStrip', padNum, isChannelStripB, padOffset, 'chan', chanIdx)
     
 
     #pMap = _PadMap[padNum]
     newChanIdx = channel.FLIndex # pMap.FLIndex
-    prn(lvlA, 'HandleChannelStrip', chanIdx, prevChanIdx, newChanIdx, _ShowPianoRoll)
+    #prn(lvlA, 'HandleChannelStrip', chanIdx, prevChanIdx, newChanIdx, _ShowPianoRoll)
     if (newChanIdx > -1): #is it a valid chan number?
-        if(newChanIdx == prevChanIdx): # if it's already on the channel, toggle the windows
-            if (isChannelStripB):
-                ShowPianoRoll(-1, True) 
-            else:
-                ShowChannelEditor(-1, True) 
-        else: #'new' channel, close the previous windows first
-            prn(lvlA, 'hi')
-            SelectAndShowChannel(newChanIdx)
+        if(_ShiftHeld): # we do the mutes when SHIFTed
+            channels.muteChannel(newChanIdx)
+            RefreshChannelStrip(False)
+        else: 
+            #not SHIFTed
+            if(newChanIdx == prevChanIdx): # if it's already on the channel, toggle the windows
+                if (isChannelStripB):
+                    ShowPianoRoll(-1, True) 
+                else:
+                    ShowChannelEditor(-1, True) 
+            else: #'new' channel, close the previous windows first
+                SelectAndShowChannel(newChanIdx)
 
     _CurrentChannel = getCurrChanIdx() # channels.channelNumber()
     _ChannelCount = channels.channelCount()
@@ -541,7 +565,7 @@ def SelectAndShowChannel(newChanIdx, keepPRopen = True):
     if(newChanIdx < 0) or (oldChanIdx < 0):
         return
 
-    prn(lvlA, '----------------selectAndShowChan', newChanIdx, oldChanIdx, getCurrChanIdx(), 'CS', _ShowCSForm, 'CE', _ShowChannelEditor)
+    #prn(lvlA, '----------------selectAndShowChan', newChanIdx, oldChanIdx, getCurrChanIdx(), 'CS', _ShowCSForm, 'CE', _ShowChannelEditor)
 
 
     channels.selectOneChannel(newChanIdx)
@@ -568,7 +592,7 @@ def SelectAndShowChannel(newChanIdx, keepPRopen = True):
     ui.miDisplayRect(mixerTrk, mixerTrk, 5000, CR_ScrollToView)
 
 def HandlePatternStripOld(padNum):
-    prn(lvlH, 'HandlePatternStrip()')
+    #prn(lvlH, 'HandlePatternStrip()')
     global _PatternMap
     global _CurrentPattern
 
@@ -600,7 +624,7 @@ def HandlePatternStripOld(padNum):
     return True
 
 def HandlePlaylist(event, padNum):
-    prn(lvlA, 'HandlePlaylist()')
+    #prn(lvlA, 'HandlePlaylist()')
 
     flIdx = _PadMap[padNum]
 
@@ -656,14 +680,13 @@ def HandleProgressBar(padNum):
     return True
 
 def HandlePads(event, padNum, pMap):  
-    prn(lvlH, 'HandlePads', _CurrentPattern)
+    #print(lvlA, 'HandlePads', padNum)
 
     # 'perfomance'  pads will need a pressed AND release...
 
     if(_PadMode.Mode == MODE_DRUM):
         if (padNum in DrumPads()):
             return HandleDrums(event, padNum)
-
     elif(_PadMode.Mode == MODE_NOTE):
         if(padNum in pdWorkArea):
             return HandleNotes(event, padNum)
@@ -672,7 +695,7 @@ def HandlePads(event, padNum, pMap):
     # some pads we only need on pressed event
     if(event.data2 > 0): # On Pressed
 
-        #macros are handled in OnMidiIn
+        # macros are handled in OnMidiIn
 
         #mode specific
         if(_PadMode.Mode == MODE_NOTE):
@@ -692,9 +715,9 @@ def HandlePads(event, padNum, pMap):
             elif(padNum in bpads):
                 event.handled = HandlePatternStrip(padNum)
             elif(padNum in chanapads):
-                event.handled = HandleChannelStrip(padNum, False)   
+                event.handled = HandleChannelStrip(padNum) #, False)   
             elif(padNum in chanbpads):
-                event.handled = HandleChannelStrip(padNum, True)
+                event.handled = HandleChannelStrip(padNum) #, True)
 
 
     return True
@@ -702,7 +725,7 @@ def HandlePads(event, padNum, pMap):
 def HandleNav(padIdx):
     global _NoteRepeat
     global _SnapIdx
-    prn(lvlA, 'HandleNav', padIdx, _PadMode.NavSet.NoteRepeat )
+    #prn(lvlA, 'HandleNav', padIdx, _PadMode.NavSet.NoteRepeat )
     hChanPads = _PadMode.NavSet.ChanNav
     hPresetNav = _PadMode.NavSet.PresetNav
     hUDLR = _PadMode.NavSet.UDLRNav
@@ -907,7 +930,7 @@ def HandleDrums(event, padNum):
         elif(not _isRepeating):
             ms = getBeatLenInMS(BeatLengthDivs[_NoteRepeatLengthIdx])
             snap = BeatLengthSnap[_NoteRepeatLengthIdx]
-            prn(lvlA, 'rpt', _NoteRepeatLengthIdx, BeatLengthNames[_NoteRepeatLengthIdx], ms, snap)
+            #prn(lvlA, 'rpt', _NoteRepeatLengthIdx, BeatLengthNames[_NoteRepeatLengthIdx], ms, snap)
             setSnapMode(snap)
             device.repeatMidiEvent(event, ms, ms)
             _isRepeating = True
@@ -924,7 +947,7 @@ def HandleDrums(event, padNum):
     pads = DrumPads() 
 
     if(padNum in pads):
-        prn(lvlA, 'updating note value')
+        #prn(lvlA, 'updating note value')
         event.data1 = _PadMap[padNum].NoteInfo.MIDINote
         return False
     else:
@@ -950,12 +973,23 @@ def HandlePatternStrip(padNum):
     pattOffset = getPatternOffsetFromPage()
     patternStripA, patternStripB = getPatternPads()
 
+
     if(padNum in patternStripA):
         pattIdx = patternStripA.index(padNum)
     elif(padNum in patternStripB):
         pattIdx = patternStripB.index(padNum)
+    else:
+        prn(lvlA, 'Handle Pattern Strip error', pattIdx)
 
-    pattNum = patternMap[pattIdx + pattOffset].FLIndex 
+    prn(lvlA, 'Handle Pattern Strip pattIdx', pattIdx)    
+    pattNum = -1
+    if( len(patternMap) >= pattIdx + pattOffset + 1):
+        pattNum = patternMap[pattIdx + pattOffset].FLIndex
+        prn(lvlA, 'Handle Pattern Strip pattIdx', pattNum)     
+    else:
+        return True # nothing else to do
+
+
     if(patterns.patternNumber() != pattNum): # patt.FLIndex):
         if(padNum in patternStripA):
             patterns.jumpToPattern(pattNum)
@@ -986,13 +1020,13 @@ def HandlePatternChanges():
     if (_PatternCount > 0) and (_PadMode.Mode == MODE_PATTERNS): # do pattern mode
         
         if(_PatternCount != patterns.patternCount()):
-            prn(lvlA, 'pattern added/removed')
+            #prn(lvlA, 'pattern added/removed')
             _PatternCount = patterns.patternCount()
             UpdatePatternModeData() 
             RefreshPatternStrip()
 
         else:
-            prn(lvlA, 'selected pattern changed', patterns.patternNumber())
+            #prn(lvlA, 'selected pattern changed', patterns.patternNumber())
             if _CurrentPattern != patterns.patternNumber():
                 UpdatePatternModeData(patterns.patternNumber()) 
                 RefreshPatternStrip(True)
@@ -1024,11 +1058,11 @@ def HandlePattUpDn(ctrlID):
         if(ctrlID == IDPatternUp):
             DisplayTimedText('vZoom Out')
             ui.verZoom(2)
-            SetPlaylistTop()
+            SetTop()
         else:
             DisplayTimedText('vZoom In')
             ui.verZoom(-2)
-            SetPlaylistTop()
+            SetTop()
     else:
         newPattern = patterns.patternNumber() + moveby
         if( 0 <= newPattern <= patterns.patternCount()):   #if it's a valid spot then move it
@@ -1041,16 +1075,16 @@ def HandlePattUpDn(ctrlID):
 
 def HandleGridLR(ctrlID):
     global _ScrollTo
-    prn(lvlA, 'HandleGridLR()', ctrlID)
+    #prn(lvlA, 'HandleGridLR()', ctrlID)
     if(_AltHeld):
         if(ctrlID == IDBankL):
             DisplayTimedText('hZoom Out')
             ui.horZoom(2)
-            SetPlaylistTop()
+            SetTop()
         else:
             DisplayTimedText('hZoom In')
             ui.horZoom(-2)
-            SetPlaylistTop()
+            SetTop()
     else:
         if(ctrlID == IDBankL):
             NavSetList(-1)
@@ -1273,7 +1307,7 @@ def HandlePadMode(event):
             _PadMode = modeDrumAlt
         if(ctrlID == IDPerform): #force a refresh on the pl tack bar A to clear it
             _PadMode = modePerformAlt
-            print(_PadMode.Name)
+            #print(_PadMode.Name)
             
 
     elif(_AltHeld) and (_ShiftHeld): # Shift modes
@@ -1491,6 +1525,7 @@ def RefreshModes():
         RefreshDrumPads()
     elif(_PadMode.Mode == MODE_PATTERNS):
         UpdatePatternModeData(patterns.patternNumber())
+        UpdatePatternModeData()
         RefreshPatternStrip(_ScrollTo) 
         RefreshChannelStrip(_ScrollTo)
         _ScrollTo = False
@@ -1532,8 +1567,10 @@ def RefreshShiftAlt():
 
     if(_ShiftHeld):
         RefreshShiftedStates()
+        RefreshChannelStrip(False)
     else:  
         SendCC(IDShift, DualColorOff)
+        RefreshChannelStrip(False)
         RefreshPadModeButtons()
         RefreshTransport()
 
@@ -1581,9 +1618,9 @@ def RefreshShiftedStates():
 
     if(ui.isPrecountEnabled()):
         SendCC(IDCount, ColOn)
-
     if(ui.isLoopRecEnabled()):
         SendCC(IDLoop, ColOn)
+
 def RefreshPadsFromPadMap():
     for pad in range(0,64):
         SetPadColor(pad, _PadMap[pad].Color, dimDefault) 
@@ -1630,6 +1667,7 @@ def RefreshNavPads():
         RefreshUDLR()
         return 
 
+    # these two are exclusive as they use the same pads in diff modes
     if(showScaleNav):
         for idx, pad in enumerate(pdNoteFuncs):
             color = colNoteFuncs[idx]
@@ -1651,14 +1689,15 @@ def RefreshNavPads():
     if(showNoteRepeat):
         if(_NoteRepeat):
             SetPadColor(pdNoteRepeat, colNoteRepeat, dimBright)
-            SetPadColor(pdNoteRepeatLength, 1, dimBright)
+            SetPadColor(pdNoteRepeatLength, colNoteRepeatLength, dimDim)
         else:
-            SetPadColor(pdNoteRepeat, colNoteRepeat, dimDim)
-            SetPadColor(pdNoteRepeatLength, colNoteRepeatLength, dimDefault)
+            SetPadColor(pdNoteRepeat, colNoteRepeat, dimDefault)
+            SetPadColor(pdNoteRepeatLength, colNoteRepeatLength, dimDim)
 
+    # these two are exclusive as they use the same pads in diff modes
     if(showSnapNav):
         SetPadColor(pdSnapUp, colSnapUp, dimDefault)
-        SetPadColor(pdSnapDown, colSnapDown, dimDefault)
+        SetPadColor(pdSnapDown, colSnapDown, dimDim)
     elif(showLayoutNav):
         SetPadColor(pdLayoutPrev, colLayoutPrev, dimDefault)
         SetPadColor(pdLayoutNext, colLayoutNext, dimDefault)
@@ -1984,14 +2023,14 @@ def RefreshChannelStrip(scrollToChannel = False): # was (patMap: TnfxPattern, nf
     # determine the offset. 
     channelsPerPage = getChannelModeLength()
     pageOffset = getChannelOffsetFromPage() 
+    pageNum = (currChan // channelsPerPage) + 1
 
-    prn(lvlA, 'RefreshChannelStrip()', scrollToChannel, currChan, 'page', _ChannelPage, 'to page', (currChan // channelsPerPage) + 1 )
+    #print(lvlA, 'RefreshChannelStrip()', scrollToChannel, currChan, 'page', _ChannelPage, 'to page', pageNum )
 
     channelStripA, channelStripB = getChannelPads()
 
     # is the current channel visible and do we care?
-    if(scrollToChannel):
-        pageNum = (currChan // channelsPerPage) + 1
+    if(scrollToChannel) and (pageNum != _ChannelPage):
         prn(lvlA, 'scroll to channel', currChan, pageNum, _ChannelPage)
         if(_ChannelPage != pageNum):
             _ChannelPage = pageNum 
@@ -2003,6 +2042,7 @@ def RefreshChannelStrip(scrollToChannel = False): # was (patMap: TnfxPattern, nf
         chanIdx = padOffset + pageOffset
         padAIdx = channelStripA[padOffset]
         padBIdx = channelStripB[padOffset]
+        #print(lvlA, 'RefreshChannelStrip()-2: ', chanIdx, padAIdx, padBIdx, 'cpp', channelsPerPage)
         channel = TnfxChannel(-1,'')
         if(chanIdx < len(channelMap)):
             channel = channelMap[chanIdx]
@@ -2011,14 +2051,21 @@ def RefreshChannelStrip(scrollToChannel = False): # was (patMap: TnfxPattern, nf
             SetPadColor(padAIdx, channel.Color, dimBright)
         else:
             SetPadColor(padAIdx, channel.Color, dimDefault)
-
+        
         if(channel.FLIndex >= 0):
-            if(currMixerNum == channels.getTargetFxTrack(channel.FLIndex)):
+
+            if(_ShiftHeld): # Shifted will display Mute states
+                col = cMuteOff
+                if(channels.isChannelMuted(channel.FLIndex)):
+                    col = cMuteOn
+                SetPadColor(padBIdx, col, dimDefault)
+            elif(currMixerNum == channels.getTargetFxTrack(channel.FLIndex)): 
+                #not Shifted
                 if(currChan == channel.FLIndex):
-                    SetPadColor(padBIdx, cDimWhite, dimBright)
+                    SetPadColor(padBIdx, cWhite, dimBright)
                 else:
                     SetPadColor(padBIdx, cDimWhite, dimDefault)
-            else:
+            else: #not shifted and not an fx track match
                 SetPadColor(padBIdx, cOff, dimDefault)
         else:
             SetPadColor(padBIdx, cOff, dimDefault)
@@ -2036,7 +2083,7 @@ def getPatternOffsetFromPage():
     pattAStrip, pattBStrip = getPatternPads()
     return (_PatternPage-1) * len(pattAStrip)
 
-def getChannelPads():
+def getChannelPads(): 
     if(isNoNav()):
         return pdChanStripANoNav, pdChanStripBNoNav
     return pdChanStripA, pdChanStripB
@@ -2047,8 +2094,9 @@ def getPatternPads():
     return pdPatternStripA, pdPatternStripB
 
 def getPatternModeLength():
-    a, b = getPatternPads()
-    return len(a)
+    return len(getPatternPads()[0])
+    #a, b = getPatternPads()
+    #return len(a)
 
 def getChannelModeLength():
     a, b = getChannelPads()
@@ -2090,101 +2138,24 @@ def RefreshPatternStrip(scrollToChannel = False):
     for padOffset in range(0, patternsPerPage):
         patternIdx = padOffset + pageOffset
         padIdx = patternStripA[padOffset]
-        mutePadIdx = patternStripB[padOffset]
+        padBIdx = patternStripB[padOffset]
         #print('>>>', padOffset, patternIdx, 'pageOffset', pageOffset)
         if(padOffset < patternsPerPage) and (patternIdx < len(patternMap)): # room to use an available pattern?
             pattern = patternMap[patternIdx] 
             if(patterns.patternNumber() == pattern.FLIndex): #current pattern
                 SetPadColor(padIdx, pattern.Color, dimBright)
-                SetPadColor(mutePadIdx, cWhite, dimBright)
+                SetPadColor(padBIdx, cWhite, dimBright)
             else:
                 if(pattern.Selected):
                     SetPadColor(padIdx, pattern.Color, dimDefault)
-                    SetPadColor(mutePadIdx, cDimWhite, dimBright)
+                    SetPadColor(padBIdx, cDimWhite, dimBright)
                 else:
                     SetPadColor(padIdx, pattern.Color, dimDim)
-                    SetPadColor(mutePadIdx, cOff, dimDim)
+                    SetPadColor(padBIdx, cOff, dimDim)
         else: #not used
             SetPadColor(padIdx, cOff, dimDim)
-            SetPadColor(mutePadIdx, cOff, dimDim)            
+            SetPadColor(padBIdx, cOff, dimDim)            
 
-        
-        
-
-
-# def RefreshPatternStrip3():
-#     # this function should rely upon _PadMap only. _PadMap should be updated - via UpdatePatternMap() - prior to call when needed
-#     # 
-#     #prn(lvlR, 'RefreshPatternStrip', _PatternPage)
-#     if (_PadMode.Mode != MODE_PATTERNS):
-#         return 
-#     patternStripA, patternStripB = getPatternPads()
-#     patternsPerPage = getPatternModeLength()
-#     for i in range(0, patternsPerPage):
-#         padIdx = patternStripA[i]
-#         mutePadIdx = patternStripB[i]
-#         padMap = _PadMap[padIdx] 
-#         patMap = _PatternMap[padMap.FLIndex-1] # 0-based
-#         #prn(lvlA, padIdx, padMap.FLIndex, patMap.FLIndex)
-#         if(patterns.patternNumber() == padMap.FLIndex): #current pattern
-#             SetPadColor(padMap.PadIndex, padMap.Color, dimBright)
-#             SetPadColor(mutePadIdx, cWhite, dimBright)
-#         else:
-#             if(patMap.Selected):
-#                 SetPadColor(padMap.PadIndex, padMap.Color, dimDefault)
-#                 SetPadColor(mutePadIdx, cDimWhite, dimBright)
-#             else:
-#                 if(not _isAltMode):
-#                     SetPadColor(padMap.PadIndex, padMap.Color, dimDim)
-#                     SetPadColor(mutePadIdx, cOff, dimDim)
-
-# def RefreshPatternStripOrig():
-    
-#     #prn(lvlR, 'RefreshPatternStrip', _PatternPage)
-#     if (_PadMode.Mode != MODE_PATTERNS):
-#         return 
-#     patternStripA, patternStripB = getPatternPads()
-#     patternsPerPage = getPatternModeLength()
-#     for i in range(0, patternsPerPage):
-#         padIdx = patternStripA[i]
-#         mutePadIdx = patternStripB[i]
-#         pMap = _PadMap[padIdx] # 0-based
-#         #prn(lvlA, padIdx, pMap.FLIndex, pMap.Color)
-#         if(patterns.patternNumber() == pMap.FLIndex): #current pattern
-#             SetPadColor(pMap.PadIndex, pMap.Color, dimBright)
-#             SetPadColor(mutePadIdx, cWhite, dimBright)
-#         else:
-#             if(patterns.isPatternSelected(patterns.patternNumber())):
-#                 SetPadColor(pMap.PadIndex, pMap.Color, dimBright)
-#             else:
-#                 SetPadColor(pMap.PadIndex, pMap.Color, dimDim)
-#             if(pMap.Color != cOff):
-#                 SetPadColor(mutePadIdx, cDimWhite, dimDim)
-#             else:
-#                 SetPadColor(mutePadIdx, cOff, dimDim)
-
-
-# def RefreshPatternPads2_OBS():
-#     prn(lvlR, 'RefreshPatternPads()', _PatternPage)
-#     patternStripA, patternStripB = getPatternPads()    
-#     patternsPerPage = getPatternModeLength()
-#     for i in range(0, patternsPerPage):
-#         padIdx = patternStripA[i]
-#         mutePadIdx = patternStripB[i]
-#         pMap = _PadMap[padIdx] # 0 based
-#         flPattNum = pMap.FLIndex
-#         color = pMap.Color
-#         padIdx = pMap.PadIndex
-#         #pMap = _PadMap[padIdx] # 0-based
-#         if(patterns.patternNumber() == flPattNum): #current pattern
-#             SetPadColor(padIdx, color, dimBright)
-#             SetPadColor(mutePadIdx, cWhite, dimBright)
-#         else:
-#             SetPadColor(padIdx, color, dimDefault)
-#             if(color != cOff):
-#                 SetPadColor(mutePadIdx, cDimWhite, dimDim)
-#             else:
-#                 SetPadColor(mutePadIdx, cOff, dimDim)
 
 def RefreshDisplay():
     global _menuItemSelected
@@ -2753,23 +2724,22 @@ def GetChannelMapActive():
 def SetPadMode():
     
     RefreshShiftAlt()
-    print('ok', _PadMode.Name)
+    #print('ok', _PadMode.Name)
 
     if(_PadMode.Mode == MODE_PATTERNS):
         UpdatePatternModeData()
     elif(_PadMode.Mode == MODE_PERFORM):
         ClearAllPads()
         if(_isAltMode):
-            print('ok2')
+            #print('ok2')
             UpdateMarkerMap()
             UpdateProgressMap()
             RefreshProgress()
+    elif(_PadMode.Mode == MODE_DRUM):
+        RefreshNavPads()
 
     RefreshPadModeButtons() # lights the button
-
-    print('ok3')
     RefreshAll()
-    print('ok4')
 
 def getCurrChanIdx():
     return channels.selectedChannel()
@@ -3173,9 +3143,20 @@ def prn(lvl, *objects):
     if(_DebugPrn and (lvl >= _DebugMin)) or (lvl == lvlA):
         print(prefix, *objects)    
 
+def SetTop():
+    if(ui.getFocused(widPlaylist)):
+        SetPlaylistTop()
+    elif(ui.getFocused(widPianoRoll)):
+        SetPianoRollTop()
+
 def SetPlaylistTop():
     ui.scrollWindow(widPlaylist, 1)
     ui.scrollWindow(widPlaylist, 1, 1)
+
+def SetPianoRollTop():
+    ui.scrollWindow(widPianoRoll, 1)
+    ui.scrollWindow(widPianoRoll, 1, 1)
+
 
 def ShowNote(note, isOn = True):
     #print('ShowNote', note, isOn)
@@ -3321,8 +3302,8 @@ def InititalizePadModes():
     modeNoteAlt.NavSet = TnfxNavigationSet(nsScale)
     modeNoteAlt.AllowedNavSets = [nsScale, nsDefault, nsUDLR]
 
-    modeDrum.NavSet = TnfxNavigationSet(nsDefault)
-    modeDrum.AllowedNavSets = [nsDefaultDrum, nsDefaultDrumAlt, nsUDLR]
+    modeDrum.NavSet = TnfxNavigationSet(nsDefaultDrum)
+    modeDrum.AllowedNavSets = [nsDefaultDrum, nsUDLR]
 
     modeDrumAlt.NavSet = TnfxNavigationSet(nsDefaultDrumAlt)
     modeDrumAlt.AllowedNavSets = [nsDefaultDrumAlt, nsDefaultDrum, nsUDLR, nsNone]

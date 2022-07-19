@@ -11,7 +11,7 @@ import general
 from midi import *
 from fireNFX_Colors import *
 from fireNFX_Defs import *
-
+from fireNFX_DEFAULTS import *
 
 
 # enum code from https://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
@@ -301,17 +301,17 @@ def ColorToRGB(Color):
 def RGBToColor(R,G,B):
     return (R << 16) | (G << 8) | B
 
-def GradTest():
+def GradTest(stepsize = 8):
     #def Gradient(color1, color2, stepsize, padOffs=0):
-    stepsize = 5 # 255//5
+    #stepsize = 4 # 255//5
     Gradient(cBlue, cOff, stepsize, 0)
     Gradient(cPurple, cOff, stepsize, 16)
     Gradient(cMagenta, cOff, stepsize, 32)
     Gradient(cRed, cOff, stepsize, 48)
-    Gradient(cOrange, cOff, stepsize, 4)
-    Gradient(cYellow, cOff, stepsize, 20)
-    Gradient(cGreen, cOff, stepsize, 36)
-    Gradient(cCyan, cOff, stepsize, 52)
+    Gradient(cOrange, cOff, stepsize, 8)
+    Gradient(cYellow, cOff, stepsize, 24)
+    Gradient(cGreen, cOff, stepsize, 40)
+    Gradient(cCyan, cOff, stepsize, 56)
 
 
 def ColorTest(arg1):
@@ -345,6 +345,23 @@ def getShade(baseColor, shadeOffs):
     else: 
         return baseColor
 
+def ShowLayout(pads1, color1, pads2, color2):
+    for pad in pads1:
+        SetPadColor(pad, color1, dimDefault)
+    for pad in pads2:
+        SetPadColor(pad, color2, dimDefault)
+
+dimDim = DEFAULT_DIM_DIM
+dimDefault = DEFAULT_DIM_FACTOR
+dimBright = DEFAULT_DIM_BRIGHT
+dimFull = 0
+
+def Dims(color, padOffs=0):
+    SetPadColor(0+padOffs, color, dimDim)
+    SetPadColor(1+padOffs, color, dimDefault)
+    SetPadColor(2+padOffs, color, dimBright)
+    SetPadColor(3+padOffs, color, dimFull)
+
 
 def Shades(color, padOffs=0):
     SetPadColor(0+padOffs, getShade(color, shDim), 0)
@@ -352,9 +369,14 @@ def Shades(color, padOffs=0):
     SetPadColor(2+padOffs, getShade(color, shNorm), 0)
     SetPadColor(3+padOffs, getShade(color, shLight), 0)
 
-def Gradient(color1, color2, stepsize, padOffs=0):
-    for pad in range(4):
-        step = (255//stepsize) * pad
+def Grads(color, stepsize = 64):
+    Gradient(cOff, color, stepsize, 0, 32)
+    Gradient(color, cWhite, stepsize, 32, 32)
+
+
+def Gradient(color1, color2, stepsize, padOffs=0, len=8):
+    for pad in range(len):
+        step = (127//stepsize) * pad
         col = FadeColor(color1, color2, step)
         SetPadColor(pad+padOffs, col, 0)
 

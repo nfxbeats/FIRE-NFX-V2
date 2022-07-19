@@ -1,3 +1,6 @@
+#
+# Various class definitions
+#
 from fireNFX_Defs import *
 
 class TnfxPlugin:
