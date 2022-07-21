@@ -151,7 +151,6 @@ def OnInit():
     SendCC(IDBankL, SingleColorOff)
     SendCC(IDBankR, SingleColorOff)
     SendCC(IDBrowser, SingleColorOff)    
-    SendCC(IDKnob1, SingleColorFull)    
 
     InititalizePadModes()
 
@@ -176,6 +175,23 @@ def OnInit():
     # Init some data
     RefreshAll()
     _ScrollTo = False  
+
+_shuttingDown = False
+def OnDeInit():
+    
+    global _shuttingDown
+    _shuttingDown = True
+    
+    DisplayTextAll(' ', ' ', ' ')    
+    DeInitDisplay()
+
+    # turn of the lights and go to bed...
+    ClearAllPads()
+    SendCC(IDKnobModeLEDArray, 16)
+    for ctrlID in getNonPadLightCtrls():
+        SendCC(ctrlID, 0)
+    
+
 
 def ClearAllPads():
     # clear the Pads
@@ -1923,7 +1939,7 @@ def RefreshFPCSelector():
 
 def RefreshKnobMode():
     LEDVal = IDKnobModeLEDVals[_KnobMode] | 16
-    #prn(lvlA, 'RefreshKnobMode. knob mode is', _KnobMode, 'led bit', IDKnobModeLEDVals[_KnobMode], 'val', LEDVal)
+    print(lvlA, 'RefreshKnobMode. knob mode is', _KnobMode, 'led bit', IDKnobModeLEDVals[_KnobMode], 'val', LEDVal)
     SendCC(IDKnobModeLEDArray, LEDVal)
 
 def RefreshPlaylist():
@@ -2161,6 +2177,9 @@ def RefreshPatternStrip(scrollToChannel = False):
 
 def RefreshDisplay():
     global _menuItemSelected
+
+    if _shuttingDown:
+        return
 
     prn(lvlA, "RefreshDisplay()")
     _menuItemSelected = _selectedItem # reset this for the next menu

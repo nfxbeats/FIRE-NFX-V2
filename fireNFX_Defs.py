@@ -102,7 +102,6 @@ ShiftAltCtrls = [IDShift, IDAlt]
 PadModeCtrls = [IDStepSeq, IDNote, IDDrum, IDPerform]
 PadModeNames = ['Pattern', 'Note', 'Drum', 'Perform']
 PadModeShortNames = ['PTN', 'NOTE', 'DRM', 'PERF']
-NavCtrls = [IDUp, IDDown, IDLeft, IDRight]
 KnobCtrls = [IDKnob1, IDKnob2, IDKnob3, IDKnob4]
 SelectWheelCtrls = [IDSelect, IDSelectDown]
 PadCtrls = list()
@@ -126,6 +125,18 @@ IDPage3 = IDMute4
 PageCtrls = [IDPage0, IDPage1, IDPage2, IDPage3] # using these since I dont use the step mode
 
 BeatIndicators = [IDTrackSel1, IDTrackSel2, IDTrackSel3, IDTrackSel4]
+
+def getNonPadLightCtrls():
+    NonPadLightCtrls = []
+    NonPadLightCtrls.extend(PattUpDnCtrls)
+    NonPadLightCtrls.append(IDBrowser)
+    NonPadLightCtrls.extend(GridLRCtrls)
+    NonPadLightCtrls.extend(PageCtrls)
+    NonPadLightCtrls.extend(BeatIndicators)
+    NonPadLightCtrls.extend(PadModeCtrls)
+    NonPadLightCtrls.extend(ShiftAltCtrls)
+    NonPadLightCtrls.extend(TransportCtrls)
+    return NonPadLightCtrls
 
 
 

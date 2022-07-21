@@ -77,7 +77,13 @@ def InitDisplay():
     screen.fillRect(0, 0, DisplayWidth, DisplayHeight, 0)
 
 def DeInitDisplay():
-    screen.deInit()
+    DisplayTextTop(' ')
+    DisplayTextMiddle(' ')
+    DisplayTextBottom(' ')
+    #screen.update()
+
+    #screen.deInit()
+    #screen.update()
 
 # Helpers
 
