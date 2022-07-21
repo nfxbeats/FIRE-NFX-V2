@@ -1,4 +1,7 @@
+# fireNFX_DEFAULTS.py
+#
 # DO NOT CHANGE THE FOLLOWING IMPORT LINES
+
 from fireNFX_Colors import *
 from fireNFX_Defs import NotesListFlats, NotesListSharps
 

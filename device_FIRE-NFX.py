@@ -537,6 +537,7 @@ def HandleChannelStrip(padNum): #, isChannelStripB):
     if (newChanIdx > -1): #is it a valid chan number?
         if(_ShiftHeld): # we do the mutes when SHIFTed
             channels.muteChannel(newChanIdx)
+            ui.crDisplayRect(0, newChanIdx, 0, 1, 5000, CR_ScrollToView + CR_HighlightChannelMute) # CR_HighlightChannels + 
             RefreshChannelStrip(False)
         else: 
             #not SHIFTed
@@ -586,10 +587,11 @@ def SelectAndShowChannel(newChanIdx, keepPRopen = True):
             #    ShowPianoRoll(0, True)
             ShowPianoRoll(1, True, False, newChanIdx)
 
-    mixerTrk = channels.getTargetFxTrack(newChanIdx)
-    mixer.setTrackNumber(mixerTrk, curfxScrollToMakeVisible)
-    ui.crDisplayRect(0, newChanIdx, 0, 1, 5000, CR_ScrollToView + CR_HighlightChannels)
-    ui.miDisplayRect(mixerTrk, mixerTrk, 5000, CR_ScrollToView)
+    if(not _ShiftHeld):
+        mixerTrk = channels.getTargetFxTrack(newChanIdx)
+        mixer.setTrackNumber(mixerTrk, curfxScrollToMakeVisible)
+        ui.crDisplayRect(0, newChanIdx, 0, 1, 5000, CR_ScrollToView + CR_HighlightChannels)
+        ui.miDisplayRect(mixerTrk, mixerTrk, 5000, CR_ScrollToView)
 
 def HandlePatternStripOld(padNum):
     #prn(lvlH, 'HandlePatternStrip()')
