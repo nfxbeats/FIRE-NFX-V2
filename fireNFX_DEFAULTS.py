@@ -72,6 +72,9 @@ DEFAULT_MARKER_PREFIX_TEXT = "nfx#"
 # shows extra info I use when debugging. may affect performance when True
 DEFAULT_SHOW_PRN = False 
 
-# when true, will display four banks in ALT+DRUM mode. otherwise it uses octave strips in Row4..Row1 order
+# when true, will display 4x4 banks in ALT+DRUM mode. otherwise it uses octave strips in Row4..Row1 order
 DEFAULT_ALT_DRUM_MODE_BANKS = True 
+
+# how long to keep the red boxes alive in FL Studio. in milliseconds, so 5000 would be 5 seconds, 0 = No display
+DEFAULT_DISPLAY_RECT_TIME_MS = 5000
 

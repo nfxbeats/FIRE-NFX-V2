@@ -38,6 +38,7 @@ from fireNFX_PluginDefs import *
 
 #region globals
 _debugprint = DEFAULT_SHOW_PRN
+_rectTime = DEFAULT_DISPLAY_RECT_TIME_MS
 _ShiftHeld = False
 _AltHeld = False
 _PatternCount = 0
@@ -566,16 +567,16 @@ def HandleChannelStrip(padNum): #, isChannelStripB):
     #pMap = _PadMap[padNum]
     newChanIdx = channel.FLIndex # pMap.FLIndex
     newMixerIdx = channel.Mixer.FLIndex
-    print(lvlA, 'HandleChannelStrip', prevChanIdx, newChanIdx, 'Mixer', newMixerIdx)
+    #print(lvlA, 'HandleChannelStrip', prevChanIdx, newChanIdx, 'Mixer', newMixerIdx)
     if (newChanIdx > -1): #is it a valid chan number?
         if(_ShiftHeld): # we do the mutes when SHIFTed
             if(_KnobMode == KM_MIXER):
                 mixer.muteTrack(newMixerIdx)
-                ui.miDisplayRect(newMixerIdx, newMixerIdx, 5000, CR_ScrollToView)
+                ui.miDisplayRect(newMixerIdx, newMixerIdx, _rectTime, CR_ScrollToView)
                 RefreshChannelStrip(False)
             else:
                 channels.muteChannel(newChanIdx)
-                ui.crDisplayRect(0, newChanIdx, 0, 1, 5000, CR_ScrollToView + CR_HighlightChannelMute) # CR_HighlightChannels + 
+                ui.crDisplayRect(0, newChanIdx, 0, 1, _rectTime, CR_ScrollToView + CR_HighlightChannelMute) # CR_HighlightChannels + 
                 RefreshChannelStrip(False)
         else: 
             #not SHIFTed
@@ -628,8 +629,8 @@ def SelectAndShowChannel(newChanIdx, keepPRopen = True):
     if(not _ShiftHeld):
         mixerTrk = channels.getTargetFxTrack(newChanIdx)
         mixer.setTrackNumber(mixerTrk, curfxScrollToMakeVisible)
-        ui.crDisplayRect(0, newChanIdx, 0, 1, 5000, CR_ScrollToView + CR_HighlightChannels)
-        ui.miDisplayRect(mixerTrk, mixerTrk, 5000, CR_ScrollToView)
+        ui.crDisplayRect(0, newChanIdx, 0, 1, _rectTime, CR_ScrollToView + CR_HighlightChannels)
+        ui.miDisplayRect(mixerTrk, mixerTrk, _rectTime, CR_ScrollToView)
 
 def HandlePatternStripOld(padNum):
     #prn(lvlH, 'HandlePatternStrip()')
@@ -2844,7 +2845,7 @@ def ChannelPageNav(moveby):
     if(0 <= pageOffs <= _ChannelCount ): # allow next page when there are patterns to show
         _ChannelPage = newPage
     RefreshPageLights()
-    ui.crDisplayRect(0, pageOffs, 0, pageSize, 5000, CR_ScrollToView + CR_HighlightChannelName)
+    ui.crDisplayRect(0, pageOffs, 0, pageSize, _rectTime, CR_ScrollToView + CR_HighlightChannelName)
 
 
 def NavNotesList(val):
