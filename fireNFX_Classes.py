@@ -58,8 +58,6 @@ class TnfxMixer:
     def __init__(self, flIdx, name):
         self.Name = name 
         self.FLIndex = flIdx
-        self.SelectPad = -1
-        self.MutePad = -1
         self.Muted = 0
 
 class TnfxChannel:

@@ -6,9 +6,9 @@
 # develoment started:   11/24/2021
 # first public beta:    07/13/2022
 #
-# a lot of thanks to: Miro, HDSQ and Image-Line
+# a lot of thanks to: Miro, HDSQ, TayseteDj, DAWNLIGHT and Image-Line
 # 
-
+#
 
 import device
 import midi
@@ -23,8 +23,6 @@ import general
 import plugins 
 import playlist
 import arrangement
-
-#import sys 
 
 
 
@@ -204,21 +202,19 @@ def OnDoFullRefresh():
     #prn(lvlA, 'OnDoFullRefresh')    
     RefreshAll() 
 
-
-
 def OnIdle():
     if(_shuttingDown):
         return 
 
     #if(_ShiftHeld):
     #    RefreshShiftedStates() 
-    
+   
     # no event I know of to hook into song length change so I'll check here
     if(_PadMode.Mode == MODE_PERFORM) and (_isAltMode):
         CheckAndHandleSongLenChanged()
 
     if(transport.isPlaying() or transport.isRecording()):
-        if(_PadMode.mode in [MODE_DRUM, MODE_NOTE]):
+        if(_PadMode.Mode in [MODE_DRUM, MODE_NOTE]):
             HandleShowNotesOnPlayback()
 
 def HandleShowNotesOnPlayback():
@@ -569,12 +565,18 @@ def HandleChannelStrip(padNum): #, isChannelStripB):
 
     #pMap = _PadMap[padNum]
     newChanIdx = channel.FLIndex # pMap.FLIndex
-    #prn(lvlA, 'HandleChannelStrip', chanIdx, prevChanIdx, newChanIdx, _ShowPianoRoll)
+    newMixerIdx = channel.Mixer.FLIndex
+    print(lvlA, 'HandleChannelStrip', prevChanIdx, newChanIdx, 'Mixer', newMixerIdx)
     if (newChanIdx > -1): #is it a valid chan number?
         if(_ShiftHeld): # we do the mutes when SHIFTed
-            channels.muteChannel(newChanIdx)
-            ui.crDisplayRect(0, newChanIdx, 0, 1, 5000, CR_ScrollToView + CR_HighlightChannelMute) # CR_HighlightChannels + 
-            RefreshChannelStrip(False)
+            if(_KnobMode == KM_MIXER):
+                mixer.muteTrack(newMixerIdx)
+                ui.miDisplayRect(newMixerIdx, newMixerIdx, 5000, CR_ScrollToView)
+                RefreshChannelStrip(False)
+            else:
+                channels.muteChannel(newChanIdx)
+                ui.crDisplayRect(0, newChanIdx, 0, 1, 5000, CR_ScrollToView + CR_HighlightChannelMute) # CR_HighlightChannels + 
+                RefreshChannelStrip(False)
         else: 
             #not SHIFTed
             if(newChanIdx == prevChanIdx): # if it's already on the channel, toggle the windows
@@ -2079,18 +2081,15 @@ def RefreshChannelStrip(scrollToChannel = False): # was (patMap: TnfxPattern, nf
 
     # is the current channel visible and do we care?
     if(scrollToChannel) and (pageNum != _ChannelPage):
-        #prn(lvlA, 'scroll to channel', currChan, pageNum, _ChannelPage)
         if(_ChannelPage != pageNum):
             _ChannelPage = pageNum 
             ChannelPageNav(0)
             pageOffset = getChannelOffsetFromPage()    
-            #prn(lvlA, 'scroll to channel', currChan, pageNum, _ChannelPage)
 
     for padOffset in range(channelsPerPage):
         chanIdx = padOffset + pageOffset
         padAIdx = channelStripA[padOffset]
         padBIdx = channelStripB[padOffset]
-        #print(lvlA, 'RefreshChannelStrip()-2: ', chanIdx, padAIdx, padBIdx, 'cpp', channelsPerPage)
         channel = TnfxChannel(-1,'')
         if(chanIdx < len(channelMap)):
             channel = channelMap[chanIdx]
@@ -2101,11 +2100,16 @@ def RefreshChannelStrip(scrollToChannel = False): # was (patMap: TnfxPattern, nf
             SetPadColor(padAIdx, channel.Color, dimDefault)
         
         if(channel.FLIndex >= 0):
-
             if(_ShiftHeld): # Shifted will display Mute states
                 col = cMuteOff
-                if(channels.isChannelMuted(channel.FLIndex)):
-                    col = cMuteOn
+                if(_KnobMode == KM_MIXER):
+                    if (channel.Mixer.FLIndex > -1):
+                        if(mixer.isTrackMuted(channel.Mixer.FLIndex)):
+                            col = cMuteOn
+                else:
+                    if(channels.isChannelMuted(channel.FLIndex)):
+                        col = cMuteOn
+
                 SetPadColor(padBIdx, col, dimDefault)
             elif(currMixerNum == channels.getTargetFxTrack(channel.FLIndex)): 
                 #not Shifted
@@ -2594,6 +2598,9 @@ def UpdateChannelMap():
         chanMap.ChannelType = channels.getChannelType(chan)
         chanMap.GlobalIndex = channels.getChannelIndex(chan)
         chanMap.Selected = channels.isChannelSelected(chan)
+        mixerNum = channels.getTargetFxTrack(chan)
+        mixer = TnfxMixer(mixerNum, '')
+        chanMap.Mixer = mixer
         _ChannelMap.append(chanMap)
         #print('...added', chanMap)
         if(chanMap.Selected):
