@@ -25,7 +25,7 @@ DEFAULT_PAD_PRESSED_COLOR = cRed
 
 # color of pads when pressed.
 # use  cChannel to use the channel color
-DEFAULT_ROOT_NOTE_COLOR = cChannel
+DEFAULT_ROOT_NOTE_COLOR = cBlue
 
 # this is an interal way to control the brightness for things like vs non active pads
 # value can be 0-5 where 0 is NO DIMMING and 5 is MAX DIMMING

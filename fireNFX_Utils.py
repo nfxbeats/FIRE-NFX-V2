@@ -1,12 +1,13 @@
 import math
 import time 
 import device
-from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxPlugin
+from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxChannelPlugin
 import utils
 import plugins
 import mixer
 import playlist
 import ui
+import channels 
 import general 
 from midi import *
 from fireNFX_Colors import *
@@ -218,22 +219,18 @@ def FLColorToPadColor(FLColor):
     b = (FLColor & andVal) // 2
     return utils.RGBToColor(r, g, b)
 
-def getPluginParam(chanIdx, paramIdx):
-    m = chanIdx 
+def getParamCaption(chanIdx, paramIdx):
+    return plugins.getParamName(paramIdx, chanIdx, -1) # -1 denotes not mixer
+
+def getPluginParam(chanIdx, paramIdx, prn = False):
     caption = plugins.getParamName(paramIdx, chanIdx, -1) # -1 denotes not mixer
     value = plugins.getParamValue(paramIdx, chanIdx, -1) 
     valuestr = plugins.getParamValueString(paramIdx, chanIdx, -1)
-    if(value == .5):
-        bipolar = True 
-    else:
-        bipolar = False
-
-    name = plugins.getPluginName(chanIdx)
+    bipolar = False
+    name = plugins.getPluginName(chanIdx, -1, 1)
     varName =  "pl" + name 
-    print("\t" + varName + ".Parameters.append( TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
-
-
-
+    if(caption != '') and prn:
+        print(varName + ".addParamToGroup('" + name.upper() + "', TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
     #print('TnfxParameter')
     #print('     Param', paramIdx, caption )
     #print('     Value', paramIdx, value )
@@ -266,34 +263,34 @@ def getBeatLenInMS(div):
     #print('tempo', tempo, 'div', div, 'beatlen', beatlen, 'output', timeval, 'Barlen', barlen) 
     return int(timeval)
 
-def getPluginInfo(chanIdx):
-    res = TnfxPlugin(plugins.getPluginName(chanIdx, -1, 0))
-    res.Parameters.clear()
+def getPluginInfo(chanIdx, prn = False):
+    if chanIdx == -1:
+        chanIdx = channels.selectedChannel()
 
-    print('   PluginName: ', res.Name)
+    name = plugins.getPluginName(chanIdx, -1, 1)
+    res = TnfxChannelPlugin(name)
+    res.Parameters.clear()
     pCnt = plugins.getParamCount(chanIdx, -1)
-    print('   ParamCount: ', pCnt)
-    name = plugins.getPluginName(chanIdx)
     varName =  "pl" + name 
-    print('-----------------------------------------------------------------')
-    print(varName + " = TnfxPlugin('" + name + "')")
+
+    if(prn):
+        print('#   PluginName: ', res.Name)
+        print('#   ParamCount: ', pCnt)
+        print('# -----------------------------------------------------------------')
+        print(varName + " = TnfxPlugin('" + name + "')")
     for paramIdx in range(0, pCnt):
-        #if(plugins.getParamName(paramIdx, chanIdx, -1) != ''):
-        if(True):
-            param = getPluginParam(chanIdx, paramIdx)
-            res.Parameters.append(param)
-    print('-----------------------------------------------------------------')            
+        if(plugins.getParamName(paramIdx, chanIdx, -1) != ''):
+            param = getPluginParam(chanIdx, paramIdx, prn)
+            if(param.Caption != ""):
+                res.addParamToGroup("ALL", param)
+                res.Parameters.append(param)
+    if(prn):
+        print('# -----------------------------------------------------------------')   
+        print('#    Non Blank Params Count: ' + str(len(res.Parameters)))         
     return res 
 
 def ShowPluginInfo(chanIdx):
-    print('   PluginName: ', plugins.getPluginName(chanIdx, -1, 0))
-    pCnt = plugins.getParamCount(chanIdx, -1)
-    print('   ParamCount: ', pCnt)
-    for param in range(0, pCnt):
-        if(plugins.getParamName(param, chanIdx, -1) != ''):
-            getPluginParam(chanIdx, param)
-
-
+    getPluginInfo(chanIdx, True)
 
 def ColorToRGB(Color):
     return (Color >> 16) & 0xFF, (Color >> 8) & 0xFF, Color & 0xFF

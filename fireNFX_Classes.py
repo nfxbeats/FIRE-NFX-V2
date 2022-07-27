@@ -2,22 +2,62 @@
 # Various class definitions
 #
 from fireNFX_Defs import *
+import plugins
+import channels
 
-class TnfxPlugin:
+class TnfxChannelPlugin:
     def __init__(self, name):
         self.Name = name
         self.ID = ''
-        self.Parameters = list() #
+        self.ParameterGroups = {} # { groupName: [TnfxParameters] }
+        self.Parameters = []
+        self.GroupName = ''
+        self.TweakableParam = None
+        self.User1Knobs = []
+        self.User2Knobs = []
+        self.AlwaysRescan = True
+        for i in range(4): # allocate these to have 4 each
+            p = TnfxParameter(-1,'',i,'',False)
+            self.User1Knobs.append(p)
+            self.User2Knobs.append(p)
+    def getParamNamesForGroup(self, groupName):
+        params = []
+        for p in self.ParameterGroups[groupName]:
+            params.append(p.Caption)
+        return params
+    def addParamToGroup(self, groupName, nfxParameter):
+        nfxParameter.GroupName = groupName
+        if(nfxParameter.Caption in ['?', ''] and nfxParameter.Offset > -1):
+            nfxParameter.Caption = plugins.getParamName(nfxParameter.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+        if(groupName in self.ParameterGroups.keys()):
+            self.ParameterGroups[groupName].append(nfxParameter)
+        else:
+            self.ParameterGroups[groupName] = [nfxParameter]
+    def assignParameterToUserKnob(self, knobMode, knobIdx, nfxParameter):
+        if(4 < knobIdx < 0):
+            return 
+        if(nfxParameter.Caption in ['?', ''] and nfxParameter.Offset > -1):
+            nfxParameter.Caption = plugins.getParamName(nfxParameter.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+        if(knobMode == KM_USER1):
+            self.User1Knobs[knobIdx] = nfxParameter
+        elif(knobMode == KM_USER2):
+            self.User2Knobs[knobIdx] = nfxParameter
+
+
 
 class TnfxParameter:
-    def __init__(self, offset, caption, value, valuestr, bipolar, stepsAfterZero = 1):
+    def __init__(self, offset, caption, value, valuestr, bipolar, stepsAfterZero = 0):
         self.Offset = offset 
         self.Caption = caption
         self.Value = value
         self.ValueStr = valuestr
         self.Bipolar = bipolar 
         self.StepsAfterZero = stepsAfterZero
-        self.StepSize = 1/stepsAfterZero # 0 and 1
+        self.GroupName = ''
+    def getFullName(self):
+        return self.GroupName + "-" + self.Caption 
+    def updateCaption(self, caption):
+        self.Caption = caption 
 
 
 
