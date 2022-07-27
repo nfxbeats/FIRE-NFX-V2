@@ -4,8 +4,6 @@ from fireNFX_Classes import *
 #-----------------------------------------------------------------
 plFLEX = TnfxChannelPlugin('FLEX')
 plFLEX.AlwaysRescan = False
-plFLEX.addParamToGroup('GENERAL', TnfxParameter(36, 'Output volume', 0, '57%', False) )
-plFLEX.addParamToGroup('GENERAL', TnfxParameter(39, 'Pitch', 0, '+0 cent', True) )
 
 # Macros section. The name will change for these dependng on the preset
 plFLEX.addParamToGroup('MACROS', TnfxParameter(10, '?', 0, '100%', False) )
@@ -64,6 +62,10 @@ plFLEX.addParamToGroup('LIMITER', TnfxParameter(41, 'On/Off', 0, 'On', False) )
 plFLEX.addParamToGroup('LIMITER', TnfxParameter(35, 'PRE', 0, '50%', False) )
 plFLEX.addParamToGroup('LIMITER', TnfxParameter(42, 'Mix', 0, '47%', False) )
 plFLEX.addParamToGroup('LIMITER', TnfxParameter(43, 'Type', 0, 'Limiter', False) ) # was missing a name
+
+# General
+plFLEX.addParamToGroup('GENERAL', TnfxParameter(36, 'Output volume', 0, '57%', False) )
+plFLEX.addParamToGroup('GENERAL', TnfxParameter(39, 'Pitch', 0, '+0 cent', True) )
 
 # set up the predetermined USER1 and USER2 knob parameters to link to the 8 macros
 for knobIdx in range(4):

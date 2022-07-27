@@ -267,12 +267,12 @@ def getPluginInfo(chanIdx, prn = False):
     if chanIdx == -1:
         chanIdx = channels.selectedChannel()
 
-    name = plugins.getPluginName(chanIdx, -1, 1)
-    res = TnfxChannelPlugin(name)
+    name = plugins.getPluginName(chanIdx, -1, 0)
+    uname = plugins.getPluginName(chanIdx, -1, 1)
+    res = TnfxChannelPlugin(name, uname)
     res.Parameters.clear()
     pCnt = plugins.getParamCount(chanIdx, -1)
-    varName =  "pl" + name 
-
+    varName =  "pl" + name.replace(' ', '').replace('-', '') 
     if(prn):
         print('#   PluginName: ', res.Name)
         print('#   ParamCount: ', pCnt)

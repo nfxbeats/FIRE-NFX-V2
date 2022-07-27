@@ -34,10 +34,6 @@ from fireNFX_Utils import *
 from fireNFX_Display import *
 from fireNFX_PluginDefs import *
 
-from pluginFLEX import plFLEX
-from pluginSTRUMGS2 import plStrumGS2
-from pluginFLKeys import plFLKeys
-
 #region globals
 _debugprint = DEFAULT_SHOW_PRN
 _rectTime = DEFAULT_DISPLAY_RECT_TIME_MS
@@ -83,7 +79,7 @@ MAXLEVELS = 2
 _menuBackText = '<back>'
 _ProgressPadLenIdx = 1 
 
-_LoadedPluginParams = {}
+_knownPlugins = {}
 
 _DirtyChannelFlags = 0
 
@@ -377,7 +373,7 @@ def OnSendTempMsg(msg, duration):
     pass
 
 def isKnownPlugin():
-    return getCurrChannelPluginName() in _LoadedPluginParams.keys()
+    return getCurrChanPluginID() in _knownPlugins.keys()
 
 def OnMidiIn(event):
     global _ShiftHeld
@@ -398,6 +394,9 @@ def OnMidiIn(event):
         # check if we have predefined user knob settings, if NOT shortcut out 
         # to be processed by OnMidiMsg() to use processMIDICC per the docs
         pName, plugin = getCurrentChannelPlugin()
+        if(plugin == None): # invalid plugin
+            return
+
         hasParams = False
         if(_KnobMode == KM_USER1):
             hasParams = len( [a for a in plugin.User1Knobs if a.Offset > -1]) > 0
@@ -1156,32 +1155,36 @@ def HandleKnob(event, ctrlID, useparam = None):
             elif ctrlID == IDKnob4:
                 return HandleKnobReal(recEventID + REC_Mixer_EQ_Gain + 2,  value, 'Mix EQHi: '+ mixerName, True)
     elif(isKnownPlugin()):
+        knobParam = None
         recEventID = channels.getRecEventId(getCurrChanIdx()) + REC_Chan_Plugin_First
         pluginName, plugin = getCurrentChannelPlugin()
-        
-        knobParams = []
+        if(plugin == None): # invalid plugin
+            return True
 
-        pOffset = 0
+        knobOffs = ctrlID - IDKnob1
+        if(_KnobMode == KM_USER1):
+            knobParam = plugin.User1Knobs[knobOffs]
+            knobParam.Caption = plugin.User1Knobs[knobOffs].Caption
         if(_KnobMode == KM_USER2):
-            pOffset = 4
-            knobParams.extend(plugin.User2Knobs)
-        else:
-            knobParams.extend(plugin.User1Knobs)
+            knobParam = plugin.User2Knobs[knobOffs]
+            knobParam.Caption = plugin.User2Knobs[knobOffs].Caption
+        if(  knobParam.Offset > -1  ): # valid offset?
+            return HandleKnobReal(recEventID + knobParam.Offset,  event.outEv, knobParam.Caption + ': ', knobParam.Bipolar)
+        return True
 
-        #print('KM', pOffset, pluginName, len(plugin.Parameters), _KnobMode)
-        for knob in range(4):
-            knobID = IDKnob1 + knob
-            if(ctrlID == knobID):
-                param = knobParams[knob]
-                hasParam = param.Offset > -1  # valid offset?
-                #print('KM2, Has Param:', hasParam, 'knobID', knobID )
-                if( hasParam ):
-                    #print('KM3', param.Caption, param.Offset)
-                    return HandleKnobReal(recEventID + param.Offset,  event.outEv, param.Caption + ': ', param.Bipolar)
-                    #return HandleKnobReal(recEventID + param.Offset,  value,  param.Caption + ': ',  param.Bipolar, param.StepsAfterZero)
-                    # turn HandleKnobReal(recEventID + REC_Mixer_Vol,  value, 'Mx Vol: ' + mixerName , False)
-                else:
-                    return True 
+        # for knob in range(4):
+        #     knobID = IDKnob1 + knob
+        #     if(ctrlID == knobID):
+        #         param = knobParams[knob]
+        #         hasParam = param.Offset > -1  # valid offset?
+        #         #print('KM2, Has Param:', hasParam, 'knobID', knobID )
+        #         if( hasParam ):
+        #             #print('KM3', param.Caption, param.Offset)
+        #             return HandleKnobReal(recEventID + param.Offset,  event.outEv, param.Caption + ': ', param.Bipolar)
+        #             #return HandleKnobReal(recEventID + param.Offset,  value,  param.Caption + ': ',  param.Bipolar, param.StepsAfterZero)
+        #             # turn HandleKnobReal(recEventID + REC_Mixer_Vol,  value, 'Mx Vol: ' + mixerName , False)
+        #         else:
+        #             return True 
     else:  #user modes..
         if (event.status in [MIDI_NOTEON, MIDI_NOTEOFF]):
             event.handled = True
@@ -1370,7 +1373,9 @@ def HandleSelectWheel(event, ctrlID):
     jogNext = 1
     jogPrev = 127
     paramName, plugin = getCurrentChannelPlugin()
-    
+    if(plugin == None): # invalid plugin
+        return True
+
     if(ctrlID == IDSelectDown):
         _chosenItem = _menuItemSelected
         itemstr = _menuItems[_menuItemSelected]
@@ -2715,18 +2720,24 @@ def getCurrChanIdx():
             res = cMap.FLIndex
     return res 
 
-def getCurrChannelPluginName():
+def XgetCurrChannelPluginName():
     return plugins.getPluginName(getCurrChanIdx(), -1, 0)
 
-def getCurrentChannelPlugin():
-    basePluginName = plugins.getPluginName(getCurrChanIdx(), -1, 0)
-    userPluginName = getCurrChannelPluginName()
-    pluginName = userPluginName
-    plugin = getPlugin(userPluginName)
+def getCurrChanPluginID():
+    name, plugin = getCurrentChannelPlugin()
     if(plugin == None):
-        plugin = getPlugin(basePluginName)
-        pluginName = basePluginName
-    return pluginName, plugin
+        return ""
+    return plugin.getID()
+
+def getCurrChannelPluginNames():
+    return plugins.getPluginName(getCurrChanIdx(), -1, 0), plugins.getPluginName(getCurrChanIdx(), -1, 1)
+
+NOSUPPTEXT = "UNSUPPORTED"
+def getCurrentChannelPlugin():
+    plugin = getPlugin("")
+    if plugin == None:
+        return NOSUPPTEXT, None
+    return plugin.getID(), plugin
 
 
 #endregion
@@ -3069,6 +3080,10 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
 def UpdateMenuItems(level):
     global _menuItems
     pluginName, plugin = getCurrentChannelPlugin()
+    if(not plugins.isValid(channels.selectedChannel())):
+        _menuItems.clear()
+        _menuItems.append('UNSUPPORTED')
+        return 
 #    print('l', level, pluginName, plugin)
     if(level == 0):
         _menuItems = list(plugin.ParameterGroups.keys()) #['Set Params']
@@ -3106,6 +3121,8 @@ def ShowMenuItems():
         if(level == MAXLEVELS):
             displayText[i] = "[" + _menuItems[item].upper() + "]" 
         elif(item < len(_menuItems)):
+            if(_menuItems[item] == NOSUPPTEXT):
+                preText = ''
             displayText[i] = preText + _menuItems[item]
         else:
             displayText[i] = ''
@@ -3311,33 +3328,60 @@ def InititalizePadModes():
 def SetChannelParam(offset, value):
     plugins.setParamValue(value, offset, getCurrChanIdx(), -1)
 
+def clonePluginParams(srcPlugin, destPlugin):
+    # enumerate the plugins list. no deepcopy :(  
+    for param in srcPlugin.Parameters:
+        newParam = TnfxParameter(param.Offset, param.Caption, param.Value, param.ValueStr, param.Bipolar, param.StepsAfterZero)
+        if(newParam.Caption in ['?', ''] and newParam.Offset > -1):
+            if(plugins.isValid(channels.selectedChannel())):
+                newParam.Caption = plugins.getParamName(newParam.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+
+        destPlugin.addParamToGroup(param.GroupName, newParam)
+    for knob in range(4):
+        param1 = srcPlugin.User1Knobs[knob] 
+        param2 = srcPlugin.User2Knobs[knob] 
+        newParam1 = TnfxParameter(param1.Offset, param1.Caption, param1.Value, param1.ValueStr, param1.Bipolar, param1.StepsAfterZero)
+        newParam2 = TnfxParameter(param2.Offset, param2.Caption, param2.Value, param2.ValueStr, param2.Bipolar, param2.StepsAfterZero)
+
+        if(param1.Caption in ['?', ''] and param1.Offset > -1):
+            if(plugins.isValid(channels.selectedChannel())):
+                newParam1.Caption = plugins.getParamName(param1.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+
+        if(param2.Caption in ['?', ''] and param2.Offset > -1):
+            if(plugins.isValid(channels.selectedChannel())):
+                newParam2.Caption = plugins.getParamName(param2.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+
+        destPlugin.assignParameterToUserKnob(KM_USER1, knob, newParam1 )
+        destPlugin.assignParameterToUserKnob(KM_USER2, knob, newParam2 )
+    return destPlugin
+
 def getPlugin(pluginName):
     ''' Loads the plugin from either (in this order):
 
-        1) _LoadedPluginParams if it has been added
-        2) customized TnfxPLugin (ie. Strum, FLEX). add entry to _LoadedPluginParams
-        3) real-time loading of params with non empty names. adds an entry to _LoadedPluginParams
+        1) from _knownPlugins if it exists
+        2) from customized TnfxPLugin (ie. FLKeys, FLEX) if exists. add entry to _knownPlugins
+        3) real-time loading of params with non empty names. adds an entry to _knownPlugins
         
         NOTE: passing an empty string will load the current channel's plugin
     '''
-    global _LoadedPluginParams
-    pl = TnfxChannelPlugin(pluginName)
+    global _knownPlugins
 
-    if pluginName == "":
-        pluginName, pl = getCurrentChannelPlugin()
+    if(not plugins.isValid(channels.selectedChannel())):
+        return None 
 
-    if(pluginName in _LoadedPluginParams.keys()):
-        return _LoadedPluginParams[pluginName]
+    basePluginName, userPluginName = getCurrChannelPluginNames()
+    pl = TnfxChannelPlugin(basePluginName, userPluginName) # in case we don't find one later...
+
+    if(pl.getID() in _knownPlugins.keys()):
+        return _knownPlugins[pl.getID()]
     
-    if(pluginName == 'Strum GS-2'): # customized 
-        pl = plStrumGS2 
-    elif(pluginName == 'FLEX'): # customized
-        pl =  plFLEX 
-    elif(pluginName == 'FL Keys'): # customized
-        pl =  plFLKeys 
+    if(basePluginName in CUSTOM_PLUGINS.keys()):
+        clonePluginParams(CUSTOM_PLUGINS[basePluginName], pl)
     else:
         pl = getPluginInfo(-1)
-        
-    _LoadedPluginParams[pl.Name] = pl
+    
+    #print('pl', pl)
+            
+    _knownPlugins[pl.getID()] = pl
     return pl 
 

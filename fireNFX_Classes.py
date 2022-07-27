@@ -6,38 +6,42 @@ import plugins
 import channels
 
 class TnfxChannelPlugin:
-    def __init__(self, name):
+    def __init__(self, name, username = ""):
         self.Name = name
-        self.ID = ''
+        self.PluginName = name
         self.ParameterGroups = {} # { groupName: [TnfxParameters] }
         self.Parameters = []
-        self.GroupName = ''
+        #self.GroupName = ''
         self.TweakableParam = None
         self.User1Knobs = []
         self.User2Knobs = []
         self.AlwaysRescan = True
-        for i in range(4): # allocate these to have 4 each
-            p = TnfxParameter(-1,'',i,'',False)
+        for i in range(4): # pre-allocate these to have 4 each
+            p = TnfxParameter(-1,'',i,'',False) # offset = -1 to identify it's unassigned
             self.User1Knobs.append(p)
             self.User2Knobs.append(p)
+    def getID(self):
+        chanName= channels.getChannelName(channels.selectedChannel())
+        presetName = plugins.getName(channels.selectedChannel(), -1, 6, -1)
+        return "{}-{}-{}".format(self.PluginName, chanName, presetName)    
     def getParamNamesForGroup(self, groupName):
         params = []
         for p in self.ParameterGroups[groupName]:
             params.append(p.Caption)
         return params
+        
     def addParamToGroup(self, groupName, nfxParameter):
-        nfxParameter.GroupName = groupName
-        if(nfxParameter.Caption in ['?', ''] and nfxParameter.Offset > -1):
-            nfxParameter.Caption = plugins.getParamName(nfxParameter.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
-        if(groupName in self.ParameterGroups.keys()):
+        nfxParameter.GroupName = groupName 
+        self.Parameters.append(nfxParameter)            # add to root level Param list
+        
+        if(groupName in self.ParameterGroups.keys()):   # add to group 
             self.ParameterGroups[groupName].append(nfxParameter)
         else:
             self.ParameterGroups[groupName] = [nfxParameter]
+
     def assignParameterToUserKnob(self, knobMode, knobIdx, nfxParameter):
         if(4 < knobIdx < 0):
             return 
-        if(nfxParameter.Caption in ['?', ''] and nfxParameter.Offset > -1):
-            nfxParameter.Caption = plugins.getParamName(nfxParameter.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
         if(knobMode == KM_USER1):
             self.User1Knobs[knobIdx] = nfxParameter
         elif(knobMode == KM_USER2):
