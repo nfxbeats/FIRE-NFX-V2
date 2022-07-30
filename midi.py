@@ -190,7 +190,7 @@ REC_Chan_Env_Hole = REC_Chan_Env_LFOA + 2
 REC_Chan_Env_PLast = REC_Chan_Env_Hole + 3
 REC_Chan_Env_Last = REC_Chan_Env_First + 0x800 - 1
 
-# note events
+# note events   
 REC_Chan_Note_First = REC_Chan_First + 0x4000
 REC_Chan_Note_Num = 0x20
 REC_Chan_Note_Last = REC_Chan_Note_First + REC_Chan_Note_Num

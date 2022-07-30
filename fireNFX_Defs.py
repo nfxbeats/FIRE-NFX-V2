@@ -237,3 +237,5 @@ levelU = [lvlU, 'Update']
 levelD = [lvlD, 'Display']
 prnLevels = [level0, levelE, levelH, levelR, levelU, levelD]
 
+FLEFFECTS = 'CHAN FX'
+NOSUPPTEXT = "UNSUPPORTED"

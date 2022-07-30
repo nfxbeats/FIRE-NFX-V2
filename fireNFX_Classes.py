@@ -5,6 +5,34 @@ from fireNFX_Defs import *
 import plugins
 import channels
 
+def clonePluginParams(srcPlugin, destPlugin):
+    # enumerate the plugins list. no deepcopy :(  
+    for param in srcPlugin.Parameters:
+        newParam = TnfxParameter(param.Offset, param.Caption, param.Value, param.ValueStr, param.Bipolar, param.StepsAfterZero)
+        if(newParam.Caption in ['?', ''] and newParam.Offset > -1):
+            if(plugins.isValid(channels.selectedChannel())):
+                newParam.Caption = plugins.getParamName(newParam.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+
+        destPlugin.addParamToGroup(param.GroupName, newParam)
+    for knob in range(4):
+        param1 = srcPlugin.User1Knobs[knob] 
+        param2 = srcPlugin.User2Knobs[knob] 
+        newParam1 = TnfxParameter(param1.Offset, param1.Caption, param1.Value, param1.ValueStr, param1.Bipolar, param1.StepsAfterZero)
+        newParam2 = TnfxParameter(param2.Offset, param2.Caption, param2.Value, param2.ValueStr, param2.Bipolar, param2.StepsAfterZero)
+
+        if(param1.Caption in ['?', ''] and param1.Offset > -1):
+            if(plugins.isValid(channels.selectedChannel())):
+                newParam1.Caption = plugins.getParamName(param1.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+
+        if(param2.Caption in ['?', ''] and param2.Offset > -1):
+            if(plugins.isValid(channels.selectedChannel())):
+                newParam2.Caption = plugins.getParamName(param2.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+
+        destPlugin.assignParameterToUserKnob(KM_USER1, knob, newParam1 )
+        destPlugin.assignParameterToUserKnob(KM_USER2, knob, newParam2 )
+    return destPlugin
+
+
 class TnfxChannelPlugin:
     def __init__(self, name, username = ""):
         self.Name = name
@@ -15,20 +43,33 @@ class TnfxChannelPlugin:
         self.TweakableParam = None
         self.User1Knobs = []
         self.User2Knobs = []
+        self.isNative = False
         self.AlwaysRescan = True
+        self.ChannelType = -1
         for i in range(4): # pre-allocate these to have 4 each
             p = TnfxParameter(-1,'',i,'',False) # offset = -1 to identify it's unassigned
             self.User1Knobs.append(p)
             self.User2Knobs.append(p)
+    def copy(self):
+        newPlugin = TnfxChannelPlugin(self.PluginName)
+        clonePluginParams(self, newPlugin)
+        return newPlugin
+
     def getID(self):
         chanName= channels.getChannelName(channels.selectedChannel())
-        presetName = plugins.getName(channels.selectedChannel(), -1, 6, -1)
+        presetName = "NONE"
+        if(plugins.isValid(channels.selectedChannel())):
+            presetName = plugins.getName(channels.selectedChannel(), -1, 6, -1)
         return "{}-{}-{}".format(self.PluginName, chanName, presetName)    
+
     def getParamNamesForGroup(self, groupName):
         params = []
         for p in self.ParameterGroups[groupName]:
             params.append(p.Caption)
         return params
+
+    def getGroupNames(self):
+        return list(self.ParameterGroups.keys())
         
     def addParamToGroup(self, groupName, nfxParameter):
         nfxParameter.GroupName = groupName 

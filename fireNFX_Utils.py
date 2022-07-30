@@ -228,15 +228,14 @@ def getPluginParam(chanIdx, paramIdx, prn = False):
     valuestr = plugins.getParamValueString(paramIdx, chanIdx, -1)
     bipolar = False
     name = plugins.getPluginName(chanIdx, -1, 1)
-    varName =  "pl" + name 
+    varName =  "pl" + name.replace(' ', '')
     if(caption != '') and prn:
-        print(varName + ".addParamToGroup('" + name.upper() + "', TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
-    #print('TnfxParameter')
-    #print('     Param', paramIdx, caption )
-    #print('     Value', paramIdx, value )
-    #print('    ValStr', paramIdx, valuestr )
-    #print('    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
-    #print('    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
+        print(varName + ".addParamToGroup('ALL', TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
+    #print('#    Param', paramIdx, caption )
+    #print('#     Value', paramIdx, value )
+    #print('#    ValStr', paramIdx, valuestr )
+    #print('#    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
+    #print('#    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
     #print('----------------------')
     return TnfxParameter(paramIdx, caption, value, valuestr, bipolar)
 
@@ -263,7 +262,7 @@ def getBeatLenInMS(div):
     #print('tempo', tempo, 'div', div, 'beatlen', beatlen, 'output', timeval, 'Barlen', barlen) 
     return int(timeval)
 
-def getPluginInfo(chanIdx, prn = False):
+def getPluginInfo(chanIdx, prn = False, inclBlanks = False):
     if chanIdx == -1:
         chanIdx = channels.selectedChannel()
 
@@ -277,13 +276,17 @@ def getPluginInfo(chanIdx, prn = False):
         print('#   PluginName: ', res.Name)
         print('#   ParamCount: ', pCnt)
         print('# -----------------------------------------------------------------')
-        print(varName + " = TnfxPlugin('" + name + "')")
+        print('from fireNFX_Classes import TnfxParameter, TnfxChannelPlugin')
+        print(varName + " = TnfxChannelPlugin('" + name.replace(' ', '') + "')")
     for paramIdx in range(0, pCnt):
-        if(plugins.getParamName(paramIdx, chanIdx, -1) != ''):
-            param = getPluginParam(chanIdx, paramIdx, prn)
-            if(param.Caption != ""):
+        #if(plugins.getParamName(paramIdx, chanIdx, -1) != '') or (inclBlanks):
+        param = getPluginParam(chanIdx, paramIdx, prn)
+        if(param.Caption != "") or (inclBlanks):
+            if('MIDI CC' in param.Caption):
+                res.addParamToGroup("MIDI CCs", param)
+            else:    
                 res.addParamToGroup("ALL", param)
-                res.Parameters.append(param)
+            res.Parameters.append(param)
     if(prn):
         print('# -----------------------------------------------------------------')   
         print('#    Non Blank Params Count: ' + str(len(res.Parameters)))         

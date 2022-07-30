@@ -38,6 +38,7 @@ from fireNFX_PluginDefs import *
 _debugprint = DEFAULT_SHOW_PRN
 _rectTime = DEFAULT_DISPLAY_RECT_TIME_MS
 _ShiftHeld = False
+_FLChannelFX = False
 _AltHeld = False
 _PatternCount = 0
 _CurrentPattern = -1
@@ -393,7 +394,7 @@ def OnMidiIn(event):
         
         # check if we have predefined user knob settings, if NOT shortcut out 
         # to be processed by OnMidiMsg() to use processMIDICC per the docs
-        pName, plugin = getCurrentChannelPlugin()
+        pName, plugin = getCurrChanPlugin()
         if(plugin == None): # invalid plugin
             return
 
@@ -935,12 +936,15 @@ def HandleDrums(event, padNum):
         return True # mark as handled to prevent processing
 
 def getChannelMap():
+    if(len(_ChannelMap) != channels.channelCount()):
+        UpdateChannelMap()
     channelMap = _ChannelMap
-    #if(_isAltMode):
-    #    channelMap = _ChannelSelectedMap
     return channelMap
 
 def getPatternMap():
+    if(len(_PatternMap) != patterns.patternCount() ):
+        UpdatePatternMap()
+
     patternMap = _PatternMap
     if(_isAltMode):
         patternMap = _PatternSelectedMap
@@ -954,7 +958,6 @@ def HandlePatternStrip(padNum):
     pattOffset = getPatternOffsetFromPage()
     patternStripA, patternStripB = getPatternPads()
 
-
     if(padNum in patternStripA):
         pattIdx = patternStripA.index(padNum)
     elif(padNum in patternStripB):
@@ -967,7 +970,7 @@ def HandlePatternStrip(padNum):
         return True # nothing else to do
 
 
-    if(patterns.patternNumber() != pattNum): # patt.FLIndex):
+    if(patterns.patternNumber() != pattNum): 
         if(padNum in patternStripA):
             patterns.jumpToPattern(pattNum)
         else:
@@ -1005,15 +1008,13 @@ def HandlePatternChanges():
 
         else:
             if _CurrentPattern != patterns.patternNumber():
-                UpdatePatternModeData(patterns.patternNumber()) 
+                UpdatePatternModeData() 
                 RefreshPatternStrip(True)
             else:
                 UpdatePatternModeData() 
                 RefreshPatternStrip()
 
         _CurrentPattern = patterns.patternNumber()
-        
-        
 
     if(patterns.patternCount() == 0) and (_CurrentPattern == 1): # empty project, set to 1
         _PatternCount = 1
@@ -1086,12 +1087,14 @@ def HandleKnob(event, ctrlID, useparam = None):
     value = event.outEv
 
     chanNum = getCurrChanIdx() #  channels.channelNumber()
-
-
+    recEventID = channels.getRecEventId(chanNum)
 
     if(ctrlID == IDSelect) and (useparam != None): # tweaking via Select Knob
-        recEventID = channels.getRecEventId(getCurrChanIdx()) + REC_Chan_Plugin_First
-        knobres = 1/32
+
+        if(not _FLChannelFX) and (isGenPlug()): # for plugins/generators
+            recEventID += REC_Chan_Plugin_First
+
+        knobres = 1/64
         if (useparam.StepsAfterZero > 0):
             knobres = 1/useparam.StepsAfterZero
         if(_ShiftHeld):
@@ -1102,7 +1105,6 @@ def HandleKnob(event, ctrlID, useparam = None):
 
 
     if _KnobMode == KM_CHANNEL :
-        recEventID = channels.getRecEventId(chanNum)
         if chanNum > -1: # -1 is none selected
             # check if a pad is being held for the FPC params
             pMapPressed = next((x for x in _PadMap if x.Pressed == 1), None) 
@@ -1121,6 +1123,7 @@ def HandleKnob(event, ctrlID, useparam = None):
                 else:
                     ui.crDisplayRect(0, chanNum, 0, 1, 10000, CR_ScrollToView + CR_HighlightChannelPanVol)
                     return HandleKnobReal(recEventID + REC_Chan_Vol,  value, 'Ch Vol: ' + chanName, False)
+                    
                     
 
             elif ctrlID == IDKnob2:
@@ -1157,7 +1160,7 @@ def HandleKnob(event, ctrlID, useparam = None):
     elif(isKnownPlugin()):
         knobParam = None
         recEventID = channels.getRecEventId(getCurrChanIdx()) + REC_Chan_Plugin_First
-        pluginName, plugin = getCurrentChannelPlugin()
+        pluginName, plugin = getCurrChanPlugin()
         if(plugin == None): # invalid plugin
             return True
 
@@ -1171,25 +1174,10 @@ def HandleKnob(event, ctrlID, useparam = None):
         if(  knobParam.Offset > -1  ): # valid offset?
             return HandleKnobReal(recEventID + knobParam.Offset,  event.outEv, knobParam.Caption + ': ', knobParam.Bipolar)
         return True
-
-        # for knob in range(4):
-        #     knobID = IDKnob1 + knob
-        #     if(ctrlID == knobID):
-        #         param = knobParams[knob]
-        #         hasParam = param.Offset > -1  # valid offset?
-        #         #print('KM2, Has Param:', hasParam, 'knobID', knobID )
-        #         if( hasParam ):
-        #             #print('KM3', param.Caption, param.Offset)
-        #             return HandleKnobReal(recEventID + param.Offset,  event.outEv, param.Caption + ': ', param.Bipolar)
-        #             #return HandleKnobReal(recEventID + param.Offset,  value,  param.Caption + ': ',  param.Bipolar, param.StepsAfterZero)
-        #             # turn HandleKnobReal(recEventID + REC_Mixer_Vol,  value, 'Mx Vol: ' + mixerName , False)
-        #         else:
-        #             return True 
     else:  #user modes..
         if (event.status in [MIDI_NOTEON, MIDI_NOTEOFF]):
             event.handled = True
         return True # these knobs will be handled in OnMidiMsg prior to this.
-
 
 def HandleKnobReal(recEventIDIndex, value, Name, Bipolar, stepsAfterZero = 0, knobres = 1/64):
     #knobres = 1/64
@@ -1372,7 +1360,7 @@ def HandleSelectWheel(event, ctrlID):
     ShowMenuItems()
     jogNext = 1
     jogPrev = 127
-    paramName, plugin = getCurrentChannelPlugin()
+    paramName, plugin = getCurrChanPlugin()
     if(plugin == None): # invalid plugin
         return True
 
@@ -1387,7 +1375,8 @@ def HandleSelectWheel(event, ctrlID):
                 _menuItemSelected = 0
 
             if(len(_menuHistory) == MAXLEVELS):
-                groupName = list(plugin.ParameterGroups.keys())[_menuHistory[0]]
+                #groupName = list(plugin.ParameterGroups.keys())[_menuHistory[0]]
+                groupName =  plugin.getGroupNames()[_menuHistory[0]]
                 plugin.TweakableParam = plugin.ParameterGroups[groupName][_chosenItem]
 
         _chosenItem = _menuItemSelected
@@ -1426,14 +1415,17 @@ def HandleBrowserButton():
     global _menuItems
     global _menuItemSelected
     global _menuHistory
+    global _FLChannelFX
 
     _ShowMenu = not _ShowMenu
     if(_ShowMenu):
+        _FLChannelFX = _ShiftHeld
         _menuHistory.clear()
         _menuItemSelected = 0
         SendCC(IDBrowser, DualColorFull2)  #SingleColorHalfBright
         ShowMenuItems()
     else:
+        _FLChannelFX = False
         SendCC(IDBrowser, SingleColorOff) 
         RefreshDisplay()
     return True
@@ -1539,6 +1531,7 @@ def HandleUDLR(padIndex):
 
 #region Refresh
 def RefreshAll():
+    prn(lvlA, 'RefreshAll')
     RefreshPageLights()
     RefreshModes()
     RefreshMacros()
@@ -1551,7 +1544,7 @@ def RefreshModes():
     if(_PadMode.Mode == MODE_DRUM):
         RefreshDrumPads()
     elif(_PadMode.Mode == MODE_PATTERNS):
-        UpdatePatternModeData(patterns.patternNumber())
+        UpdatePatternModeData()
         UpdatePatternModeData()
         RefreshPatternStrip(_ScrollTo) 
         RefreshChannelStrip(_ScrollTo)
@@ -1656,6 +1649,7 @@ def RefreshPadsFromPadMap():
         SetPadColor(pad, _PadMap[pad].Color, dimDefault) 
 
 def RefreshMacros():
+    prn(lvlA, 'RefreshMacros') 
     if isNoMacros():
         return 
 
@@ -1928,7 +1922,7 @@ def RefreshFPCSelector():
     for chan in range(channels.channelCount()):
         # check if there is room
         if(idx < len(pdFPCChannels)): 
-            if(_ChannelMap[chan].ChannelType == CT_GenPlug):
+            if(isGenPlug(chan)): # _ChannelMap[chan].ChannelType == CT_GenPlug):
                 if(plugins.getPluginName(chan, -1, 0) == "FPC"):
                     if(not isFPCActive()): #if an FPC is not selected, choose the first one
                         SelectAndShowChannel(chan)
@@ -2377,7 +2371,7 @@ def UpdatePlaylistMap(selectedOnly = False):
         if(plMap.Selected):
             _PlaylistSelectedMap.append(plMap)
 
-def UpdatePatternMap(pattNum):
+def UpdatePatternMap():
     # this function should read ALL patterns from FL and have update two global lists of type <TnfxPattern>:
     #   1. _PatternMap - all of the patterns from FL
     #   2. _PatternSelectedMap - the selected patterns from FL . includes the currently active pattern
@@ -2547,22 +2541,23 @@ def UpdateChannelMap():
         if(chanMap.Selected):
             _ChannelSelectedMap.append(chanMap)
 
-def UpdatePatternModeData(pattNum = -1):
+def UpdatePatternModeData():
     global _CurrentChannel
     global _ChannelCount
     ResetPadMaps(False)
-    UpdatePatternMap(pattNum)
+    UpdatePatternMap()
     UpdateChannelMap()
     #UpdatePadMap()
 
 def ResetBeatIndicators():
     for i in range(0, len(BeatIndicators) ):
         SendCC(BeatIndicators[i], SingleColorOff)
+
 #endregion 
 
 #region Helper function 
 def isFPCChannel(chanIdx):
-    if(_ChannelMap[chanIdx].ChannelType == CT_GenPlug):
+    if(isGenPlug(chanIdx)): #_ChannelMap[chanIdx].ChannelType == CT_GenPlug):
         pluginName = plugins.getPluginName(chanIdx, -1, 0)      
         return (pluginName == 'FPC')     
 
@@ -2692,8 +2687,8 @@ def PlayMIDINote(chan, note, velocity):
 def GetPatternMapActive():
     return _PatternMap[_CurrentPattern-1]
 
-def GetChannelMapActive():
-    return _ChannelMap[_CurrentChannel-1]
+# def GetChannelMapActive():
+#     return _ChannelMap[_CurrentChannel-1]
 
 def SetPadMode():
     RefreshShiftAltButtons()
@@ -2720,21 +2715,21 @@ def getCurrChanIdx():
             res = cMap.FLIndex
     return res 
 
-def XgetCurrChannelPluginName():
-    return plugins.getPluginName(getCurrChanIdx(), -1, 0)
-
 def getCurrChanPluginID():
-    name, plugin = getCurrentChannelPlugin()
+    name, plugin = getCurrChanPlugin()
     if(plugin == None):
         return ""
     return plugin.getID()
 
-def getCurrChannelPluginNames():
+def getCurrChanPluginNames():
     return plugins.getPluginName(getCurrChanIdx(), -1, 0), plugins.getPluginName(getCurrChanIdx(), -1, 1)
 
-NOSUPPTEXT = "UNSUPPORTED"
-def getCurrentChannelPlugin():
-    plugin = getPlugin("")
+
+def getCurrChanPlugin():
+    plName = ""
+    if(_FLChannelFX):
+        plName = FLEFFECTS
+    plugin = getPlugin(plName)
     if plugin == None:
         return NOSUPPTEXT, None
     return plugin.getID(), plugin
@@ -2777,7 +2772,6 @@ def ChannelPageNav(moveby):
     RefreshPageLights()
     ui.crDisplayRect(0, pageOffs, 0, pageSize, _rectTime, CR_ScrollToView + CR_HighlightChannelName)
 
-
 def NavNotesList(val):
     global _NoteIdx
     _NoteIdx += val
@@ -2786,15 +2780,12 @@ def NavNotesList(val):
     elif( _NoteIdx < 0 ):
         _NoteIdx = len(NotesList)-1
 
-
-
 def NavLayout(val):
     global _PadMode
     oldIdx = _PadMode.LayoutIdx
     newIdx = (oldIdx + val) % len(_Layouts)
 
     _PadMode.LayoutIdx = newIdx 
-
 
 def NavOctavesList(val):
     global _OctaveIdx
@@ -2803,7 +2794,6 @@ def NavOctavesList(val):
         _OctaveIdx = 0
     elif( _OctaveIdx < 0 ):
         _OctaveIdx = len(OctavesList)-1
-
 
 def NavSetList(val):
     global _PadMode 
@@ -2834,7 +2824,6 @@ def RefreshGridLR():
     elif(navSet == nsUDLR):
         SendCC(IDLeft, SingleColorFull)
         SendCC(IDRight, SingleColorFull)
-
 
 def NavScalesList(val):
     global _ScaleIdx
@@ -2870,15 +2859,6 @@ def ShowPianoRoll(showVal, bSave, bUpdateDisplay = False, chanIdx = -1):
     if(showVal <= 0) and (isShowing) and (chanIdx == -1):
         ui.hideWindow(widPianoRoll)
 
-    #if(showVal == 1):
-    #    ShowChannelRack(1, True)
-    
-    #ui.showWindow(widChannelRack)
-    #chanNum = channels.selectedChannel(0, 0, 0)
-
-#    ui.openEventEditor(channels.getRecEventId(
-#        chanNum) + REC_Chan_PianoRoll, EE_PR)
-
     if(showVal == -1):  # toggle
         if(currVal == 0):
             showVal = 1
@@ -2899,10 +2879,6 @@ def ShowPianoRoll(showVal, bSave, bUpdateDisplay = False, chanIdx = -1):
         if(bSave):
             if(len(_PatternMap) > 0):
                 selPat.ShowPianoRoll = 0
-
-    #if(showVal == 0): # make CR active
-    #    ShowChannelRack(_ShowChanRack)
-        
 
     if(bUpdateDisplay):
         DisplayTimedText('Piano Roll: ' + _showText[showVal])
@@ -3079,16 +3055,16 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
 
 def UpdateMenuItems(level):
     global _menuItems
-    pluginName, plugin = getCurrentChannelPlugin()
-    if(not plugins.isValid(channels.selectedChannel())):
+    pluginName, plugin = getCurrChanPlugin()
+    if(plugin == None):
         _menuItems.clear()
         _menuItems.append('UNSUPPORTED')
         return 
-#    print('l', level, pluginName, plugin)
     if(level == 0):
-        _menuItems = list(plugin.ParameterGroups.keys()) #['Set Params']
+        _menuItems = plugin.getGroupNames() # list(plugin.ParameterGroups.keys()) #['Set Params']
     elif(level == 1):
-        group = list(plugin.ParameterGroups.keys())[_menuHistory[level-1]]
+        #group = list(plugin.ParameterGroups.keys())[_menuHistory[level-1]]
+        group = plugin.getGroupNames()[_menuHistory[level-1]]
         _menuItems = plugin.getParamNamesForGroup(group)
     if(level > 0) and (_menuBackText not in _menuItems):
         _menuItems.append(_menuBackText)
@@ -3119,7 +3095,8 @@ def ShowMenuItems():
                     preText = '<--'
         
         if(level == MAXLEVELS):
-            displayText[i] = "[" + _menuItems[item].upper() + "]" 
+            pass
+            #displayText[i] = "[" + _menuItems[item].upper() + "]" 
         elif(item < len(_menuItems)):
             if(_menuItems[item] == NOSUPPTEXT):
                 preText = ''
@@ -3194,6 +3171,8 @@ def UpdateWindowStates():
     global _ShowPianoRoll
     global _ShowChannelEditor
     global _ShowCSForm
+    
+    prn(lvlA, 'UpdateWindowStates')
 
     if isNoMacros():
         return 
@@ -3215,7 +3194,7 @@ def UpdateWindowStates():
     RefreshWindowStates()
 
 def RefreshWindowStates():
-
+    prn(lvlA, 'RefreshWindowState')
     if isNoMacros():
         return 
 
@@ -3328,32 +3307,19 @@ def InititalizePadModes():
 def SetChannelParam(offset, value):
     plugins.setParamValue(value, offset, getCurrChanIdx(), -1)
 
-def clonePluginParams(srcPlugin, destPlugin):
-    # enumerate the plugins list. no deepcopy :(  
-    for param in srcPlugin.Parameters:
-        newParam = TnfxParameter(param.Offset, param.Caption, param.Value, param.ValueStr, param.Bipolar, param.StepsAfterZero)
-        if(newParam.Caption in ['?', ''] and newParam.Offset > -1):
-            if(plugins.isValid(channels.selectedChannel())):
-                newParam.Caption = plugins.getParamName(newParam.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+def getChannelType(chan = -1):
+    if(chan < 0):
+        chan = getCurrChanIdx()
+    return channels.getChannelType(chan)
 
-        destPlugin.addParamToGroup(param.GroupName, newParam)
-    for knob in range(4):
-        param1 = srcPlugin.User1Knobs[knob] 
-        param2 = srcPlugin.User2Knobs[knob] 
-        newParam1 = TnfxParameter(param1.Offset, param1.Caption, param1.Value, param1.ValueStr, param1.Bipolar, param1.StepsAfterZero)
-        newParam2 = TnfxParameter(param2.Offset, param2.Caption, param2.Value, param2.ValueStr, param2.Bipolar, param2.StepsAfterZero)
+def isGenPlug(chan = -1):
+    return (getChannelType(chan) in [CT_GenPlug])
 
-        if(param1.Caption in ['?', ''] and param1.Offset > -1):
-            if(plugins.isValid(channels.selectedChannel())):
-                newParam1.Caption = plugins.getParamName(param1.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+def isSampler(chan = -1):
+    return (getChannelType(chan) in [CT_Sampler])
 
-        if(param2.Caption in ['?', ''] and param2.Offset > -1):
-            if(plugins.isValid(channels.selectedChannel())):
-                newParam2.Caption = plugins.getParamName(param2.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
-
-        destPlugin.assignParameterToUserKnob(KM_USER1, knob, newParam1 )
-        destPlugin.assignParameterToUserKnob(KM_USER2, knob, newParam2 )
-    return destPlugin
+def isAudioClip(chan = -1):
+    return (getChannelType(chan) in [CT_AudioClip])
 
 def getPlugin(pluginName):
     ''' Loads the plugin from either (in this order):
@@ -3366,22 +3332,27 @@ def getPlugin(pluginName):
     '''
     global _knownPlugins
 
+    if(pluginName == "") and (isSampler()):
+        return plSampler
+
+    if(pluginName == FLEFFECTS):
+        plFLChanFX.ChannelType = getChannelType()
+        return plFLChanFX
+
     if(not plugins.isValid(channels.selectedChannel())):
         return None 
 
-    basePluginName, userPluginName = getCurrChannelPluginNames()
-    pl = TnfxChannelPlugin(basePluginName, userPluginName) # in case we don't find one later...
+    basePluginName, userPluginName = getCurrChanPluginNames()
+    pl = TnfxChannelPlugin(basePluginName, userPluginName) # in case we need a new instance
 
     if(pl.getID() in _knownPlugins.keys()):
         return _knownPlugins[pl.getID()]
     
     if(basePluginName in CUSTOM_PLUGINS.keys()):
-        clonePluginParams(CUSTOM_PLUGINS[basePluginName], pl)
+        pl = CUSTOM_PLUGINS[basePluginName].copy() #clonePluginParams(CUSTOM_PLUGINS[basePluginName], pl)
     else:
         pl = getPluginInfo(-1)
     
-    #print('pl', pl)
-            
     _knownPlugins[pl.getID()] = pl
     return pl 
 
