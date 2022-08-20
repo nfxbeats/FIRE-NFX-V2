@@ -375,10 +375,28 @@ def Grads(color, stepsize = 64):
 
 
 def Gradient(color1, color2, stepsize, padOffs=0, len=8):
+    gradientList = []
     for pad in range(len):
         step = (127//stepsize) * pad
         col = FadeColor(color1, color2, step)
-        SetPadColor(pad+padOffs, col, 0)
+        if(padOffs > -1):
+            SetPadColor(pad+padOffs, col, 0)
+        gradientList.append(col)
+    return gradientList
+
+
+goDim = 0
+goDark = 16
+goNorm = 32
+goLight = 48
+_gradientOffs = [goLight, goNorm, goDark, goDim] # light to dark
+def getGradientOffs(baseColor, goVal):
+    gradientList = Gradient(cOff, baseColor, 64, -1, 32)
+    gradientList.extend(Gradient(baseColor, cWhite, 64, -1, 32))
+    return gradientList[goVal]  #, gradientList
+
+
+
 
 
 
@@ -474,11 +492,75 @@ def getAbsTicksFromBar(bar):
     return (bar - 1) * general.getRecPPB() 
 
 #from the original AKAI script
-def FadeColor(StartColor, EndColor, Value):
+def FadeColor(StartColor, EndColor, ColorSteps):
   rStart, gStart, bStart = ColorToRGB(StartColor)
   rEnd, gEnd, bEnd = ColorToRGB(EndColor)
-  ratio = Value / 255
+  ratio = ColorSteps / 255
   rEnd = round(rStart * (1 - ratio) + (rEnd * ratio))
   gEnd = round(gStart * (1 - ratio) + (gEnd * ratio))
   bEnd = round(bStart * (1 - ratio) + (bEnd * ratio))
   return RGBToColor(rEnd, gEnd, bEnd)
+
+mvUp = 0
+mvUpRight = 1
+mvRight = 2
+mvDownRight = 3
+mvDown = 4
+mvDownLeft = 5
+mvLeft = 6
+mvUpLeft = 7
+
+def MovePad(PadToMoveIdx, direction, StartColor = cGreen, EndColor = cWhite, colorStep = 0):
+    padRow = PadToMoveIdx // 16
+    padCol = PadToMoveIdx % 16
+    addVal = 0
+    #directions are indicated in a clock wise manner starting with the top
+    if(direction in [mvUpLeft, mvUp, mvUpRight]): # up
+        if(padRow > 0):
+            addVal += -16
+    if(direction in [mvUpRight, mvRight, mvDownRight]):
+        if(padCol < 16):
+            addVal += +1
+    if(direction in [mvDownLeft, mvDown, mvDownRight]): # down
+        if(padRow < 3):
+            addVal += 16 
+    if(direction in [mvUpLeft, mvLeft, mvDownLeft]):
+        if(padCol > 0):
+            addVal += -1
+    newPadIdx = PadToMoveIdx + addVal
+    stepSize = 255//4
+    newColor = FadeColor(StartColor, EndColor, colorStep * stepSize)
+    oldColor = newColor # FadeColor(StartColor, EndColor, (colorStep + 1) * stepSize)
+    SetPadColor(newPadIdx, newColor, dimBright, False)
+    SetPadColor(PadToMoveIdx, oldColor, dimDefault, False)
+    return newPadIdx
+
+_baseDelay = getBeatLenInMS(8)/1000
+#_testpath = [mvLeft, mvUp, mvRight, mvRight, mvDown, mvDown, mvLeft, mvLeft, mvLeft, mvUp, mvUp, mvUp, mvRight, mvRight, mvRight, mvUp]
+_testpath = [mvDown, mvDown, mvDown, mvRight, mvUp, mvUp, mvUp, mvRight,
+    mvDown, mvDown, mvDown, mvRight, mvUp, mvUp, mvUp, mvRight, 
+    mvDown, mvDown, mvDown, mvRight, mvUp, mvUp, mvUp]
+def BankMoves(startpad = 34, path = _testpath, color = cGreen):
+    delay = _baseDelay 
+    pad = startpad
+    pad2 = startpad + 4
+    pad3 = startpad + 8
+    pad4 = startpad + 12
+    for step in _testpath:
+        pad = MovePad(pad, step, color, cBlack, 0)
+        pad2 = MovePad(pad2, step, color, cBlack, 1)
+        pad3 = MovePad(pad3, step, color, cBlack, 2)
+        pad4 = MovePad(pad4, step, color, cBlack, 3)
+        time.sleep(delay) #getBeatLenInMS(4)/1000
+
+import _thread 
+
+def TestThreadMove():
+    delay = _baseDelay * 4
+    startPad = 0 
+    baseColor = cRed
+    for goOffs in _gradientOffs:
+        color = getGradientOffs(baseColor, goOffs)
+        _thread.start_new_thread(BankMoves, (startPad, _testpath, color ) )
+        time.sleep(delay)
+    

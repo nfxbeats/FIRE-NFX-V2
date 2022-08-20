@@ -17,7 +17,6 @@ ppFPC_Tune   = TnfxParameter( 256,'PAD Tune',   0, '', False)
 
 # FL Channel FX 
 plFLChanFX = TnfxChannelPlugin(FLEFFECTS)
-
 plFLChanFX.addParamToGroup('CHANNEL', TnfxParameter(REC_Chan_Mute, 'CHAN Mute', 0, '', False, 1)) # NO Value return
 plFLChanFX.addParamToGroup('CHANNEL', TnfxParameter(REC_Chan_Pan, 'CHAN Pan', 0, '', True))
 plFLChanFX.addParamToGroup('CHANNEL', TnfxParameter(REC_Chan_Vol, 'CHAN Volume', 0, '', False))

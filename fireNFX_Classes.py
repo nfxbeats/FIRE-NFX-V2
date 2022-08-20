@@ -289,4 +289,27 @@ class TnfxColorMap:
         self.B = 0
         self.Anim = ''
         self.AnimStep = -1
-    
+
+class TnfxMenuItems:
+    def __init__(self, text, object = None) -> None:
+        self.Level = 0
+        self.Parent = None
+        self.Text = text
+        self.Value = 0
+        self.Selected = False
+        self.Object = object
+        self.SubItems = []
+    def __str__(self):
+        return "TnfxMenuItem( {}, {}, {} ) - {} subitem(s) - parent: {}".format(self.Level, self.Text, self.Value, len(self.SubItems), self.Parent )
+    def addSubItem(self, item):
+        exists = False
+        item.Level = self.Level + 1
+        item.Parent = self 
+        item.Value = len(self.SubItems)
+        for idx, mi in enumerate(self.SubItems):
+            #if(item.Text == mi.Text) and (idx == mi.Value): 
+            if (id(item) == id(mi)):
+                exists = True
+                break
+        if(not exists):
+            self.SubItems.append(item)

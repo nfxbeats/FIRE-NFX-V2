@@ -24,8 +24,20 @@ import plugins
 import playlist
 import arrangement
 
-from harmonicScales import *
+# not safe to use as of Aug 20, 2022
+# import _thread 
+# _task = True
+# def task(a,b):
+#     while (_task) and (a < b):
+#         a += 1
+#         print('working...', a)
+#         time.sleep(1)
+#     print('done')
+# def startTask():
+#     id = _thread.start_new_thread(task, (0,100))
+#     print('task started', id)
 
+from harmonicScales import *
 from fireNFX_DEFAULTS import *
 from fireNFX_Classes import *
 from fireNFX_Defs import * 
@@ -69,6 +81,8 @@ _ShowPianoRoll = 0
 _ShowChannelEditor = 0
 _ShowCSForm = 0
 _showText = ['OFF', 'ON']
+
+_WalkerChanIdx = -1
 
 #display menu
 _ShowMenu = 0
@@ -136,6 +150,9 @@ _ScrollTo = True # used to determine when to scroll to the channel/pattern
 
 #region FL MIDI API Events
 def OnInit():
+    # if not supportsFLVersion():
+    #     return 
+
     global _ScrollTo 
 
     _ScrollTo = True
@@ -160,7 +177,6 @@ def OnInit():
     RefreshShiftAltButtons()
     RefreshTransport()    
 
-
     InitDisplay()
     line = '----------------------'
     DisplayText(Font6x8, JustifyCenter, 0, "-={ FIRE-NFX }=-", True)
@@ -178,6 +194,14 @@ def OnInit():
 
 _shuttingDown = False
 def OnDeInit():
+    global _task
+    _task = False
+    time.sleep(1)
+    
+    #print('deInit')
+
+    if not supportsFLVersion():
+        return 
     
     global _shuttingDown
     _shuttingDown = True
@@ -199,34 +223,42 @@ def ClearAllPads():
         SetPadColor(pad, 0x000000, 0)
     
 def OnDoFullRefresh():
+    if not supportsFLVersion():
+        return 
+
     RefreshAll() 
 
 def OnIdle():
+    if not supportsFLVersion():
+        return 
+
     if(_shuttingDown):
         return 
 
-    #if(_ShiftHeld):
-    #    RefreshShiftedStates() 
-   
     # no event I know of to hook into song length change so I'll check here
     if(_PadMode.Mode == MODE_PERFORM) and (_isAltMode):
         CheckAndHandleSongLenChanged()
 
-    if(transport.isPlaying() or transport.isRecording()):
-        if(_PadMode.Mode in [MODE_DRUM, MODE_NOTE]):
-            HandleShowNotesOnPlayback()
+    # determines if we need show note playback
+    if(DEFAULT_SHOW_PLAYBACK_NOTES):
+        if(transport.isPlaying() or transport.isRecording()):
+            if(_PadMode.Mode in [MODE_DRUM, MODE_NOTE]):
+                HandleShowNotesOnPlayback()
+
+
+def getNoteForChannel(chanIdx):
+    return channels.getCurrentStepParam(chanIdx, mixer.getSongStepPos(), pPitch)
 
 def HandleShowNotesOnPlayback():
     global _PadMode
     global  _lastNote
-    if(DEFAULT_SHOW_PLAYBACK_NOTES): # this is note playback, make true to enable
-        if (_PadMode.Mode in [MODE_DRUM, MODE_NOTE]):
-            note = channels.getCurrentStepParam(getCurrChanIdx(), mixer.getSongStepPos(), pPitch)
-            if(_lastNote != note):
-                ShowNote(_lastNote, False)
-                if(note > -1) and (note in _NoteMap):
-                    ShowNote(note, True)
-                _lastNote = note
+    if (_PadMode.Mode in [MODE_DRUM, MODE_NOTE]):
+        note = getNoteForChannel(getCurrChanIdx()) # channels.getCurrentStepParam(getCurrChanIdx(), mixer.getSongStepPos(), pPitch)
+        if(_lastNote != note):
+            ShowNote(_lastNote, False)
+            if(note > -1) and (note in _NoteMap):
+                ShowNote(note, True)
+            _lastNote = note
 
 def CheckAndHandleSongLenChanged():
     global _lastNote
@@ -239,6 +271,9 @@ def CheckAndHandleSongLenChanged():
     RefreshProgress()
     
 def OnMidiMsg(event):
+    if not supportsFLVersion():
+        return 
+
     if(event.data1 in KnobCtrls) and (_KnobMode in [KM_USER1, KM_USER2]): # user defined knobs
         # this code from the original script with slight modification:
         data2 = event.data2
@@ -262,6 +297,9 @@ def OnMidiMsg(event):
                 DisplayTextAll(s, s2, '')        
 
 def OnUpdateBeatIndicator(value):
+    if not supportsFLVersion():
+        return 
+
     global _Beat
     if(not transport.isPlaying()):
         RefreshTransport()
@@ -293,6 +331,9 @@ def OnUpdateBeatIndicator(value):
             SendCC(BeatIndicators[i], SingleColorOff)
 
 def OnDirtyChannel(chan, flags):
+    if not supportsFLVersion():
+        return 
+
     global _DirtyChannelFlags
     # Called on channel rack channel(s) change, 
     # 'index' indicates channel that changed or -1 when all channels changed
@@ -308,6 +349,12 @@ def OnDirtyChannel(chan, flags):
     _DirtyChannelFlags = flags
 
 def OnRefresh(flags):
+    global _PadMode
+    global _isAltMode
+    #print('OnRefresh', flags)
+    if not supportsFLVersion():
+        return 
+
     if(flags == HW_CustomEvent_ShiftAlt):
         # called by HandleShiftAlt
         RefreshShiftAltButtons()
@@ -339,7 +386,12 @@ def OnRefresh(flags):
         CloseBrowser()
         UpdateChannelMap()  
         if (_PadMode.Mode == MODE_DRUM):
+            if(not isFPCActive()):
+                _PadMode = modeDrumAlt
+                _isAltMode = True
+                SetPadMode()
             RefreshDrumPads()
+
         elif(_PadMode.Mode == MODE_PATTERNS):
             scrollTo = _CurrentChannel != channels.channelNumber()
             RefreshChannelStrip(scrollTo)
@@ -359,6 +411,9 @@ def OnRefresh(flags):
         pass
 
 def OnProjectLoad(status):
+    if not supportsFLVersion():
+        return 
+
     # status = 0 = starting load?
     if(status == 0):
         DisplayTextAll('Project Loading', '-', 'Please Wait...')
@@ -370,6 +425,9 @@ def OnProjectLoad(status):
         RefreshAll()
 
 def OnSendTempMsg(msg, duration):
+    if not supportsFLVersion():
+        return 
+
     #print('TempMsg', msg, duration)
     pass
 
@@ -377,6 +435,9 @@ def isKnownPlugin():
     return getCurrChanPluginID() in _knownPlugins.keys()
 
 def OnMidiIn(event):
+    if not supportsFLVersion():
+        return 
+
     global _ShiftHeld
     global _AltHeld
     global _PadMap
@@ -440,10 +501,10 @@ def OnMidiIn(event):
         #if(padNum in pdWorkArea):
         if(padNum in padsToHandle):
             if(_PadMode.Mode == MODE_DRUM): # handles on and off for PADS
-                event.handled = HandlePads(event, padNum, pMap)
+                event.handled = HandlePads(event, padNum)
                 return 
             elif(_PadMode.Mode == MODE_NOTE): # handles on and off for NOTES
-                event.handled = HandlePads(event, padNum, pMap)
+                event.handled = HandlePads(event, padNum)
                 return 
             elif(_PadMode.Mode == MODE_PERFORM): # handles on and off for PERFORMANCE
                 if(pMap.Pressed == 1):
@@ -453,7 +514,7 @@ def OnMidiIn(event):
                 return 
             elif(_PadMode.Mode == MODE_PATTERNS): # if STEP/PATTERN mode, treat as controls and not notes...
                 if(pMap.Pressed == 1): # On Pressed
-                    event.handled = HandlePads(event, padNum, pMap)
+                    event.handled = HandlePads(event, padNum)
                     return 
                 else:
                     event.handled = True #prevents a note off message
@@ -501,10 +562,15 @@ def OnMidiIn(event):
         event.handled = True 
 
 def OnNoteOn(event):
+    if not supportsFLVersion():
+        return 
+
     #prn(lvlA, 'OnNoteOn()', utils.GetNoteName(event.data1),event.data1,event.data2)
     pass
 
 def OnNoteOff(event):
+    if not supportsFLVersion():
+        return 
     #prn(lvlA, 'OnNoteOff()', utils.GetNoteName(event.data1),event.data1,event.data2)
     pass
 
@@ -600,37 +666,6 @@ def SelectAndShowChannel(newChanIdx, keepPRopen = True):
         ui.crDisplayRect(0, newChanIdx, 0, 1, _rectTime, CR_ScrollToView + CR_HighlightChannels)
         ui.miDisplayRect(mixerTrk, mixerTrk, _rectTime, CR_ScrollToView)
 
-def HandlePatternStripOld(padNum):
-    global _PatternMap
-    global _CurrentPattern
-
-    prevPattNum = patterns.patternNumber()
-    pMap = _PadMap[padNum]
-    newPatNum = pMap.FLIndex
-
-    if (newPatNum > 0): #is it a valid pattern number?
-        if(newPatNum == prevPattNum): # if it's already on the pattern, toggle the windows
-            if (padNum in pdPatternStripB):
-                ShowPianoRoll(-1, True) 
-            else:
-                ShowChannelEditor(-1, True) 
-        else: #'new' channel, close the previous windows first
-            UpdateWindowStates()
-            if (_ShowPianoRoll):
-                ShowPianoRoll(0, True)
-            if(_ShowCSForm):
-                ShowChannelSettings(0, True)
-            if(_ShowChannelEditor):
-                ShowChannelEditor(0, True)            
-            patterns.deselectAll()
-            patterns.jumpToPattern(newPatNum)
-
-    #RefreshPatterns(_CurrentPattern)
-    _CurrentChannel = getCurrChanIdx() # channels.channelNumber()
-    _ChannelCount = channels.channelCount()
-    RefreshDisplay()
-    return True
-
 def HandlePlaylist(event, padNum):
     flIdx = _PadMap[padNum]
 
@@ -658,7 +693,7 @@ def HandleProgressBar(padNum):
     prgMap = _ProgressMapSong[padOffs]
     # ABS Ticks
     if(_ProgressPadLenIdx == 0):
-        newSongPos = _ProgressMapSong[padOffs].SongPosAbsTicks
+        newSongPos = prgMap[padOffs].SongPosAbsTicks
         transport.setSongPos(newSongPos, SONGLENGTH_ABSTICKS)
     else:
         # bar number
@@ -670,14 +705,33 @@ def HandleProgressBar(padNum):
         arrangement.addAutoTimeMarker(prgMap.SongPosAbsTicks, DEFAULT_MARKER_PREFIX_TEXT + str(markerOffs))
 
     if(_ShiftHeld):
-        #prn(lvlA, '', 'Selecting bars..')    
-        pass        
+        if(len(prgMap.Markers) > 0):
+            newSongPos = prgMap.Markers[0].SongPosAbsTicks
+        else:
+            newSongPos = prgMap[padOffs].SongPosAbsTicks
+        transport.setSongPos(newSongPos, SONGLENGTH_ABSTICKS)
+        selEnd = transport.getSongLength(SONGLENGTH_ABSTICKS)
+        # select to the next marker or song end
+        arrangement.jumpToMarker(1, True)
+        pos = transport.getSongPos(SONGLENGTH_ABSTICKS)
+        addedEndMarker = False
+        if pos > newSongPos: # if there is another marker later in time we can use it for the end of selection
+            selEnd = pos
+        else:
+            arrangement.addAutoTimeMarker(selEnd, 'END') # add temp end marker
+            addedEndMarker = True
+        
+        transport.setSongPos(newSongPos, SONGLENGTH_ABSTICKS)
+        transport.markerSelJog(0)
+
+        if addedEndMarker:
+            arrangement.addAutoTimeMarker(selEnd, 'END') # remove temp end marker
         
     RefreshAllProgressAndMarkers()
 
     return True
 
-def HandlePads(event, padNum, pMap):  
+def HandlePads(event, padNum):  
     # 'perfomance'  pads will need a pressed AND release...
     if(_PadMode.Mode == MODE_DRUM):
         if (padNum in DrumPads()):
@@ -704,7 +758,10 @@ def HandlePads(event, padNum, pMap):
             chanapads, chanbpads = getChannelPads()
             if(padNum in apads): # was in pdPatternStripA
                 if(_AltHeld):
-                    CopyPattern(pMap.FLIndex)
+                    patt, pMap = getPatternNumFromPad(padNum)
+                    #print('v', patt, pMap)
+                    if(pMap != None):
+                        CopyPattern(pMap.FLIndex)
                 else:
                     event.handled = HandlePatternStrip(padNum)
             elif(padNum in bpads):
@@ -950,25 +1007,32 @@ def getPatternMap():
         patternMap = _PatternSelectedMap
     return patternMap
 
-def HandlePatternStrip(padNum):
-    global _PatternMap
-    global _PatternSelectedMap
+def getPatternNumFromPad(padNum):
     patternMap = getPatternMap()
     pattIdx = -1
+    pattNum = -1
     pattOffset = getPatternOffsetFromPage()
     patternStripA, patternStripB = getPatternPads()
-
     if(padNum in patternStripA):
         pattIdx = patternStripA.index(padNum)
     elif(padNum in patternStripB):
         pattIdx = patternStripB.index(padNum)
-    pattNum = -1
-
-    if( len(patternMap) >= pattIdx + pattOffset + 1):
-        pattNum = patternMap[pattIdx + pattOffset].FLIndex
+    if(pattIdx >= 0):
+        if( len(patternMap) >= pattIdx + pattOffset + 1):
+            pattNum = patternMap[pattIdx + pattOffset].FLIndex
+    if(pattIdx > -1):
+        return pattNum, patternMap[pattIdx + pattOffset]
     else:
-        return True # nothing else to do
+        return pattNum, None
 
+def HandlePatternStrip(padNum):
+    global _PatternMap
+    global _PatternSelectedMap
+
+    patternStripA, patternStripB = getPatternPads()
+    pattNum, pMap = getPatternNumFromPad(padNum)
+    if(pattNum == -1):
+        return True
 
     if(patterns.patternNumber() != pattNum): 
         if(padNum in patternStripA):
@@ -1242,7 +1306,7 @@ def HandlePage(event, ctrlID):
     return True
 
 def RefreshAllProgressAndMarkers():
-    UpdateMarkerMap()                
+    #UpdateMarkerMap()                
     UpdateProgressMap(False)
     RefreshProgress()
 
@@ -1316,6 +1380,9 @@ def HandleTransport(event):
     if(event.data1 == IDStop):
         transport.stop()
         ResetBeatIndicators()
+        UpdateMarkerMap()
+        transport.setSongPos(0.0)
+        RefreshModes()
 
     if(event.data1 == IDRec):
         transport.record()
@@ -1544,7 +1611,7 @@ def RefreshModes():
     if(_PadMode.Mode == MODE_DRUM):
         RefreshDrumPads()
     elif(_PadMode.Mode == MODE_PATTERNS):
-        UpdatePatternModeData()
+        #UpdatePatternModeData()
         UpdatePatternModeData()
         RefreshPatternStrip(_ScrollTo) 
         RefreshChannelStrip(_ScrollTo)
@@ -2221,8 +2288,7 @@ def RefreshUDLR():
 
 
 def RefreshProgress():
-    progMap = list()
-
+    progMap = []
     if(transport.getLoopMode == 0): # PATTERN
         progMap.extend(_ProgressMapPatterns)
     else:
@@ -2484,8 +2550,6 @@ def UpdateProgressMap(autodetect = True):
 def UpdateMarkerMap():
     global _MarkerMap
 
-    return
-
     # should only run when not playing
     if(transport.isPlaying()):
         return 
@@ -2503,26 +2567,24 @@ def UpdateMarkerMap():
             break
 
     if(markerCount > 0):
-        transport.setSongPos(1)
+        transport.setSongPos(1) # by starting at the end, we wrap around and find the first marker
         for m in range(markerCount):
             markerNum = arrangement.jumpToMarker(1, False)
             while (markerNum > m): #workaround
                 markerNum = arrangement.jumpToMarker(-1, False)
-
-        #while(markerNum > prevNum):
             markerName = arrangement.getMarkerName(markerNum)
             markerTime = arrangement.currentTime(1) # returns in ticks
             m = TnfxMarker(markerNum, markerName, markerTime)
             _MarkerMap.append(m)
-        #    prevNum = markerNum
-        #   markerNum = arrangement.jumpToMarker(1, False)
 
-    
+_WalkerName = 'Walker'    
+
 def UpdateChannelMap():
     global _ChannelMap
     global _ChannelCount
     global _CurrentChannel
     global _ChannelSelectedMap
+    global _WalkerChanIdx
 
     _ChannelCount = channels.channelCount()
     _ChannelMap.clear()
@@ -2537,6 +2599,10 @@ def UpdateChannelMap():
         mixerNum = channels.getTargetFxTrack(chan)
         mixer = TnfxMixer(mixerNum, '')
         chanMap.Mixer = mixer
+
+        if(chanMap.Name == _WalkerName):
+            _WalkerChanIdx = chanMap.FLIndex
+
         _ChannelMap.append(chanMap)
         if(chanMap.Selected):
             _ChannelSelectedMap.append(chanMap)
@@ -2577,6 +2643,7 @@ def CopyChannel(chanIdx):
 
 
 def CopyPattern(FLPattern):
+    global _ScrollTo
     ui.showWindow(widChannelRack)
     chanIdx = getCurrChanIdx() # channels.channelNumber()
     SelectAndShowChannel(chanIdx)
@@ -2585,10 +2652,16 @@ def CopyPattern(FLPattern):
     color = patterns.getPatternColor(FLPattern)
     patterns.findFirstNextEmptyPat(FFNEP_DontPromptName)
     newpat = patterns.patternNumber()
+    if("#" in name):
+        name = name.split('#')[0]
+    name += "#{}".format(newpat)
     patterns.setPatternName(newpat, name)
     patterns.setPatternColor(newpat, color)
+    patterns.jumpToPattern(newpat)
     SelectAndShowChannel(chanIdx)
     ui.paste 
+    _ScrollTo = True
+    RefreshModes()    
     
 
 def ResetPadMaps(bUpdatePads = False):
@@ -3053,6 +3126,16 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
         DisplayTimedText('Browser: ' + _showText[showVal])
 
 
+_menuAssign = TnfxMenuItems('Assign Knobs', 0)
+_menuAssign.addSubItem( TnfxMenuItems('Knob-1') )
+_menuAssign.addSubItem( TnfxMenuItems('Knob-2') )
+_menuAssign.addSubItem( TnfxMenuItems('Knob-3') )
+_menuAssign.addSubItem( TnfxMenuItems('Knob-4') )
+_menuParams = TnfxMenuItems('Browse Params', 0)
+_menus = []
+_menus.append(_menuAssign)
+_menus.append(_menuParams)
+
 def UpdateMenuItems(level):
     global _menuItems
     pluginName, plugin = getCurrChanPlugin()
@@ -3062,10 +3145,14 @@ def UpdateMenuItems(level):
         return 
     if(level == 0):
         _menuItems = plugin.getGroupNames() # list(plugin.ParameterGroups.keys()) #['Set Params']
+        _menuItems.append('[Assign Knobs]')
     elif(level == 1):
-        #group = list(plugin.ParameterGroups.keys())[_menuHistory[level-1]]
-        group = plugin.getGroupNames()[_menuHistory[level-1]]
-        _menuItems = plugin.getParamNamesForGroup(group)
+        selText = _menuItems[_menuItemSelected]
+        if(selText == '[Assign Knobs]'):
+            _menuItems = ['Knob-1', 'Knob-2', 'Knob-3', 'Knob-4',]
+        else:
+            group = plugin.getGroupNames()[_menuHistory[level-1]]
+            _menuItems = plugin.getParamNamesForGroup(group)
     if(level > 0) and (_menuBackText not in _menuItems):
         _menuItems.append(_menuBackText)
 
@@ -3355,4 +3442,12 @@ def getPlugin(pluginName):
     
     _knownPlugins[pl.getID()] = pl
     return pl 
+
+def supportsFLVersion():
+    # 
+    res = ( "20.9." in ui.getVersion() )
+    if(not res):
+        print('* FL Version is not supported at this time. *')
+    return res 
+
 
