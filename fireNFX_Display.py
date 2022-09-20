@@ -49,7 +49,8 @@ def DisplayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime = 0
     try:
         screen.displayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime)
         screen.update()
-    except:
+    except Exception as e:
+        print('Display Text exception: ' + str(e))
         return 
     
 def DisplayBar3(p1, p2, Text, Value, Bipolar):    
@@ -91,7 +92,7 @@ def DisplayTextAll(textTop, textMid, textBot):
     DisplayTextTop(textTop)
     DisplayTextMiddle(textMid)
     DisplayTextBottom(textBot)
-    screen.update
+    screen.update()
 
 def DisplayTimedText2(Text1, Text2, Text3):
     DisplayTextCenter(Text1, ROWTOP)

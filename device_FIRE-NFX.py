@@ -472,7 +472,6 @@ def OnMidiIn(event):
     if( IDPadFirst <=  ctrlID <= IDPadLast):
         padNum = ctrlID - IDPadFirst
         pMap = _PadMap[padNum]
-
         cMap = getColorMap()
         col = cMap[padNum].PadColor
         if (col == cOff):
@@ -520,17 +519,17 @@ def OnMidiIn(event):
                     event.handled = True #prevents a note off message
                     return 
 
-        # always handle macros
-        if(padNum in pdMacros) and (pMap.Pressed): 
-            event.handled = HandleMacros(pdMacros.index(padNum))
-            RefreshMacros()
-            return 
+        if(not isNoNav()):
+            # always handle macros
+            if(padNum in pdMacros) and (pMap.Pressed): 
+                event.handled = HandleMacros(pdMacros.index(padNum))
+                RefreshMacros()
+                return 
 
-        # always handle nav
-        if(padNum in pdNav) and (pMap.Pressed): 
-            event.handled = HandleNav(padNum)
-            return 
-
+            # always handle nav
+            if(padNum in pdNav) and (pMap.Pressed): 
+                event.handled = HandleNav(padNum)
+                return 
 
     # handle other "non" Pads
     # here we will get a message for on (press) and off (release), so we need to
@@ -705,6 +704,10 @@ def HandleProgressBar(padNum):
         arrangement.addAutoTimeMarker(prgMap.SongPosAbsTicks, DEFAULT_MARKER_PREFIX_TEXT + str(markerOffs))
 
     if(_ShiftHeld):
+        select = True
+        if( arrangement.selectionEnd() > -1 ): #already selected so lets deselect
+            select = False
+            
         if(len(prgMap.Markers) > 0):
             newSongPos = prgMap.Markers[0].SongPosAbsTicks
         else:
@@ -712,7 +715,7 @@ def HandleProgressBar(padNum):
         transport.setSongPos(newSongPos, SONGLENGTH_ABSTICKS)
         selEnd = transport.getSongLength(SONGLENGTH_ABSTICKS)
         # select to the next marker or song end
-        arrangement.jumpToMarker(1, True)
+        arrangement.jumpToMarker(1, select)
         pos = transport.getSongPos(SONGLENGTH_ABSTICKS)
         addedEndMarker = False
         if pos > newSongPos: # if there is another marker later in time we can use it for the end of selection
@@ -870,14 +873,11 @@ def HandleMacros(macIdx):
     if(_PadMode.NavSet.MacroNav == False):
         return 
     
-    #if(_PadMode.Mode == MODE_PERFORM): # not used by this mode
-    #    return
-
-    chanNum = channels.selectedChannel(0, 0, 0)
-    macro = _MacroList[macIdx]
-
     if(macIdx == 4):
-        general.undoUp()
+        if(DEFAULT_UNDO_STYLE == 0):
+            general.undoUp()
+        else:
+            general.undo()
     elif(macIdx == 1):
         ShowChannelRack(-1)        
     elif(macIdx == 2):
@@ -887,15 +887,16 @@ def HandleMacros(macIdx):
     elif(macIdx == 0):
         DisplayTimedText('Reset Windows')
         transport.globalTransport(FPT_F12, 1)  # close all...
+
         # enable the following lines to have it re-open windows 
         if(DEFAULT_REOPEN_WINDOWS_AFTER_CLOSE_ALL):
-            #ShowBrowser(1)
+            ShowBrowser(1)
             ShowMixer(1)
             ShowChannelRack(1)
             ShowPlaylist(1)
         #else:
         #    ShowMixer(0)
-            ShowChannelRack(0)
+        #    ShowChannelRack(0)
         #    ShowPlaylist(0)
 
     elif(macIdx == 5):
@@ -969,11 +970,10 @@ def HandleDrums(event, padNum):
             device.stopRepeatMidiEvent()
             _isRepeating = False
         elif(not _isRepeating):
-            ms = getBeatLenInMS(BeatLengthDivs[_NoteRepeatLengthIdx])
-            snap = BeatLengthSnap[_NoteRepeatLengthIdx]
-            setSnapMode(snap)
-            device.repeatMidiEvent(event, ms, ms)
             _isRepeating = True
+            setSnapMode(BeatLengthSnap[_NoteRepeatLengthIdx])
+            ms = getBeatLenInMS(BeatLengthDivs[_NoteRepeatLengthIdx])
+            device.repeatMidiEvent(event, ms, ms)
     
     # FPC Quick select
     if(not _isAltMode) and (padNum in pdFPCChannels):
@@ -1361,9 +1361,10 @@ def HandlePadMode(event):
         _isAltMode = True
 
     SetPadMode()
-
     return True
+    
 def HandleTransport(event):
+    global _turnOffMetronomeOnNextPlay
     if(event.data1 == IDPatternSong):
         if(_ShiftHeld):
             pass
@@ -1371,6 +1372,9 @@ def HandleTransport(event):
             transport.setLoopMode()
 
     if(event.data1 == IDPlay):
+        if _turnOffMetronomeOnNextPlay and ui.isMetronomeEnabled():
+            _turnOffMetronomeOnNextPlay = False
+            transport.globalTransport(FPT_Metronome, 1)
         if(transport.isPlaying()):
             transport.stop()
             ResetBeatIndicators()
@@ -1392,14 +1396,21 @@ def HandleTransport(event):
 
     return True 
 
+_turnOffMetronomeOnNextPlay = False 
 def HandleShifted(event):
+    global _turnOffMetronomeOnNextPlay
     ctrlID = event.data1
     if(ctrlID == IDAccent):
         pass 
     elif(ctrlID == IDSnap):
         transport.globalTransport(FPT_Snap, 1)
     elif(ctrlID == IDTap):
-        transport.globalTransport(FPT_TapTempo, 1)
+        if(ui.isMetronomeEnabled()):
+            transport.globalTransport(FPT_TapTempo, 1)
+        else:
+            transport.globalTransport(FPT_Metronome, 1)
+            _turnOffMetronomeOnNextPlay = True 
+            transport.globalTransport(FPT_TapTempo, 1)
     elif(ctrlID == IDOverview):
         pass 
     elif(ctrlID == IDMetronome):
@@ -1491,7 +1502,12 @@ def HandleBrowserButton():
         _menuItemSelected = 0
         SendCC(IDBrowser, DualColorFull2)  #SingleColorHalfBright
         ShowMenuItems()
+        if(_FLChannelFX):
+            channels.showEditor(getCurrChanIdx(), 1) 
+            ui.right()
     else:
+        if(_FLChannelFX):
+            channels.showEditor(getCurrChanIdx(), 0) 
         _FLChannelFX = False
         SendCC(IDBrowser, SingleColorOff) 
         RefreshDisplay()
@@ -2048,8 +2064,8 @@ def RefreshPlaylist():
         padMuteB  = pdPlaylistMutesB[padOffs]
         dimA = dimDefault
         dimB = dimDefault
-        muteColorA = cDimWhite
-        muteColorB = cDimWhite
+        muteColorA = cNotMuted # cNotMuted is dimWhite
+        muteColorB = cNotMuted
 
         plMapA = plMapToShow[plStartIdx + padOffs]
         flIdxA = plMapA.FLIndex 
@@ -2059,8 +2075,8 @@ def RefreshPlaylist():
         _PadMap[padTrackA].Color = plMapA.Color
         _PadMap[padTrackA].FLIndex = flIdxA
         if(playlist.isTrackMuted(flIdxA)):
-            muteColorA = cOff 
-        SetPadColor(padMuteA, muteColorA, dimDefault) 
+            muteColorA = cMuted
+        SetPadColor(padMuteA, muteColorA, dimBright) 
         _PadMap[padMuteA].Color = muteColorA
         _PadMap[padMuteA].FLIndex = flIdxA
 
@@ -2073,8 +2089,8 @@ def RefreshPlaylist():
             _PadMap[padTrackB].Color = plMapB.Color
             _PadMap[padTrackB].FLIndex = flIdxB
             if(playlist.isTrackMuted(flIdxB)):
-                muteColorB = cOff 
-            SetPadColor(padMuteB, muteColorB, dimDefault) 
+                muteColorB = cMuted 
+            SetPadColor(padMuteB, muteColorB, dimBright) 
             _PadMap[padMuteB].Color = muteColorB
             _PadMap[padMuteB].FLIndex = flIdxB
         else:
@@ -2130,16 +2146,16 @@ def RefreshChannelStrip(scrollToChannel = False):
         
         if(channel.FLIndex >= 0):
             if(_ShiftHeld): # Shifted will display Mute states
-                col = cMuteOff
+                col = cNotMuted
                 if(_KnobMode == KM_MIXER):
                     if (channel.Mixer.FLIndex > -1):
                         if(mixer.isTrackMuted(channel.Mixer.FLIndex)):
-                            col = cMuteOn
+                            col = cMuted
                 else:
                     if(channels.isChannelMuted(channel.FLIndex)):
-                        col = cMuteOn
+                        col = cMuted
 
-                SetPadColor(padBIdx, col, dimDefault)
+                SetPadColor(padBIdx, col, dimBright) #cWhite, dimBright
             elif(currMixerNum == channels.getTargetFxTrack(channel.FLIndex)): 
                 #not Shifted
                 if(currChan == channel.FLIndex):
@@ -2235,8 +2251,8 @@ def RefreshDisplay():
 
     _menuItemSelected = _chosenItem # reset this for the next menu
     chanIdx = getCurrChanIdx() # 
-    chanName = channels.getChannelName(chanIdx)
-    mixerName = mixer.getTrackName(mixer.trackNumber())
+    # chanName = channels.getChannelName(chanIdx)
+    # mixerName = mixer.getTrackName(mixer.trackNumber())
     patName = patterns.getPatternName(patterns.patternNumber())
     cMap = _ChannelMap[chanIdx]
     
@@ -2289,7 +2305,7 @@ def RefreshUDLR():
 
 def RefreshProgress():
     progMap = []
-    if(transport.getLoopMode == 0): # PATTERN
+    if(transport.getLoopMode() == 0): # PATTERN
         progMap.extend(_ProgressMapPatterns)
     else:
         progMap.extend(_ProgressMapSong)
@@ -2478,14 +2494,14 @@ def UpdateProgressMap(autodetect = True):
 
     selStart = arrangement.selectionStart()
     selEnd = arrangement.selectionEnd()
-    selBarStart = getBarFromAbsTicks(selStart)
-    selBarEnd =  getBarFromAbsTicks(selEnd)
-    if(selEnd > -1): #this will be -1 if nothing selected
-        songLenAbsTicks = selEnd - selStart
-        songLenBars = selBarEnd - selBarStart
-    else:
-        selBarStart = 0 # 
-        selStart = 0
+    # selBarStart = getBarFromAbsTicks(selStart)
+    # selBarEnd =  getBarFromAbsTicks(selEnd)
+    # if(selEnd > -1): #this will be -1 if nothing selected
+    #     songLenAbsTicks = selEnd - selStart
+    #     songLenBars = selBarEnd - selBarStart
+    # else:
+    selBarStart = 0 # 
+    selStart = 0
 
 
     if(autodetect):
@@ -3391,8 +3407,17 @@ def InititalizePadModes():
 
     _PadMode = modePattern
 
-def SetChannelParam(offset, value):
-    plugins.setParamValue(value, offset, getCurrChanIdx(), -1)
+def SetChannelFXParam(offset, value):
+    chanNum = getCurrChanIdx()
+    recEventID = channels.getRecEventId(chanNum)    
+    return general.processRECEvent(recEventID + offset, value, REC_UpdateValue)
+
+def GetChannelFXParam(offset):
+    chanNum = getCurrChanIdx()
+    recEventID = channels.getRecEventId(chanNum)    
+    value = 0
+    return general.processRECEvent(recEventID + offset, value, REC_GetValue)
+
 
 def getChannelType(chan = -1):
     if(chan < 0):
@@ -3445,9 +3470,42 @@ def getPlugin(pluginName):
 
 def supportsFLVersion():
     # 
+    return True
     res = ( "20.9." in ui.getVersion() )
     if(not res):
         print('* FL Version is not supported at this time. *')
     return res 
 
+def getChannelRecEventID():
+    chanNum = getCurrChanIdx()
+    return channels.getRecEventId(chanNum)
+
+arp1 = 1446
+arp2= 1232
+arp4 = 1024
+arp8 = 820
+arp16 = 648
+arp32 = 502 # 450
+arpTimes = {'Beat': arp1, 'Half-Beat':arp2, '4th-Beat':arp4, '8th-Beat':arp8, '16th-Beat':arp16, '32nd-Beat': arp32}
+
+def SetArp(enabled, arpTime = 1024, arpRange = 1, arpRepeat = 2):
+    if(enabled):
+        SetChannelFXParam(REC_Chan_Arp_Mode, 1)
+        SetChannelFXParam(REC_Chan_Arp_Time, arpTime)
+        SetChannelFXParam(REC_Chan_Arp_Range, arpRange)
+        SetChannelFXParam(REC_Chan_Arp_Repeat, arpRepeat)
+    else:
+        SetChannelFXParam(REC_Chan_Arp_Mode, 0)
+
+# plFLChanFX.addParamToGroup('ARPEGGIATOR', TnfxParameter( REC_Chan_Arp_Mode, 'ARP Mode', 0, '', False)) # NO Value return
+# plFLChanFX.addParamToGroup('ARPEGGIATOR', TnfxParameter( REC_Chan_Arp_Time, 'ARP Time', 0, '', False))
+# plFLChanFX.addParamToGroup('ARPEGGIATOR', TnfxParameter( REC_Chan_Arp_Gate, 'ARP Gate', 0, '', False))
+# plFLChanFX.addParamToGroup('ARPEGGIATOR', TnfxParameter( REC_Chan_Arp_Range, 'ARP Range', 0, '', False))
+# plFLChanFX.addParamToGroup('ARPEGGIATOR', TnfxParameter( REC_Chan_Arp_Repeat, 'ARP Repeat', 0, '', False))
+# plFLChanFX.addParamToGroup('ARPEGGIATOR', TnfxParameter( REC_Chan_Arp_Chord, 'ARP Chord', 0, '', False)) # NO Value return 
+
+def OnMidiOutMsg(event):
+    #	Called for short MIDI out messages sent from MIDI Out plugin - 
+    # (event properties are limited to: handled, status, data1, data2, port, midiId, midiChan, midiChanEx)
+    print('MidiOutMsg:', event.handled, event.status, event.data1, event.data2, event.port, event.midiId, event.midiChan, event.midiChanEx )
 

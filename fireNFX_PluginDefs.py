@@ -5,6 +5,7 @@ from pluginFLKeys import plFLKeys
 from pluginSTRUMGS2 import plStrumGS2
 from pluginSlicex import plSlicex
 from pluginFruityDance import plFruityDance
+from pluginLoungeLizardEP4 import plLoungeLizardEP4
 from midi import *
 
 # for the FPC modes
@@ -102,9 +103,11 @@ plSampler.addParamToGroup('TIME STRETCHING', TnfxParameter(REC_Chan_StretchTime,
 # plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_Hole+1, '15-Hole', 0, '', False))
 # plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_PLast, '16-PLast', 0, '', False))
 
+#plFLChanFX
+
 
 CUSTOM_PLUGINS = {plFLEX.Name:plFLEX, plFLKeys.Name:plFLKeys, plStrumGS2.Name:plStrumGS2, plSlicex.Name: plSlicex,
-                  plFruityDance.Name:plFruityDance}
+                  plFruityDance.Name:plFruityDance, plLoungeLizardEP4.Name: plLoungeLizardEP4}
 
 
 

@@ -231,12 +231,12 @@ def getPluginParam(chanIdx, paramIdx, prn = False):
     varName =  "pl" + name.replace(' ', '')
     if(caption != '') and prn:
         print(varName + ".addParamToGroup('ALL', TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
-    #print('#    Param', paramIdx, caption )
-    #print('#     Value', paramIdx, value )
-    #print('#    ValStr', paramIdx, valuestr )
-    #print('#    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
-    #print('#    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
-    #print('----------------------')
+        print('#    Param', paramIdx, caption )
+        print('#     Value', paramIdx, value )
+        print('#    ValStr', paramIdx, valuestr )
+        print('#    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
+        print('#    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
+        print('----------------------')
     return TnfxParameter(paramIdx, caption, value, valuestr, bipolar)
 
 
@@ -283,6 +283,7 @@ def getPluginInfo(chanIdx, prn = False, inclBlanks = False):
         param = getPluginParam(chanIdx, paramIdx, prn)
         if(param.Caption != "") or (inclBlanks):
             if('MIDI CC' in param.Caption):
+                param.Caption = param.Caption.replace('MIDI CC', '').replace('#', '').lstrip()
                 res.addParamToGroup("MIDI CCs", param)
             else:    
                 res.addParamToGroup("ALL", param)

@@ -16,5 +16,5 @@ cCyan       = 0x007070
 
 cChannel = -1   # value to indicate to use the previous channel color in specific cases.
 
-cMuteOff = cDimWhite
-cMuteOn  = cOff
+cNotMuted = cDimWhite
+cMuted  = cOff

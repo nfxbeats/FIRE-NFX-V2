@@ -78,3 +78,6 @@ DEFAULT_ALT_DRUM_MODE_BANKS = True
 # how long to keep the red boxes alive in FL Studio. in milliseconds, so 5000 would be 5 seconds, 0 = No display
 DEFAULT_DISPLAY_RECT_TIME_MS = 5000
 
+# undo style - 0 = undo multiple times, 1 = undo last only
+DEFAULT_UNDO_STYLE = 0
+
