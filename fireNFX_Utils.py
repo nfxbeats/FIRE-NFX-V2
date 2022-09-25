@@ -510,24 +510,26 @@ mvDown = 4
 mvDownLeft = 5
 mvLeft = 6
 mvUpLeft = 7
+mvStay= 9
 
 def MovePad(PadToMoveIdx, direction, StartColor = cGreen, EndColor = cWhite, colorStep = 0):
     padRow = PadToMoveIdx // 16
     padCol = PadToMoveIdx % 16
     addVal = 0
-    #directions are indicated in a clock wise manner starting with the top
-    if(direction in [mvUpLeft, mvUp, mvUpRight]): # up
-        if(padRow > 0):
-            addVal += -16
-    if(direction in [mvUpRight, mvRight, mvDownRight]):
-        if(padCol < 16):
-            addVal += +1
-    if(direction in [mvDownLeft, mvDown, mvDownRight]): # down
-        if(padRow < 3):
-            addVal += 16 
-    if(direction in [mvUpLeft, mvLeft, mvDownLeft]):
-        if(padCol > 0):
-            addVal += -1
+    if(direction != mvStay):
+        #directions are indicated in a clock wise manner starting with the top
+        if(direction in [mvUpLeft, mvUp, mvUpRight]): # up
+            if(padRow > 0):
+                addVal += -16
+        if(direction in [mvUpRight, mvRight, mvDownRight]):
+            if(padCol < 16):
+                addVal += +1
+        if(direction in [mvDownLeft, mvDown, mvDownRight]): # down
+            if(padRow < 3):
+                addVal += 16 
+        if(direction in [mvUpLeft, mvLeft, mvDownLeft]):
+            if(padCol > 0):
+                addVal += -1
     newPadIdx = PadToMoveIdx + addVal
     stepSize = 255//4
     newColor = FadeColor(StartColor, EndColor, colorStep * stepSize)
@@ -537,11 +539,13 @@ def MovePad(PadToMoveIdx, direction, StartColor = cGreen, EndColor = cWhite, col
     return newPadIdx
 
 _baseDelay = getBeatLenInMS(8)/1000
-#_testpath = [mvLeft, mvUp, mvRight, mvRight, mvDown, mvDown, mvLeft, mvLeft, mvLeft, mvUp, mvUp, mvUp, mvRight, mvRight, mvRight, mvUp]
-_testpath = [mvDown, mvDown, mvDown, mvRight, mvUp, mvUp, mvUp, mvRight,
-    mvDown, mvDown, mvDown, mvRight, mvUp, mvUp, mvUp, mvRight, 
-    mvDown, mvDown, mvDown, mvRight, mvUp, mvUp, mvUp]
-def BankMoves(startpad = 34, path = _testpath, color = cGreen):
+_testpath = [mvStay, mvLeft, mvUp, mvRight, mvRight, mvDown, mvDown, mvLeft, mvLeft, mvLeft, mvUp, mvUp, mvUp, mvRight, mvRight, mvRight, mvUp]
+# ^ 34 start pad
+
+#_testpath = [mvStay, mvDown, mvDown, mvDown, mvRight, mvUp, mvUp, mvUp, mvRight,
+#    mvDown, mvDown, mvDown, mvRight, mvUp, mvUp, mvUp]
+
+def BankMoves(startpad = 34, path = _testpath, color = cGreen, finishAtStart = True):
     delay = _baseDelay 
     pad = startpad
     pad2 = startpad + 4
@@ -549,10 +553,21 @@ def BankMoves(startpad = 34, path = _testpath, color = cGreen):
     pad4 = startpad + 12
     for step in _testpath:
         pad = MovePad(pad, step, color, cBlack, 0)
-        pad2 = MovePad(pad2, step, color, cBlack, 1)
-        pad3 = MovePad(pad3, step, color, cBlack, 2)
-        pad4 = MovePad(pad4, step, color, cBlack, 3)
+        pad2 = MovePad(pad2, step, color, cBlack, 0)
+        pad3 = MovePad(pad3, step, color, cBlack, 0)
+        pad4 = MovePad(pad4, step, color, cBlack, 0)
         time.sleep(delay) #getBeatLenInMS(4)/1000
+    if(finishAtStart):
+        pad = MovePad(startpad, step, color, cBlack, 0)
+        pad2 = MovePad(startpad+4, step, color, cBlack, 0)
+        pad3 = MovePad(startpad+8, step, color, cBlack, 0)
+        pad4 = MovePad(startpad+12, step, color, cBlack, 0)
+
+def LoopBankTest():
+    BankMoves()
+    BankMoves()
+    BankMoves()
+    BankMoves()
 
 import _thread 
 

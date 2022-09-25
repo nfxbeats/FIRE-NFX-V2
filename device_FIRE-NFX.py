@@ -1159,12 +1159,21 @@ def HandleKnob(event, ctrlID, useparam = None):
             recEventID += REC_Chan_Plugin_First
 
         knobres = 1/64
+        shiftres = 1/128
+        altres = 1/8
+        if(DEFAULT_BROWSER_STEPS >= 1):
+            knobres = 1/DEFAULT_BROWSER_STEPS
+        if(DEFAULT_SHIFT_BROWSER_STEPS >= 1):
+            shiftres = 1/DEFAULT_SHIFT_BROWSER_STEPS
+        if(DEFAULT_ALT_BROWSER_STEPS >= 1):
+            altres = 1/DEFAULT_ALT_BROWSER_STEPS
+
         if (useparam.StepsAfterZero > 0):
             knobres = 1/useparam.StepsAfterZero
         if(_ShiftHeld):
-            knobres = 1/128
+            knobres = shiftres
         elif(_AltHeld):
-            knobres = 1/8
+            knobres = altres
         return HandleKnobReal(recEventID + useparam.Offset,  event.outEv, useparam.Caption + ': ', useparam.Bipolar, 0, knobres)
 
 

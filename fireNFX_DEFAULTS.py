@@ -78,6 +78,11 @@ DEFAULT_ALT_DRUM_MODE_BANKS = True
 # how long to keep the red boxes alive in FL Studio. in milliseconds, so 5000 would be 5 seconds, 0 = No display
 DEFAULT_DISPLAY_RECT_TIME_MS = 5000
 
-# undo style - 0 = undo multiple times, 1 = undo last only
+# undo macro behavior:  0 = undo multiple times, 1 = undo last only. 
 DEFAULT_UNDO_STYLE = 0
 
+# This number is how many fast or slow the knob wheel moves the value. This number represents how precise the knob will be
+# lower numbers are faster but less precise. higher numbers are slower but more precise.
+DEFAULT_BROWSER_STEPS = 64          # default
+DEFAULT_SHIFT_BROWSER_STEPS = 128   # when SHIFT is held
+DEFAULT_ALT_BROWSER_STEPS = 8       # when ALT is held
