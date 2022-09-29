@@ -605,6 +605,11 @@ def HandleChannelStrip(padNum): #, isChannelStripB):
     newChanIdx = channel.FLIndex # pMap.FLIndex
     newMixerIdx = channel.Mixer.FLIndex
     if (newChanIdx > -1): #is it a valid chan number?
+        if(_AltHeld):
+            patterns.setPatternColor(patterns.patternNumber(), channels.getChannelColor(newChanIdx))
+            RefreshAll()
+            return True
+
         if(_ShiftHeld): # we do the mutes when SHIFTed
             if(_KnobMode == KM_MIXER):
                 mixer.muteTrack(newMixerIdx)
@@ -1105,9 +1110,25 @@ def HandlePattUpDn(ctrlID):
             SetTop()
     else:
         newPattern = patterns.patternNumber() + moveby
+        #print('newpat', newPattern, patterns.patternCount())
         if( 0 <= newPattern <= patterns.patternCount()):   #if it's a valid spot then move it
             patterns.jumpToPattern(newPattern)
-    
+        else:
+            setPatternName = False
+            if(DEFAULT_PROMPT_NAME_FOR_NEW_PATTERN):
+                patterns.findFirstNextEmptyPat(FFNEP_FindFirst)
+                # if we dont have a valid name, use the DEFAULT
+                if(patterns.patternNumber() > patterns.patternCount() ):
+                    setPatternName = True
+            else:
+                patterns.findFirstNextEmptyPat(FFNEP_DontPromptName)
+                setPatternName = True 
+            
+            if(setPatternName):
+                newPatt = patterns.patternNumber()
+                pattName = DEFAULT_PATTERN_NAME.format(newPatt)
+                patterns.setPatternName(newPatt, pattName)
+
     RefreshDisplay()
     RefreshNavPads()
 

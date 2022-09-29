@@ -86,3 +86,19 @@ DEFAULT_UNDO_STYLE = 0
 DEFAULT_BROWSER_STEPS = 64          # default
 DEFAULT_SHIFT_BROWSER_STEPS = 128   # when SHIFT is held
 DEFAULT_ALT_BROWSER_STEPS = 8       # when ALT is held
+
+
+# this will set the naming style used when navigating to a new pattern
+# example, say your new pattern was number 11:  
+#   "Pattern {}" will name it:  Pattern 11
+#   "{}-Pattern" will name it:  11-Pattern 
+#
+DEFAULT_PATTERN_NAME = "{}-Pattern" #  the {} will be replaced with the pattern number
+
+# this affects how the scripts reacts when you scroll to an empty pattern
+# can be True or False. 
+# when True, it will show the prompt to name a pattern.
+# when False, it will use the DEFAULT_PATTERN_NAME (above) value to name the pattern
+# 
+DEFAULT_PROMPT_NAME_FOR_NEW_PATTERN = False  
+
