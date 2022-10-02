@@ -6,7 +6,7 @@
 # develoment started:   11/24/2021
 # first public beta:    07/13/2022
 #
-# thanks to: HDSQ, TayseteDj, DAWNLIGHT, a candle, Miro and Image-Line
+# thanks to: HDSQ, TayseteDj, CBaum83, DAWNLIGHT, Jaimezin, a candle, Miro and Image-Line
 # 
 #
 
@@ -125,6 +125,9 @@ _VelocityMin = 100
 _VelocityMax = 126
 _DebugPrn = True
 _DebugMin = lvlD
+
+
+# MACROS DEFINED HERE
 macCloseAll = TnfxMacro("Close All", getShade(cCyan, shDim) )
 macTogChanRack = TnfxMacro("Chan Rack", cCyan)
 macTogPlaylist = TnfxMacro("Playlist", cCyan)
@@ -607,6 +610,13 @@ def HandleChannelStrip(padNum): #, isChannelStripB):
     if (newChanIdx > -1): #is it a valid chan number?
         if(_AltHeld):
             patterns.setPatternColor(patterns.patternNumber(), channels.getChannelColor(newChanIdx))
+            # 
+            for plt in _PlaylistMap:
+                if(plt.ChanIdx == newChanIdx):
+                    playlist.setTrackColor(plt.FLIndex, channels.getChannelColor(newChanIdx))
+                    UpdatePlaylistMap(_isAltMode)
+                    break
+
             RefreshAll()
             return True
 
@@ -652,7 +662,6 @@ def SelectAndShowChannel(newChanIdx, keepPRopen = True):
     if( oldChanIdx != newChanIdx):
         _ShowChannelEditor = False
         _ShowCSForm = False
-        #channels.deselectAll()
 
         #close previous windows
         channels.showEditor(oldChanIdx, 0)   
@@ -1624,7 +1633,8 @@ def HandleUDLR(padIndex):
     if(padIndex == pdTab):
         ui.selectWindow(0)
     elif(padIndex == pdShiftTab):
-        ui.selectWindow(1)
+        #ui.selectWindow(1)
+        MenuNavigation()
     elif(padIndex == pdUp):
         ui.up()
     elif(padIndex == pdDown):
@@ -1659,6 +1669,10 @@ def RefreshModes():
     elif(_PadMode.Mode == MODE_PATTERNS):
         #UpdatePatternModeData()
         UpdatePatternModeData()
+        # if(True) and (not transport.isPlaying()):
+        #     UpdatePlaylistMap(False, True)
+        #     playlist.deselectAll()
+        #     playlist.selectTrack(1)
         RefreshPatternStrip(_ScrollTo) 
         RefreshChannelStrip(_ScrollTo)
         _ScrollTo = False
@@ -2322,7 +2336,7 @@ def RefreshDisplay():
 def RefreshUDLR():
     for pad in pdUDLR:
         if(pad == pdShiftTab):
-            SetPadColor(pad, cCyan, dimDefault)
+            SetPadColor(pad, cBlue, dimDefault)
         elif(pad == pdTab):
             SetPadColor(pad, cCyan, dimBright)
         elif(pad == pdEsc):
@@ -2464,24 +2478,46 @@ def UpdatePatternMapOld_OBS(pattNum):
     else: #update the current pattern's channels map only
         RefreshChannelStrip()     
 
-def UpdatePlaylistMap(selectedOnly = False):
+def UpdatePlaylistMap(selectedOnly = False, mapExtra = True):
     global _PlaylistMap
     global _PlaylistSelectedMap
     global _PadMap
 
     _PlaylistMap.clear()
     _PlaylistSelectedMap.clear()
+    blankTracks = 0
 
     for plt in range(playlist.trackCount()):
         flIdx = plt + 1
         color = FLColorToPadColor( playlist.getTrackColor(flIdx) )
         name = playlist.getTrackName(flIdx)
+        # if(name[:6] == "Track "):
+        #     blankTracks += 1
+        # else:
+        #     blankTracks == 0
+
         plMap = TnfxPlaylistTrack(flIdx, name, color)
         plMap.Muted = playlist.isTrackMuted(flIdx)
         plMap.Selected = playlist.isTrackSelected(flIdx)
+
+        # if(mapExtra) and (not transport.isPlaying()):
+        #     playlist.deselectAll()
+        #     playlist.selectTrack(flIdx)
+        #     chanIdx = channels.channelNumber()
+        #     mixerIdx = mixer.trackNumber()
+        #     plMap.ChanIdx = chanIdx
+        #     plMap.MixerIdx = mixerIdx
+            
         _PlaylistMap.append(plMap)
         if(plMap.Selected):
             _PlaylistSelectedMap.append(plMap)
+        
+        # if(blankTracks > 9): # the max number of sequential "Track " (blank Tracks)
+        #     break 
+    
+    if(mapExtra):
+        playlist.deselectAll()
+        playlist.selectTrack(1)
 
 def UpdatePatternMap():
     # this function should read ALL patterns from FL and have update two global lists of type <TnfxPattern>:

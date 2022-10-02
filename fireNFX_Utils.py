@@ -1,4 +1,5 @@
 import math
+import transport
 import time 
 import device
 from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxChannelPlugin
@@ -579,4 +580,41 @@ def TestThreadMove():
         color = getGradientOffs(baseColor, goOffs)
         _thread.start_new_thread(BankMoves, (startPad, _testpath, color ) )
         time.sleep(delay)
-    
+
+# menu offsets, use a negatwe go negatiove because it is more reliable to move backwards 
+MainMenu = {'File':'', 'Edit':'LLLLLLL', 'Add':'LLLLLL', 'Patterns':'LLLLL', 'View':'LLLL', 'Options':'LLL', 'Tools':'LL', 'Help':'L'}
+PRToolsMenu = {'Tools', 'LL'}
+PRTools = {}
+
+def ProcessKeys(cmdStr):
+    for cmd in cmdStr:
+        print(cmd)
+        if(cmd == 'U'):
+            ui.up()
+        elif(cmd == 'D'):
+            ui.down()
+        elif(cmd == 'L'):
+            ui.left()
+        elif(cmd == 'R'):
+            ui.right()
+        elif(cmd == 'E'):
+            ui.enter()
+        elif(cmd == 'S'):
+            ui.escape()
+        elif(cmd == 'N'):
+            ui.next()
+
+_testnav = ''
+def MenuNavigation(cmdString = _testnav):
+    # this code was inspired by HDSQ's implementation: 
+    # https://github.com/MiguelGuthridge/Universal-Controller-Script/blob/main/src/plugs/windows/piano_roll.py
+    #
+
+    #
+    if (ui.isInPopupMenu()):
+        ui.closeActivePopupMenu()
+    # open the File menu
+    transport.globalTransport(90, 1)
+    if(ui.getFocused(widPianoRoll) == 1):
+        ProcessKeys('LL')
+

@@ -240,6 +240,8 @@ class TnfxPlaylistTrack:
         self.Color = color
         self.Muted = -1
         self.Selected = False 
+        self.ChanIdx = -1
+        self.MixerIdx = -1
         
 class TnfxNoteInfo:
     def __init__(self):
