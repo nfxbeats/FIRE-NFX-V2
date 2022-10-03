@@ -460,12 +460,12 @@ def OnMidiIn(event):
         _proctime = time.monotonic_ns() // 1000000
         elapsed = _proctime-prevtime
         if (_prevCtrlID == ctrlID):
-            print(ctrlID, _prevCtrlID, 'proc', _proctime, prevtime, 'elapsed', elapsed)
+            #print(ctrlID, _prevCtrlID, 'proc', _proctime, prevtime, 'elapsed', elapsed)
             _DoubleTap = (elapsed < 220)
         else:
             _prevCtrlID = ctrlID
             _DoubleTap = False
-        print('dbltap', _DoubleTap)
+        #print('dbltap', _DoubleTap)
         
     
     
