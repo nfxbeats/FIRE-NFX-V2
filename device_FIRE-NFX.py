@@ -363,6 +363,9 @@ def OnRefresh(flags):
         RefreshShiftAltButtons()
         if(_ShiftHeld):
             RefreshShiftedStates() 
+            if(_DoubleTap):
+                ShowScriptDebug()
+
         else:
             RefreshPadModeButtons()
             RefreshTransport()            
@@ -430,13 +433,15 @@ def OnProjectLoad(status):
 def OnSendTempMsg(msg, duration):
     if not supportsFLVersion():
         return 
-
     #print('TempMsg', msg, duration)
     pass
 
 def isKnownPlugin():
     return getCurrChanPluginID() in _knownPlugins.keys()
 
+_prevCtrlID = 0
+_proctime = 0
+_DoubleTap = False
 def OnMidiIn(event):
     if not supportsFLVersion():
         return 
@@ -444,8 +449,27 @@ def OnMidiIn(event):
     global _ShiftHeld
     global _AltHeld
     global _PadMap
-    
+    global _proctime
+    global _prevCtrlID
+    global _DoubleTap
+
     ctrlID = event.data1 # the low level hardware id of a button, knob, pad, etc
+
+    if(event.data2 > 0):
+        prevtime = _proctime
+        _proctime = time.monotonic_ns() // 1000000
+        elapsed = _proctime-prevtime
+        if (_prevCtrlID == ctrlID):
+            print(ctrlID, _prevCtrlID, 'proc', _proctime, prevtime, 'elapsed', elapsed)
+            _DoubleTap = (elapsed < 220)
+        else:
+            _prevCtrlID = ctrlID
+            _DoubleTap = False
+        print('dbltap', _DoubleTap)
+        
+    
+    
+
     # handle shift/alt
     if(ctrlID in [IDAlt, IDShift]):
         HandleShiftAlt(event, ctrlID)
@@ -926,6 +950,7 @@ def HandleMacros(macIdx):
         return False 
 
     return True 
+
 def HandleNotes(event, padNum):
     global _ChordInvert
     global _Chord7th
@@ -1349,16 +1374,24 @@ def RefreshAllProgressAndMarkers():
     UpdateProgressMap(False)
     RefreshProgress()
 
+_ShiftLock = False 
+_AltLock = False 
+
 def HandleShiftAlt(event, ctrlID):
     global _ShiftHeld
     global _AltHeld
-    
+    global _ShiftLock
+    global _AltLock
+
     if(ctrlID == IDShift):
         _ShiftHeld = (event.data2 > 0)
+        _ShiftLock = _DoubleTap
     elif(ctrlID == IDAlt):
         _AltHeld = (event.data2 > 0)
+        _AltLock = _DoubleTap
 
     OnRefresh(HW_CustomEvent_ShiftAlt)
+
     
 
 
@@ -1634,7 +1667,8 @@ def HandleUDLR(padIndex):
         ui.selectWindow(0)
     elif(padIndex == pdShiftTab):
         #ui.selectWindow(1)
-        MenuNavigation()
+        MenuNavigation('', _AltHeld)
+        
     elif(padIndex == pdUp):
         ui.up()
     elif(padIndex == pdDown):
@@ -1708,13 +1742,17 @@ def RefreshShiftAltButtons():
     if(_AltHeld):
         SendCC(IDAlt, SingleColorFull)
     elif(_isAltMode):
-        SendCC(IDAlt, SingleColorHalfBright)
+        SendCC(IDAlt, SingleColorFull)
+    # elif(_AltLock):
+    #     SendCC(IDAlt, SingleColorHalfBright)
     else:
         SendCC(IDAlt, SingleColorOff)
 
     if(_ShiftHeld):
         RefreshShiftedStates()
         RefreshChannelStrip(False)
+    # elif(_ShiftLock):
+    #     SendCC(IDShift, DualColorHalfBright2)
     else:  
         SendCC(IDShift, DualColorOff)
         RefreshChannelStrip(False)
@@ -1768,6 +1806,7 @@ def RefreshShiftedStates():
 
     if(ui.isPrecountEnabled()):
         SendCC(IDCount, ColOn)
+
     if(ui.isLoopRecEnabled()):
         SendCC(IDLoop, ColOn)
 
@@ -2973,12 +3012,12 @@ def RefreshGridLR():
     SendCC(IDRight, SingleColorOff)
 
     if(navSet in [nsDefault, nsDefaultDrum] ):
-        SendCC(IDLeft, SingleColorFull)
+        SendCC(IDLeft, SingleColorHalfBright)
     elif(navSet in [nsScale, nsDefaultDrumAlt]):
-        SendCC(IDRight, SingleColorFull)
+        SendCC(IDRight, SingleColorHalfBright)
     elif(navSet == nsUDLR):
-        SendCC(IDLeft, SingleColorFull)
-        SendCC(IDRight, SingleColorFull)
+        SendCC(IDLeft, SingleColorHalfBright)
+        SendCC(IDRight, SingleColorHalfBright)
 
 def NavScalesList(val):
     global _ScaleIdx
@@ -3175,6 +3214,8 @@ def ShowChannelRack(showVal, bUpdateDisplay = False):
         ui.setFocused(widChannelRack)
     else:
         ui.hideWindow(widChannelRack)
+        if(ui.getVisible(widBrowser)):
+            ui.showWindow(widBrowser)
 
     _ShowChanRack = showVal
 

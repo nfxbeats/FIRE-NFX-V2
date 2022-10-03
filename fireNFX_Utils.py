@@ -588,7 +588,8 @@ PRTools = {}
 
 def ProcessKeys(cmdStr):
     for cmd in cmdStr:
-        print(cmd)
+        #print(cmd)
+
         if(cmd == 'U'):
             ui.up()
         elif(cmd == 'D'):
@@ -603,9 +604,11 @@ def ProcessKeys(cmdStr):
             ui.escape()
         elif(cmd == 'N'):
             ui.next()
+        elif(cmd == ','):
+            time.sleep(.05)
 
 _testnav = ''
-def MenuNavigation(cmdString = _testnav):
+def MenuNavigation(cmdString = _testnav, altmenu = False):
     # this code was inspired by HDSQ's implementation: 
     # https://github.com/MiguelGuthridge/Universal-Controller-Script/blob/main/src/plugs/windows/piano_roll.py
     #
@@ -614,7 +617,16 @@ def MenuNavigation(cmdString = _testnav):
     if (ui.isInPopupMenu()):
         ui.closeActivePopupMenu()
     # open the File menu
-    transport.globalTransport(90, 1)
-    if(ui.getFocused(widPianoRoll) == 1):
-        ProcessKeys('LL')
+    if(altmenu):
+        transport.globalTransport(91, 1)
+    else:
+        transport.globalTransport(90, 1)
+        if(ui.getFocused(widPianoRoll) == 1):
+            ProcessKeys('LL')
 
+    for cmd in cmdString:
+        ProcessKeys(cmd)
+
+def ShowScriptDebug():
+    ui.showWindow(widChannelRack)
+    MenuNavigation(',LLLL,DDDDDDDDDD,E')
