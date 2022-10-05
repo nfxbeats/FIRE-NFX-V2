@@ -24,6 +24,10 @@ import plugins
 import playlist
 import arrangement
 
+# fix
+widPlugin = 5
+widPluginGenerator = 7
+
 # not safe to use as of Aug 20, 2022
 # import _thread 
 # _task = True
@@ -77,6 +81,9 @@ _ShowMixer = 1
 _ShowChanRack = 1
 _ShowPlaylist = 1
 _ShowBrowser = 1
+if(DEFAULT_TOGGLE_CR_AND_BROWSER):
+    _ShowBrowser = 0
+
 _ShowPianoRoll = 0
 _ShowChannelEditor = 0
 _ShowCSForm = 0
@@ -203,9 +210,6 @@ def OnDeInit():
     
     #print('deInit')
 
-    if not supportsFLVersion():
-        return 
-    
     global _shuttingDown
     _shuttingDown = True
     
@@ -361,10 +365,10 @@ def OnRefresh(flags):
     if(flags == HW_CustomEvent_ShiftAlt):
         # called by HandleShiftAlt
         RefreshShiftAltButtons()
-        if(_ShiftHeld):
-            RefreshShiftedStates() 
-            if(_DoubleTap):
-                ShowScriptDebug()
+        # if(_ShiftHeld):
+        #     RefreshShiftedStates() 
+        if(_DoubleTap) and (_ShiftHeld):
+            ShowScriptDebug()
 
         else:
             RefreshPadModeButtons()
@@ -660,6 +664,7 @@ def HandleChannelStrip(padNum): #, isChannelStripB):
                     ShowPianoRoll(-1, True) 
                 else:
                     ShowChannelEditor(-1, True) 
+
             else: #'new' channel, close the previous windows first
                 SelectAndShowChannel(newChanIdx)
 
@@ -693,8 +698,6 @@ def SelectAndShowChannel(newChanIdx, keepPRopen = True):
         UpdateWindowStates()
 
         if(ui.getVisible(widPianoRoll)): #closes previous instance
-            #if(keepPRopen == False):
-            #    ShowPianoRoll(0, True)
             ShowPianoRoll(1, True, False, newChanIdx)
 
     if(not _ShiftHeld):
@@ -917,7 +920,10 @@ def HandleMacros(macIdx):
         else:
             general.undo()
     elif(macIdx == 1):
-        ShowChannelRack(-1)        
+        ShowChannelRack(-1)
+        if(DEFAULT_TOGGLE_CR_AND_BROWSER):
+            if(_ShowChanRack == 0):
+                ui.showWindow(widBrowser)
     elif(macIdx == 2):
         ShowPlaylist(-1)
     elif(macIdx == 3):
@@ -1133,15 +1139,15 @@ def HandlePattUpDn(ctrlID):
         newChanIdx = getCurrChanIdx() + moveby
         if(0 <= newChanIdx < _ChannelCount):
             SelectAndShowChannel(newChanIdx) 
-    elif(_AltHeld):
-        if(ctrlID == IDPatternUp):
-            DisplayTimedText('vZoom Out')
-            ui.verZoom(2)
-            SetTop()
-        else:
-            DisplayTimedText('vZoom In')
-            ui.verZoom(-2)
-            SetTop()
+    # elif(_AltHeld):
+    #     if(ctrlID == IDPatternUp):
+    #         DisplayTimedText('vZoom Out')
+    #         ui.verZoom(2)
+    #         SetTop()
+    #     else:
+    #         DisplayTimedText('vZoom In')
+    #         ui.verZoom(-2)
+    #         SetTop()
     else:
         newPattern = patterns.patternNumber() + moveby
         #print('newpat', newPattern, patterns.patternCount())
@@ -1190,7 +1196,7 @@ def HandleGridLR(ctrlID):
     return True
 
 def HandleKnobMode():
-    NextKnobMode()
+    SetKnobMode()
     RefreshDisplay()
     return True
 
@@ -1389,7 +1395,6 @@ def HandleShiftAlt(event, ctrlID):
     elif(ctrlID == IDAlt):
         _AltHeld = (event.data2 > 0)
         _AltLock = _DoubleTap
-
     OnRefresh(HW_CustomEvent_ShiftAlt)
 
     
@@ -1415,6 +1420,9 @@ def HandlePadMode(event):
             _PadMode = modeDrum
         elif(ctrlID == IDPerform):
             _PadMode = modePerform
+            # if(supportsFLVersion('20.99')):
+            #     if(playlist.getPerformanceModeState() == 1): # in performance mode
+            #         _PadMode = modePerform
     elif(_AltHeld) and (not _ShiftHeld): # Alt modes
         _isShiftMode = False
         _isAltMode = True 
@@ -1497,19 +1505,104 @@ def HandleShifted(event):
     RefreshShiftedStates()
     event.handled = True 
 
+_lastBrowserFolder = ''
 def HandleSelectWheel(event, ctrlID):
     global _menuItemSelected
     global _menuItems
     global _chosenItem
+    global _lastBrowserFolder 
 
-    if(not _ShowMenu):
+    jogNext = 1
+    jogPrev = 127
+
+
+    if(ui.getFocused(widBrowser)):
+        if(ctrlID == IDSelect):
+            caption = ''
+            if(event.data2 == jogNext):
+                #ui.down()
+                caption = ui.navigateBrowserMenu(1, _ShiftHeld)
+            elif(event.data2 == jogPrev):
+                #ui.up()
+                caption = ui.navigateBrowserMenu(0, _ShiftHeld)
+            
+            ftype = ui.getFocusedNodeFileType()
+            actions = ''
+            if(ftype <= -100):
+                actions = '[]'
+            else:
+                actions = '[] S+[] A+[]'
+            DisplayTimedText2('Browser', caption, actions )
+        elif(ctrlID == IDSelectDown):
+            if(ui.getFocusedNodeFileType() <= -100):
+                _lastBrowserFolder = '>' + ui.getFocusedNodeCaption()
+                ui.enter()
+            else:
+                ui.selectBrowserMenuItem()
+                if(_ShiftHeld) or (_AltHeld):
+                    ui.down()
+                    if(_AltHeld):
+                        ui.down()
+                    ui.enter()            
+        return True 
+    elif(not _ShowMenu):
         if(ctrlID == IDSelectDown):
-            HandleBrowserButton()
+            #HandleBrowserButton()
+            ui.enter()
+        else:
+            numIdx = -1
+            name = ''
+            window = ''
+
+            if(event.data2 == jogNext):
+                if(ui.getFocused(widMixer)):
+                    if (not _ShiftHeld):
+                        ui.right()
+                    else:
+                        ui.down()
+                else:
+                    if (not _ShiftHeld):
+                        ui.down()
+                    else:
+                        ui.right()
+
+            elif(event.data2 == jogPrev):
+                if(ui.getFocused(widMixer)):
+                    if (not _ShiftHeld):
+                        ui.left()
+                    else:
+                        ui.up()
+                else:
+                    if(not _ShiftHeld):
+                        ui.up()
+                    else:
+                        ui.left()
+
+            
+            if(ui.getFocused(widMixer)):
+                time.sleep(0.05) # if no delay, it reads the previous info
+                window = 'Mixer'    
+                numIdx = mixer.trackNumber()
+                name = mixer.getTrackName(numIdx) 
+            elif(ui.getFocused(widChannelRack)):
+                time.sleep(0.05) # if no delay, it reads the previous info
+                window = 'Channel Rack'
+                numIdx = getCurrChanIdx()
+                name = channels.getChannelName(numIdx)
+            elif(ui.getFocused(widPlaylist)):
+                window = 'Playlist'
+            elif(ui.getFocused(widPianoRoll)):
+                window = 'Piano Roll'
+
+            if(numIdx > -1):                    
+                DisplayTimedText2(window, "{}-{}".format(numIdx, name), '')
+            else:
+                DisplayTimedText2(window, '', '')
+                
+           
         return True
 
     ShowMenuItems()
-    jogNext = 1
-    jogPrev = 127
     paramName, plugin = getCurrChanPlugin()
     if(plugin == None): # invalid plugin
         return True
@@ -1557,22 +1650,39 @@ def HandleSelectWheel(event, ctrlID):
         return True 
 
 
-
 def HandleBrowserButton():
-    #global _ShowBrowser
-    # using to trigger the menu for now
     global _ShowMenu 
     global _menuItems
     global _menuItemSelected
     global _menuHistory
     global _FLChannelFX
+    global _ShowBrowser
 
+    # in a menu
+    if (ui.isInPopupMenu()):
+        ui.closeActivePopupMenu()
+
+    # regular File browser....
+    if(not _ShiftHeld) and (not _AltHeld) and (not _ShowMenu):
+        if(_ShowBrowser == 1):
+            ShowBrowser(0)
+            if (DEFAULT_TOGGLE_CR_AND_BROWSER):
+                ShowChannelRack(1)
+        else:
+            if (DEFAULT_TOGGLE_CR_AND_BROWSER):
+                ShowChannelRack(0)
+            ShowBrowser(1)
+        RefreshWindowStates()
+        return True
+
+    #
+    # para /settings menus    
     _ShowMenu = not _ShowMenu
     if(_ShowMenu):
         _FLChannelFX = _ShiftHeld
         _menuHistory.clear()
         _menuItemSelected = 0
-        SendCC(IDBrowser, DualColorFull2)  #SingleColorHalfBright
+        SendCC(IDBrowser, SingleColorFull)  #SingleColorHalfBright
         ShowMenuItems()
         if(_FLChannelFX):
             channels.showEditor(getCurrChanIdx(), 1) 
@@ -1666,9 +1776,7 @@ def HandleUDLR(padIndex):
     if(padIndex == pdTab):
         ui.selectWindow(0)
     elif(padIndex == pdShiftTab):
-        #ui.selectWindow(1)
-        MenuNavigation('', _AltHeld)
-        
+        FLMenuNavigation('', _AltHeld)
     elif(padIndex == pdUp):
         ui.up()
     elif(padIndex == pdDown):
@@ -1825,7 +1933,7 @@ def RefreshMacros():
         SetPadColor(pad, _MacroList[idx].PadColor, dimDefault)
 
     UpdateWindowStates()
-    RefreshWindowStates()
+    #RefreshWindowStates()
 
 def RefreshMarkers():
     for pad in pdMarkers:
@@ -2102,7 +2210,7 @@ def RefreshFPCSelector():
                     _PadMap[padNum].ItemIndex = chan 
                     idx += 1
 
-def RefreshKnobMode():
+def  RefreshKnobMode():
     LEDVal = IDKnobModeLEDVals[_KnobMode] | 16
     SendCC(IDKnobModeLEDArray, LEDVal)
 
@@ -2222,10 +2330,23 @@ def RefreshChannelStrip(scrollToChannel = False):
         if(chanIdx < len(channelMap)):
             channel = channelMap[chanIdx]
         
+        dimA = dimDim
+        dimB = dimDim
+
         if(currChan == channel.FLIndex):
-            SetPadColor(padAIdx, channel.Color, dimBright)
+            if(ui.getFocused(widPlugin) or ui.getFocused(widPluginGenerator)):
+                dimA = dimFull
+            elif(ui.getVisible(widPlugin) or ui.getVisible(widPluginGenerator)):
+                dimA = dimBright
+            if(ui.getFocused(widPianoRoll)):
+                dimB = dimFull
+            elif(ui.getVisible(widPianoRoll)):
+                dimB = dimDim
+            SetPadColor(padAIdx, channel.Color, dimA)
+            SetPadColor(padBIdx, cWhite, dimB)
         else:
-            SetPadColor(padAIdx, channel.Color, dimDefault)
+            SetPadColor(padAIdx, channel.Color, dimA)
+            SetPadColor(padBIdx, cDimWhite, dimB)
         
         if(channel.FLIndex >= 0):
             if(_ShiftHeld): # Shifted will display Mute states
@@ -2242,7 +2363,7 @@ def RefreshChannelStrip(scrollToChannel = False):
             elif(currMixerNum == channels.getTargetFxTrack(channel.FLIndex)): 
                 #not Shifted
                 if(currChan == channel.FLIndex):
-                    SetPadColor(padBIdx, cWhite, dimBright)
+                    SetPadColor(padBIdx, cWhite, dimDefault)
                 else:
                     SetPadColor(padBIdx, cDimWhite, dimDefault)
             else: #not shifted and not an fx track match
@@ -2250,7 +2371,7 @@ def RefreshChannelStrip(scrollToChannel = False):
         else:
             SetPadColor(padBIdx, cOff, dimDefault)
 
-    SelectAndShowChannel(currChan)
+    #SelectAndShowChannel(currChan)
     RefreshNavPads()
 
 def getChannelOffsetFromPage():
@@ -2932,11 +3053,15 @@ def getCurrChanPlugin():
 #endregion
 
 #region Nav helpers
-def NextKnobMode():
+def SetKnobMode(mode=-1):
     global _KnobMode
-    _KnobMode += 1
-    if(_KnobMode > 3):
-        _KnobMode = 0    
+    if(mode == -1):
+        _KnobMode += 1
+    else:
+        _KnobMode = mode
+    if(-1 < _KnobMode > 3): #if(_KnobMode > 3):
+        _KnobMode = KM_CHANNEL    
+    #print('km', _KnobMode)
     RefreshKnobMode()
 
 def PatternPageNav(moveby):
@@ -3074,8 +3199,11 @@ def ShowPianoRoll(showVal, bSave, bUpdateDisplay = False, chanIdx = -1):
             if(len(_PatternMap) > 0):
                 selPat.ShowPianoRoll = 0
 
+    RefreshChannelStrip()
+
     if(bUpdateDisplay):
         DisplayTimedText('Piano Roll: ' + _showText[showVal])
+
 
 def ShowChannelSettings(showVal, bSave, bUpdateDisplay = False):
     global _PatternMap
@@ -3102,6 +3230,8 @@ def ShowChannelSettings(showVal, bSave, bUpdateDisplay = False):
 
     if(bUpdateDisplay):
         DisplayTimedText('Chan Sett: ' + _showText[showVal])
+
+    RefreshChannelStrip()
 
     if(bSave):
         if(len(_PatternMap) > 0):
@@ -3144,6 +3274,8 @@ def ShowChannelEditor(showVal, bSave, bUpdateDisplay = False):
 
     if(bUpdateDisplay):
         DisplayTextBottom('ChanEdit: ' + _showText[showVal])
+
+    RefreshChannelStrip()
 
     if(showVal == 0): # make CR active when closed
         ShowChannelRack(_ShowChanRack)
@@ -3214,8 +3346,6 @@ def ShowChannelRack(showVal, bUpdateDisplay = False):
         ui.setFocused(widChannelRack)
     else:
         ui.hideWindow(widChannelRack)
-        if(ui.getVisible(widBrowser)):
-            ui.showWindow(widBrowser)
 
     _ShowChanRack = showVal
 
@@ -3225,26 +3355,28 @@ def ShowChannelRack(showVal, bUpdateDisplay = False):
 def ShowBrowser(showVal, bUpdateDisplay = False):
     global _ShowBrowser
 
-    #temp until bug gets fixed.
-    DisplayTimedText('Browser: NYI')
-    return 
 
-    isShowing = ui.getVisible(widBroswer)
-    isFocused = ui.getFocused(widBroswer)
+    #temp until bug gets fixed.
+    #DisplayTimedText('Browser: NYI')
+    #return 
 
     if(showVal == -1): # toggle
-        if(isShowing == 1) and (isFocused == 1):
+        if(ui.getVisible(widBrowser) == 1) and (ui.getFocused(widBrowser) == 1):
             showVal = 0
         else:
             showVal = 1
 
     if(showVal == 1):
+        if(DEFAULT_TOGGLE_CR_AND_BROWSER):
+            ui.hideWindow(widChannelRack)        
         ui.showWindow(widBrowser)
+        _ShowBrowser = 1
     else:
-        ui.hideWindow(widBrowser)
+        if(not DEFAULT_TOGGLE_CR_AND_BROWSER):
+            ui.hideWindow(widBrowser)
+            ShowChannelRack(1)
+        _ShowBrowser = 0
 
-    _ShowBrowser = showVal
-    
     if(bUpdateDisplay):
         DisplayTimedText('Browser: ' + _showText[showVal])
 
@@ -3384,17 +3516,28 @@ def UpdateWindowStates():
     
     prn(lvlA, 'UpdateWindowStates')
 
-    if isNoMacros():
-        return 
-
-    chanIdx = getCurrChanIdx()
-
     _ShowMixer = ui.getVisible(widMixer)
     _ShowPlaylist = ui.getVisible(widPlaylist)
     _ShowChanRack = ui.getVisible(widChannelRack)
     _ShowBrowser = ui.getVisible(widBrowser)
+    if(DEFAULT_TOGGLE_CR_AND_BROWSER):
+        if(_ShowChanRack == 1):
+            _ShowBrowser = 0
+        else:
+            _ShowBrowser = 1
     _ShowPianoRoll = ui.getVisible(widPianoRoll)
+
+    if(DEFAULT_AUTO_SWITCH_KNOBMODE):
+        if(ui.getFocused(widMixer)):
+            SetKnobMode(KM_MIXER) 
+        if(ui.getFocused(widChannelRack)):
+            SetKnobMode(KM_CHANNEL) 
+        
     
+    if isNoMacros():
+        return 
+
+    chanIdx = getCurrChanIdx()
     if(chanIdx >= len(_ChannelMap)):
         UpdateChannelMap()
 
@@ -3403,8 +3546,20 @@ def UpdateWindowStates():
 
     RefreshWindowStates()
 
+def RefreshBrowserButton():
+    if(ui.getFocused(widBrowser)):
+        SendCC(IDBrowser, SingleColorHalfBright)
+    elif(_ShowMenu):
+        SendCC(IDBrowser, SingleColorFull)
+    else:
+        SendCC(IDBrowser, SingleColorOff)  # 
+
 def RefreshWindowStates():
-    prn(lvlA, 'RefreshWindowState')
+    prn(lvlA, 'RefreshWindowStates')
+
+    RefreshChannelStrip()
+    RefreshBrowserButton()
+
     if isNoMacros():
         return 
 
@@ -3431,6 +3586,10 @@ def RefreshWindowStates():
         SetPadColor(pdMacros[3], getShade(_MacroList[3].PadColor, shd), dimFull)
     else:
         SetPadColor(pdMacros[3], getShade(_MacroList[3].PadColor, shDark), dimDefault)
+    
+
+
+    
 
     
 def setSnapMode(newmode):
@@ -3575,10 +3734,11 @@ def getPlugin(pluginName):
     _knownPlugins[pl.getID()] = pl
     return pl 
 
-def supportsFLVersion():
+def supportsFLVersion(version = '20.9'):
     # 
-    return True
-    res = ( "20.9." in ui.getVersion() )
+    return True 
+
+    res = ( version in ui.getVersion() )
     if(not res):
         print('* FL Version is not supported at this time. *')
     return res 

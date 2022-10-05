@@ -100,5 +100,15 @@ DEFAULT_PATTERN_NAME = "{}-Pattern" #  the {} will be replaced with the pattern 
 # when True, it will show the prompt to name a pattern.
 # when False, it will use the DEFAULT_PATTERN_NAME (above) value to name the pattern
 # 
-DEFAULT_PROMPT_NAME_FOR_NEW_PATTERN = False  
+DEFAULT_PROMPT_NAME_FOR_NEW_PATTERN = False
+
+
+# This will close the Channel Rack, when you select Browser. And reopen it when done.
+# it also makes the ChannelRack WIndow act as a toggle between the it and the Browser
+# this allows you to have the detached ChannelRack overlaid on the Browser to save screen space.
+#
+DEFAULT_TOGGLE_CR_AND_BROWSER = True 
+
+# When switching to Mixer, it changes to Mixer Knobs, Channel Rack changes to Channel Knobs
+DEFAULT_AUTO_SWITCH_KNOBMODE = True
 
