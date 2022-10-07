@@ -67,7 +67,7 @@ DEFAULT_SHOW_PLAYBACK_NOTES = True
 DEFAULT_REOPEN_WINDOWS_AFTER_CLOSE_ALL = True 
 
 # markers created by the script will have this prefix 
-DEFAULT_MARKER_PREFIX_TEXT = "nfx#"  
+DEFAULT_MARKER_PREFIX_TEXT = "{}-Marker"  
 
 # shows extra info I use when debugging. may affect performance when True
 DEFAULT_SHOW_PRN = False 
@@ -95,6 +95,8 @@ DEFAULT_ALT_BROWSER_STEPS = 8       # when ALT is held
 #
 DEFAULT_PATTERN_NAME = "{}-Pattern" #  the {} will be replaced with the pattern number
 
+
+
 # this affects how the scripts reacts when you scroll to an empty pattern
 # can be True or False. 
 # when True, it will show the prompt to name a pattern.
@@ -107,8 +109,9 @@ DEFAULT_PROMPT_NAME_FOR_NEW_PATTERN = False
 # it also makes the ChannelRack WIndow act as a toggle between the it and the Browser
 # this allows you to have the detached ChannelRack overlaid on the Browser to save screen space.
 #
-DEFAULT_TOGGLE_CR_AND_BROWSER = True 
+DEFAULT_TOGGLE_CR_AND_BROWSER = True
 
 # When switching to Mixer, it changes to Mixer Knobs, Channel Rack changes to Channel Knobs
+#
 DEFAULT_AUTO_SWITCH_KNOBMODE = True
 

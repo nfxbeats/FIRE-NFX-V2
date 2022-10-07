@@ -742,7 +742,7 @@ def HandleProgressBar(padNum):
 
     if(_AltHeld):
         markerOffs = padOffs + 1
-        arrangement.addAutoTimeMarker(prgMap.SongPosAbsTicks, DEFAULT_MARKER_PREFIX_TEXT + str(markerOffs))
+        arrangement.addAutoTimeMarker(prgMap.SongPosAbsTicks, DEFAULT_MARKER_PREFIX_TEXT.format(markerOffs))
 
     if(_ShiftHeld):
         select = True
@@ -1577,15 +1577,14 @@ def HandleSelectWheel(event, ctrlID):
                         ui.up()
                     else:
                         ui.left()
-
+            
+            time.sleep(0.02) # if no delay, it reads the previous info
             
             if(ui.getFocused(widMixer)):
-                time.sleep(0.05) # if no delay, it reads the previous info
                 window = 'Mixer'    
                 numIdx = mixer.trackNumber()
                 name = mixer.getTrackName(numIdx) 
             elif(ui.getFocused(widChannelRack)):
-                time.sleep(0.05) # if no delay, it reads the previous info
                 window = 'Channel Rack'
                 numIdx = getCurrChanIdx()
                 name = channels.getChannelName(numIdx)
@@ -1666,6 +1665,7 @@ def HandleBrowserButton():
     if(not _ShiftHeld) and (not _AltHeld) and (not _ShowMenu):
         if(_ShowBrowser == 1):
             ShowBrowser(0)
+
             if (DEFAULT_TOGGLE_CR_AND_BROWSER):
                 ShowChannelRack(1)
         else:
@@ -3352,30 +3352,38 @@ def ShowChannelRack(showVal, bUpdateDisplay = False):
     if(bUpdateDisplay):
         DisplayTimedText('Chan Rack: ' + _showText[showVal])
 
+_resetAutoHide = False
 def ShowBrowser(showVal, bUpdateDisplay = False):
     global _ShowBrowser
+    global _resetAutoHide
 
+    _resetAutoHide = (ui.isBrowserAutoHide()==1) or _resetAutoHide
+    wasHidden = not ui.getVisible(widBrowser) # curr value
+    hasFocus = ui.getFocused(widBrowser)
 
-    #temp until bug gets fixed.
-    #DisplayTimedText('Browser: NYI')
-    #return 
+    if(_resetAutoHide):
+        ui.setBrowserAutoHide(False)  # if hidden it will become visible
 
     if(showVal == -1): # toggle
-        if(ui.getVisible(widBrowser) == 1) and (ui.getFocused(widBrowser) == 1):
+        if(hasFocus):
             showVal = 0
         else:
-            showVal = 1
-
+            showVal = 1        
+        
     if(showVal == 1):
         if(DEFAULT_TOGGLE_CR_AND_BROWSER):
-            ui.hideWindow(widChannelRack)        
+            ui.hideWindow(widChannelRack)  
         ui.showWindow(widBrowser)
         _ShowBrowser = 1
     else:
-        if(not DEFAULT_TOGGLE_CR_AND_BROWSER):
+        if(_resetAutoHide):
+            ui.setBrowserAutoHide(True)
             ui.hideWindow(widBrowser)
-            ShowChannelRack(1)
+            _resetAutoHide = False
+        ShowChannelRack(1) # to take focus off the Browser
         _ShowBrowser = 0
+
+    print('  ', _resetAutoHide)
 
     if(bUpdateDisplay):
         DisplayTimedText('Browser: ' + _showText[showVal])
@@ -3519,12 +3527,12 @@ def UpdateWindowStates():
     _ShowMixer = ui.getVisible(widMixer)
     _ShowPlaylist = ui.getVisible(widPlaylist)
     _ShowChanRack = ui.getVisible(widChannelRack)
-    _ShowBrowser = ui.getVisible(widBrowser)
-    if(DEFAULT_TOGGLE_CR_AND_BROWSER):
-        if(_ShowChanRack == 1):
-            _ShowBrowser = 0
-        else:
-            _ShowBrowser = 1
+    _ShowBrowser = ui.getFocused(widBrowser)
+    # if(DEFAULT_TOGGLE_CR_AND_BROWSER):
+    #     if(_ShowChanRack == 1):
+    #         _ShowBrowser = 0
+    #     else:
+    #         _ShowBrowser = 1
     _ShowPianoRoll = ui.getVisible(widPianoRoll)
 
     if(DEFAULT_AUTO_SWITCH_KNOBMODE):
