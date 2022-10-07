@@ -924,6 +924,7 @@ def HandleMacros(macIdx):
         if(DEFAULT_TOGGLE_CR_AND_BROWSER):
             if(_ShowChanRack == 0):
                 ui.showWindow(widBrowser)
+            RefreshBrowserDisplay()    
     elif(macIdx == 2):
         ShowPlaylist(-1)
     elif(macIdx == 3):
@@ -1176,7 +1177,6 @@ def HandlePattUpDn(ctrlID):
 
 def HandleGridLR(ctrlID):
     global _ScrollTo
-
     if(_AltHeld):
         if(ctrlID == IDBankL):
             DisplayTimedText('hZoom Out')
@@ -1526,13 +1526,15 @@ def HandleSelectWheel(event, ctrlID):
                 #ui.up()
                 caption = ui.navigateBrowserMenu(0, _ShiftHeld)
             
-            ftype = ui.getFocusedNodeFileType()
-            actions = ''
-            if(ftype <= -100):
-                actions = '[]'
-            else:
-                actions = '[] S+[] A+[]'
-            DisplayTimedText2('Browser', caption, actions )
+            RefreshBrowserDisplay(caption)
+
+            # ftype = ui.getFocusedNodeFileType()
+            # actions = ''
+            # if(ftype <= -100):
+            #     actions = '[]'
+            # else:
+            #     actions = '[] S+[] A+[]'
+            # DisplayTimedText2('Browser', caption, actions )
         elif(ctrlID == IDSelectDown):
             if(ui.getFocusedNodeFileType() <= -100):
                 _lastBrowserFolder = '>' + ui.getFocusedNodeCaption()
@@ -1665,14 +1667,17 @@ def HandleBrowserButton():
     if(not _ShiftHeld) and (not _AltHeld) and (not _ShowMenu):
         if(_ShowBrowser == 1):
             ShowBrowser(0)
-
             if (DEFAULT_TOGGLE_CR_AND_BROWSER):
                 ShowChannelRack(1)
+            
         else:
             if (DEFAULT_TOGGLE_CR_AND_BROWSER):
                 ShowChannelRack(0)
             ShowBrowser(1)
+
+        RefreshBrowserDisplay()
         RefreshWindowStates()
+        
         return True
 
     #
@@ -1809,7 +1814,6 @@ def RefreshModes():
     if(_PadMode.Mode == MODE_DRUM):
         RefreshDrumPads()
     elif(_PadMode.Mode == MODE_PATTERNS):
-        #UpdatePatternModeData()
         UpdatePatternModeData()
         # if(True) and (not transport.isPlaying()):
         #     UpdatePlaylistMap(False, True)
@@ -3114,6 +3118,23 @@ def NavOctavesList(val):
     elif( _OctaveIdx < 0 ):
         _OctaveIdx = len(OctavesList)-1
 
+def ForceNavSet(navSet):
+    if(navSet in _PadMode.AllowedNavSets):
+        newIdx = _PadMode.AllowedNavSets.index(navSet)
+        ForceNavSetIdx(newIdx)
+
+def ForceNavSetIdx(navSetIdx):
+    global _PadMode
+    navset = _PadMode.AllowedNavSets[navSetIdx]
+    _PadMode.NavSet = TnfxNavigationSet(navset)
+    _PadMode.AllowedNavSetIdx = navSetIdx 
+    RefreshGridLR()
+    RefreshMacros()
+    RefreshNavPads()
+    RefreshModes()
+
+
+
 def NavSetList(val):
     global _PadMode 
 
@@ -3124,15 +3145,16 @@ def NavSetList(val):
     elif(newNavSetIdx < 0):
         newNavSetIdx = len(_PadMode.AllowedNavSets)-1
 
-    _PadMode.NavSet = TnfxNavigationSet( _PadMode.AllowedNavSets[newNavSetIdx])
-    _PadMode.AllowedNavSetIdx = newNavSetIdx 
-    RefreshGridLR()
+    ForceNavSetIdx(newNavSetIdx)
+    # _PadMode.NavSet = TnfxNavigationSet( _PadMode.AllowedNavSets[newNavSetIdx])
+    # _PadMode.AllowedNavSetIdx = newNavSetIdx 
+    # RefreshGridLR()
 
-    RefreshMacros()
-    RefreshNavPads()
+    # RefreshMacros()
+    # RefreshNavPads()
 
 def RefreshGridLR():
-    navSet = _PadMode.NavSet.Index
+    navSet = _PadMode.NavSet.NavSetID
     SendCC(IDLeft, SingleColorOff)
     SendCC(IDRight, SingleColorOff)
 
@@ -3349,13 +3371,17 @@ def ShowChannelRack(showVal, bUpdateDisplay = False):
 
     _ShowChanRack = showVal
 
+    
+
     if(bUpdateDisplay):
         DisplayTimedText('Chan Rack: ' + _showText[showVal])
 
 _resetAutoHide = False
+_prevNavSet = -1
 def ShowBrowser(showVal, bUpdateDisplay = False):
     global _ShowBrowser
     global _resetAutoHide
+    global _prevNavSet
 
     _resetAutoHide = (ui.isBrowserAutoHide()==1) or _resetAutoHide
     wasHidden = not ui.getVisible(widBrowser) # curr value
@@ -3375,6 +3401,10 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
             ui.hideWindow(widChannelRack)  
         ui.showWindow(widBrowser)
         _ShowBrowser = 1
+        if(DEFAULT_FORCE_UDLR_ON_BROWSER):
+            _prevNavSet = _PadMode.NavSet.NavSetID
+            ForceNavSet(nsUDLR)
+
     else:
         if(_resetAutoHide):
             ui.setBrowserAutoHide(True)
@@ -3382,9 +3412,11 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
             _resetAutoHide = False
         ShowChannelRack(1) # to take focus off the Browser
         _ShowBrowser = 0
-
-    print('  ', _resetAutoHide)
-
+        if(DEFAULT_FORCE_UDLR_ON_BROWSER):
+            if(_prevNavSet > -1):
+                ForceNavSet(_prevNavSet)
+                _prevNavSet = -1
+    
     if(bUpdateDisplay):
         DisplayTimedText('Browser: ' + _showText[showVal])
 
@@ -3528,11 +3560,9 @@ def UpdateWindowStates():
     _ShowPlaylist = ui.getVisible(widPlaylist)
     _ShowChanRack = ui.getVisible(widChannelRack)
     _ShowBrowser = ui.getFocused(widBrowser)
-    # if(DEFAULT_TOGGLE_CR_AND_BROWSER):
-    #     if(_ShowChanRack == 1):
-    #         _ShowBrowser = 0
-    #     else:
-    #         _ShowBrowser = 1
+    if(DEFAULT_TOGGLE_CR_AND_BROWSER) and (_ShowBrowser):
+        if _ShowChanRack == 1:
+            ShowChannelRack(0)
     _ShowPianoRoll = ui.getVisible(widPianoRoll)
 
     if(DEFAULT_AUTO_SWITCH_KNOBMODE):
@@ -3554,9 +3584,26 @@ def UpdateWindowStates():
 
     RefreshWindowStates()
 
+def RefreshBrowserDisplay(caption = ''):
+    if(ui.getFocused(widBrowser)):
+        ftype = ui.getFocusedNodeFileType()
+        actions = ''
+        if(caption == ''):
+            caption = ui.getFocusedNodeCaption()
+        if(ftype <= -100):
+            actions = '[Open/Close]'
+        else:
+            actions = '[]  S[]  A[]'
+        DisplayTimedText2('Browser', caption, actions )
+    else:
+        RefreshDisplay()
+
+
+
 def RefreshBrowserButton():
     if(ui.getFocused(widBrowser)):
         SendCC(IDBrowser, SingleColorHalfBright)
+        RefreshBrowserDisplay()
     elif(_ShowMenu):
         SendCC(IDBrowser, SingleColorFull)
     else:

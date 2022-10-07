@@ -173,7 +173,8 @@ nsDefaultDrumAlt = 5
 
 class TnfxNavigationSet:
     def __init__(self, navSet):
-        self.Index = navSet
+        self.NavSetID = navSet
+        self.Index = -1
         self.ChanNav = False
         self.ScaleNav = False
         self.SnapNav = False
