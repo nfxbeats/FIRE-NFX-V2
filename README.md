@@ -41,13 +41,17 @@ If you prefer to leave you file explorer open with this folder open, it might ma
 <br>
 
 ## *Script File Download*
-Once you have the folder properly identified, you can download the files from the releases page: 
+Once you have the folder properly identified, you can download the files from the the "master" or from the "releases": 
 
-https://github.com/nfxbeats/FIRE-NFX-V2/releases 
+### Master Branch
+The master is the lastest of the latest, and may have newer/improved features but also potential new bugs that go with the devlopment of the features. You can get the master file here: https://github.com/nfxbeats/FIRE-NFX-V2/archive/refs/heads/master.zip
+
+### Releases 
+The release version is usually an older version that runs smoothly, but may be lacking in up to date features and fixes. You can get the latest release (and previous releases, if needed) from here: https://github.com/nfxbeats/FIRE-NFX-V2/releases 
 
 Find the ZIP download for the latest version. It should be the first link labelled as "**Source code (zip)** " on the page.
 
-Download it and open it in a new window.
+Pick a version, (master or release) and then download it and open it in a new window.
 
 In the ZIP file you downloaded, you should open it and go into the first folder it may be named something similar to **FIRE-NFX-V2-Beta-1**. Inside this folder you will see several files. The most important file is the script file named **device_FIRE-NFX.py**. If you see this file, this is the correct source folder.
 
