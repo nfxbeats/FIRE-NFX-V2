@@ -26,6 +26,7 @@ import arrangement
 
 # fix
 widPlugin = 5
+widPluginEffect = 6
 widPluginGenerator = 7
 
 # not safe to use as of Aug 20, 2022
@@ -42,7 +43,7 @@ widPluginGenerator = 7
 #     print('task started', id)
 
 from harmonicScales import *
-from fireNFX_DEFAULTS import *
+from fireNFX_DefaultSettings import *
 from fireNFX_Classes import *
 from fireNFX_Defs import * 
 from fireNFX_PadDefs import *
@@ -50,9 +51,16 @@ from fireNFX_Utils import *
 from fireNFX_Display import *
 from fireNFX_PluginDefs import *
 
+
 #region globals
-_debugprint = DEFAULT_SHOW_PRN
-_rectTime = DEFAULT_DISPLAY_RECT_TIME_MS
+dimDim = Settings.DIM_DIM
+dimDefault = Settings.DIM_NORMAL
+dimBright = Settings.DIM_BRIGHT
+dimFull = 0
+
+
+_debugprint = Settings.SHOW_PRN
+_rectTime = Settings.DISPLAY_RECT_TIME_MS
 _ShiftHeld = False
 _FLChannelFX = False
 _AltHeld = False
@@ -81,7 +89,7 @@ _ShowMixer = 1
 _ShowChanRack = 1
 _ShowPlaylist = 1
 _ShowBrowser = 1
-if(DEFAULT_TOGGLE_CR_AND_BROWSER):
+if(Settings.TOGGLE_CR_AND_BROWSER):
     _ShowBrowser = 0
 
 _ShowPianoRoll = 0
@@ -112,17 +120,17 @@ lyStrips = 1
 _Layouts = ['Banks', 'Strips']
 
 #notes/scales
-_ScaleIdx = DEFAULT_SCALE
+_ScaleIdx = Settings.SCALE
 _ScaleDisplayText = ""
 _ScaleNotes = list()
 _lastNote =-1
-_NoteIdx = DEFAULT_NOTE_NAMES.index(DEFAULT_ROOT_NOTE)
+_NoteIdx = Settings.NOTE_NAMES.index(Settings.ROOT_NOTE)
 _NoteRepeat = False
 _NoteRepeatLengthIdx = BeatLengthsDefaultOffs
 _isRepeating = False
 
 _SnapIdx = InitialSnapIndex
-_OctaveIdx = OctavesList.index(DEFAULT_OCTAVE)
+_OctaveIdx = OctavesList.index(Settings.OCTAVE)
 _ShowChords = False
 _ChordNum = -1
 _ChordInvert = 0 # 0 = none, 1 = 1st, 2 = 2nd
@@ -160,9 +168,6 @@ _ScrollTo = True # used to determine when to scroll to the channel/pattern
 
 #region FL MIDI API Events
 def OnInit():
-    # if not supportsFLVersion():
-    #     return 
-
     global _ScrollTo 
 
     _ScrollTo = True
@@ -230,15 +235,9 @@ def ClearAllPads():
         SetPadColor(pad, 0x000000, 0)
     
 def OnDoFullRefresh():
-    if not supportsFLVersion():
-        return 
-
     RefreshAll() 
 
 def OnIdle():
-    if not supportsFLVersion():
-        return 
-
     if(_shuttingDown):
         return 
 
@@ -247,7 +246,7 @@ def OnIdle():
         CheckAndHandleSongLenChanged()
 
     # determines if we need show note playback
-    if(DEFAULT_SHOW_PLAYBACK_NOTES):
+    if(Settings.SHOW_PLAYBACK_NOTES):
         if(transport.isPlaying() or transport.isRecording()):
             if(_PadMode.Mode in [MODE_DRUM, MODE_NOTE]):
                 HandleShowNotesOnPlayback()
@@ -278,9 +277,6 @@ def CheckAndHandleSongLenChanged():
     RefreshProgress()
     
 def OnMidiMsg(event):
-    if not supportsFLVersion():
-        return 
-
     if(event.data1 in KnobCtrls) and (_KnobMode in [KM_USER1, KM_USER2]): # user defined knobs
         # this code from the original script with slight modification:
         data2 = event.data2
@@ -304,9 +300,6 @@ def OnMidiMsg(event):
                 DisplayTextAll(s, s2, '')        
 
 def OnUpdateBeatIndicator(value):
-    if not supportsFLVersion():
-        return 
-
     global _Beat
     if(not transport.isPlaying()):
         RefreshTransport()
@@ -338,9 +331,6 @@ def OnUpdateBeatIndicator(value):
             SendCC(BeatIndicators[i], SingleColorOff)
 
 def OnDirtyChannel(chan, flags):
-    if not supportsFLVersion():
-        return 
-
     global _DirtyChannelFlags
     # Called on channel rack channel(s) change, 
     # 'index' indicates channel that changed or -1 when all channels changed
@@ -359,9 +349,6 @@ def OnRefresh(flags):
     global _PadMode
     global _isAltMode
     #print('OnRefresh', flags)
-    if not supportsFLVersion():
-        return 
-
     if(flags == HW_CustomEvent_ShiftAlt):
         # called by HandleShiftAlt
         RefreshShiftAltButtons()
@@ -421,9 +408,6 @@ def OnRefresh(flags):
         pass
 
 def OnProjectLoad(status):
-    if not supportsFLVersion():
-        return 
-
     # status = 0 = starting load?
     if(status == 0):
         DisplayTextAll('Project Loading', '-', 'Please Wait...')
@@ -434,11 +418,18 @@ def OnProjectLoad(status):
         UpdatePatternModeData()
         RefreshAll()
 
+_tempMsg = ''
+_tempMsg2 = ''
 def OnSendTempMsg(msg, duration):
-    if not supportsFLVersion():
-        return 
-    #print('TempMsg', msg, duration)
-    pass
+    global _tempMsg 
+    global _tempMsg2 
+    _tempMsg = msg
+    # if(' - ' in msg):
+    #     _tempMsg = msg
+    #     print('TempMsg', "[{}]".format(_tempMsg), duration, 'inMenu', ui.isInPopupMenu())
+    # else:
+    #     _tempMsg2 = msg
+    #     print('TempMsg2', "[{}]".format(_tempMsg2), duration, 'inMenu', ui.isInPopupMenu())
 
 def isKnownPlugin():
     return getCurrChanPluginID() in _knownPlugins.keys()
@@ -447,9 +438,6 @@ _prevCtrlID = 0
 _proctime = 0
 _DoubleTap = False
 def OnMidiIn(event):
-    if not supportsFLVersion():
-        return 
-
     global _ShiftHeld
     global _AltHeld
     global _PadMap
@@ -470,9 +458,6 @@ def OnMidiIn(event):
             _prevCtrlID = ctrlID
             _DoubleTap = False
         #print('dbltap', _DoubleTap)
-        
-    
-    
 
     # handle shift/alt
     if(ctrlID in [IDAlt, IDShift]):
@@ -506,7 +491,7 @@ def OnMidiIn(event):
         cMap = getColorMap()
         col = cMap[padNum].PadColor
         if (col == cOff):
-            col = DEFAULT_PAD_PRESSED_COLOR
+            col = Settings.PAD_PRESSED_COLOR
 
         if(event.data2 > 0): # pressed
             pMap.Pressed = 1
@@ -592,15 +577,10 @@ def OnMidiIn(event):
         event.handled = True 
 
 def OnNoteOn(event):
-    if not supportsFLVersion():
-        return 
-
     #prn(lvlA, 'OnNoteOn()', utils.GetNoteName(event.data1),event.data1,event.data2)
     pass
 
 def OnNoteOff(event):
-    if not supportsFLVersion():
-        return 
     #prn(lvlA, 'OnNoteOff()', utils.GetNoteName(event.data1),event.data1,event.data2)
     pass
 
@@ -742,7 +722,7 @@ def HandleProgressBar(padNum):
 
     if(_AltHeld):
         markerOffs = padOffs + 1
-        arrangement.addAutoTimeMarker(prgMap.SongPosAbsTicks, DEFAULT_MARKER_PREFIX_TEXT.format(markerOffs))
+        arrangement.addAutoTimeMarker(prgMap.SongPosAbsTicks, Settings.MARKER_PREFIX_TEXT.format(markerOffs))
 
     if(_ShiftHeld):
         select = True
@@ -915,13 +895,13 @@ def HandleMacros(macIdx):
         return 
     
     if(macIdx == 4):
-        if(DEFAULT_UNDO_STYLE == 0):
+        if(Settings.UNDO_STYLE == 0):
             general.undoUp()
         else:
             general.undo()
     elif(macIdx == 1):
         ShowChannelRack(-1)
-        if(DEFAULT_TOGGLE_CR_AND_BROWSER):
+        if(Settings.TOGGLE_CR_AND_BROWSER):
             if(_ShowChanRack == 0):
                 ui.showWindow(widBrowser)
             RefreshBrowserDisplay()    
@@ -934,7 +914,7 @@ def HandleMacros(macIdx):
         transport.globalTransport(FPT_F12, 1)  # close all...
 
         # enable the following lines to have it re-open windows 
-        if(DEFAULT_REOPEN_WINDOWS_AFTER_CLOSE_ALL):
+        if(Settings.REOPEN_WINDOWS_AFTER_CLOSE_ALL):
             ShowBrowser(1)
             ShowMixer(1)
             ShowChannelRack(1)
@@ -1063,13 +1043,15 @@ def getPatternNumFromPad(padNum):
         pattIdx = patternStripA.index(padNum)
     elif(padNum in patternStripB):
         pattIdx = patternStripB.index(padNum)
-    if(pattIdx >= 0):
-        if( len(patternMap) >= pattIdx + pattOffset + 1):
-            pattNum = patternMap[pattIdx + pattOffset].FLIndex
-    if(pattIdx > -1):
-        return pattNum, patternMap[pattIdx + pattOffset]
+    newPatIdx = pattIdx + pattOffset
+    if(newPatIdx < len(patternMap)):
+        if(pattIdx >= 0):
+            if( len(patternMap) >= (newPatIdx + 1) ):
+                pattNum = patternMap[newPatIdx].FLIndex
+        if(pattIdx > -1):
+            return pattNum, patternMap[newPatIdx]
     else:
-        return pattNum, None
+        return patterns.patternNumber(), None
 
 def HandlePatternStrip(padNum):
     global _PatternMap
@@ -1156,7 +1138,7 @@ def HandlePattUpDn(ctrlID):
             patterns.jumpToPattern(newPattern)
         else:
             setPatternName = False
-            if(DEFAULT_PROMPT_NAME_FOR_NEW_PATTERN):
+            if(Settings.PROMPT_NAME_FOR_NEW_PATTERN):
                 patterns.findFirstNextEmptyPat(FFNEP_FindFirst)
                 # if we dont have a valid name, use the DEFAULT
                 if(patterns.patternNumber() > patterns.patternCount() ):
@@ -1167,7 +1149,7 @@ def HandlePattUpDn(ctrlID):
             
             if(setPatternName):
                 newPatt = patterns.patternNumber()
-                pattName = DEFAULT_PATTERN_NAME.format(newPatt)
+                pattName = Settings.PATTERN_NAME.format(newPatt)
                 patterns.setPatternName(newPatt, pattName)
 
     RefreshDisplay()
@@ -1222,12 +1204,12 @@ def HandleKnob(event, ctrlID, useparam = None):
         knobres = 1/64
         shiftres = 1/128
         altres = 1/8
-        if(DEFAULT_BROWSER_STEPS >= 1):
-            knobres = 1/DEFAULT_BROWSER_STEPS
-        if(DEFAULT_SHIFT_BROWSER_STEPS >= 1):
-            shiftres = 1/DEFAULT_SHIFT_BROWSER_STEPS
-        if(DEFAULT_ALT_BROWSER_STEPS >= 1):
-            altres = 1/DEFAULT_ALT_BROWSER_STEPS
+        if(Settings.BROWSER_STEPS >= 1):
+            knobres = 1/Settings.BROWSER_STEPS
+        if(Settings.SHIFT_BROWSER_STEPS >= 1):
+            shiftres = 1/Settings.SHIFT_BROWSER_STEPS
+        if(Settings.ALT_BROWSER_STEPS >= 1):
+            altres = 1/Settings.ALT_BROWSER_STEPS
 
         if (useparam.StepsAfterZero > 0):
             knobres = 1/useparam.StepsAfterZero
@@ -1420,9 +1402,9 @@ def HandlePadMode(event):
             _PadMode = modeDrum
         elif(ctrlID == IDPerform):
             _PadMode = modePerform
-            # if(supportsFLVersion('20.99')):
-            #     if(playlist.getPerformanceModeState() == 1): # in performance mode
-            #         _PadMode = modePerform
+            if(checkFLVersionAtLeast('20.99.0')):
+                if(playlist.getPerformanceModeState() == 1): # in performance mode
+                    _PadMode = modePerform
     elif(_AltHeld) and (not _ShiftHeld): # Alt modes
         _isShiftMode = False
         _isAltMode = True 
@@ -1540,7 +1522,7 @@ def HandleSelectWheel(event, ctrlID):
                 _lastBrowserFolder = '>' + ui.getFocusedNodeCaption()
                 ui.enter()
             else:
-                ui.selectBrowserMenuItem()
+                ui.selectBrowserMenuItem() # brings up menu
                 if(_ShiftHeld) or (_AltHeld):
                     ui.down()
                     if(_AltHeld):
@@ -1667,11 +1649,11 @@ def HandleBrowserButton():
     if(not _ShiftHeld) and (not _AltHeld) and (not _ShowMenu):
         if(_ShowBrowser == 1):
             ShowBrowser(0)
-            if (DEFAULT_TOGGLE_CR_AND_BROWSER):
+            if (Settings.TOGGLE_CR_AND_BROWSER):
                 ShowChannelRack(1)
             
         else:
-            if (DEFAULT_TOGGLE_CR_AND_BROWSER):
+            if (Settings.TOGGLE_CR_AND_BROWSER):
                 ShowChannelRack(0)
             ShowBrowser(1)
 
@@ -1777,15 +1759,24 @@ def HandleChord(chan, chordNum, noteOn, noteVelocity, play7th, playInverted):
         PlayMIDINote(chan, note3, noteVelocity)
         PlayMIDINote(chan, note5, noteVelocity)
 
+
 def HandleUDLR(padIndex):
     if(padIndex == pdTab):
         ui.selectWindow(0)
     elif(padIndex == pdShiftTab):
-        FLMenuNavigation('', _AltHeld)
+        NavigateFLMenu('', _AltHeld)
     elif(padIndex == pdUp):
-        ui.up()
+        if(ui.isInPopupMenu()) and (ui.getFocused(widBrowser)) and (_ShiftHeld): 
+            print('x')
+            NavigateFLMenu(',UUUUE')
+        else:
+            ui.up()
     elif(padIndex == pdDown):
-        ui.down()
+        if(ui.isInPopupMenu()) and (ui.getFocused(widBrowser)) and (_ShiftHeld): 
+            print('y')
+            NavigateFLMenu(',UUUE')
+        else:
+            ui.down()
     elif(padIndex == pdLeft):
         ui.left()
     elif(padIndex == pdRight):
@@ -2073,10 +2064,10 @@ def RefreshNotes():
                 color = cWhite 
         else: #non chromatic
             if(_PadMap[p].NoteInfo.IsRootNote) and (showRoot):
-                if(DEFAULT_ROOT_NOTE_COLOR == cChannel):
+                if(Settings.ROOT_NOTE_COLOR == cChannel):
                     color = FLColorToPadColor(channels.getChannelColor(getCurrChanIdx()))
                 else:
-                    color = DEFAULT_ROOT_NOTE_COLOR
+                    color = Settings.ROOT_NOTE_COLOR
 
         if(_ShowChords):
             if(p in pdChordBar):
@@ -2124,7 +2115,7 @@ def RefreshDrumPads():
         if(_PadMode.LayoutIdx  == lyStrips):
             changeEvery = 12
 
-        #if(DEFAULT_ALT_DRUM_MODE_BANKS == False):
+        #if(Settings.ALT_DRUM_MODE_BANKS == False):
         #    changeEvery = 12
 
         for idx, p in enumerate(pads):
@@ -2983,7 +2974,7 @@ def GetScaleGrid(newModeIdx=0, rootNote=0, startOctave=2):
                 if(_PadMap[padIdx].NoteInfo.ChordNum < 0): # not a chord pad, so its ok
                     if(noteVal not in _NoteMapDict.keys()): 
                         _NoteMapDict[noteVal] = [padIdx]
-                    elif(DEFAULT_SHOW_ALL_MATCHING_CHORD_NOTES):
+                    elif(Settings.SHOW_ALL_MATCHING_CHORD_NOTES):
                         if(padIdx not in _NoteMapDict[noteVal]):
                             _NoteMapDict[noteVal].append(padIdx)
 
@@ -3397,11 +3388,11 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
             showVal = 1        
         
     if(showVal == 1):
-        if(DEFAULT_TOGGLE_CR_AND_BROWSER):
+        if(Settings.TOGGLE_CR_AND_BROWSER):
             ui.hideWindow(widChannelRack)  
         ui.showWindow(widBrowser)
         _ShowBrowser = 1
-        if(DEFAULT_FORCE_UDLR_ON_BROWSER):
+        if(Settings.FORCE_UDLR_ON_BROWSER):
             _prevNavSet = _PadMode.NavSet.NavSetID
             ForceNavSet(nsUDLR)
 
@@ -3412,7 +3403,7 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
             _resetAutoHide = False
         ShowChannelRack(1) # to take focus off the Browser
         _ShowBrowser = 0
-        if(DEFAULT_FORCE_UDLR_ON_BROWSER):
+        if(Settings.FORCE_UDLR_ON_BROWSER):
             if(_prevNavSet > -1):
                 ForceNavSet(_prevNavSet)
                 _prevNavSet = -1
@@ -3560,12 +3551,12 @@ def UpdateWindowStates():
     _ShowPlaylist = ui.getVisible(widPlaylist)
     _ShowChanRack = ui.getVisible(widChannelRack)
     _ShowBrowser = ui.getFocused(widBrowser)
-    if(DEFAULT_TOGGLE_CR_AND_BROWSER) and (_ShowBrowser):
+    if(Settings.TOGGLE_CR_AND_BROWSER) and (_ShowBrowser):
         if _ShowChanRack == 1:
             ShowChannelRack(0)
     _ShowPianoRoll = ui.getVisible(widPianoRoll)
 
-    if(DEFAULT_AUTO_SWITCH_KNOBMODE):
+    if(Settings.AUTO_SWITCH_KNOBMODE):
         if(ui.getFocused(widMixer)):
             SetKnobMode(KM_MIXER) 
         if(ui.getFocused(widChannelRack)):
@@ -3789,15 +3780,6 @@ def getPlugin(pluginName):
     _knownPlugins[pl.getID()] = pl
     return pl 
 
-def supportsFLVersion(version = '20.9'):
-    # 
-    return True 
-
-    res = ( version in ui.getVersion() )
-    if(not res):
-        print('* FL Version is not supported at this time. *')
-    return res 
-
 def getChannelRecEventID():
     chanNum = getCurrChanIdx()
     return channels.getRecEventId(chanNum)
@@ -3830,4 +3812,100 @@ def OnMidiOutMsg(event):
     #	Called for short MIDI out messages sent from MIDI Out plugin - 
     # (event properties are limited to: handled, status, data1, data2, port, midiId, midiChan, midiChanEx)
     print('MidiOutMsg:', event.handled, event.status, event.data1, event.data2, event.port, event.midiId, event.midiChan, event.midiChanEx )
+
+def OpenMainMenu(menuName = 'Patterns'):
+    res = False
+    NavigateFLMenu('', False)
+    msg = _tempMsg
+
+    if(msg == menuName):
+        return True
+    
+    for i in range(20):
+        ui.left()
+        time.sleep(Settings.MENU_DELAY)
+        msg = _tempMsg
+        match1 = 'Menu - {}'.format(menuName)
+        match2 = '{} -'.format(menuName)
+        if(msg.startswith(match1)) or (msg.startswith(match2)):
+            res = True
+            break
+    return res
+
+def ClonePattern():
+    NavigateFLMainMenu('Patterns', 'Clone')
+
+def MenuNavTo(menuItemStartsWith, verticalNav = True, hasMenuItems = False):
+    visitedMenuItems = []
+    matched = False
+    msg = ''
+    res = False 
+    while (not matched):
+        msg = _tempMsg   # getting a copy of this value in case it changes
+        matched = msg.startswith(menuItemStartsWith)
+        if(not matched):
+            if verticalNav:
+                ui.down()
+            else:
+                ui.right
+            time.sleep(Settings.MENU_DELAY)
+        else:
+            if(hasMenuItems):
+                ui.right()
+            else:
+                ui.enter()
+        if (msg not in visitedMenuItems):        
+            visitedMenuItems.append(msg)
+        else:
+            res = True
+            break
+    return True
+
+def NavMainMenu(mainMenu = 'File', subMenuNav = ['New']):
+    if OpenMainMenu(mainMenu):
+        lastItem = subMenuNav[-1]
+        print(lastItem)
+        for menuItem in subMenuNav:
+            print('>', menuItem)
+            if not MenuNavTo(menuItem, True, (menuItem != lastItem)):
+                return False
+        return True        
+    else:
+        return False
+
+      
+
+
+
+
+def NavigateFLMainMenu(menu1 = 'Patterns', menu2 = 'Clone', menu3 = ''):
+    visited = []
+    OpenMainMenu(menu1)
+    if(not ui.isInPopupMenu()):
+        ui.down()
+        time.sleep(0.25)
+    match = '{} - {}'.format(menu1, menu2)
+    matched = False
+    msg = ''
+    while (not matched):
+        msg = _tempMsg   # getting a copy of this value in case it changes
+        #print('tm looking for ', "[{}]".format(match))
+        matched = msg.startswith(match)
+        if(not matched):
+            #print('up', msg)
+            ui.down()
+            time.sleep(Settings.MENU_DELAY)
+        else:
+            ui.enter()
+        if (msg not in visited):        
+            #print('adding', msg)
+            visited.append(msg)
+        else:
+            break
+
+    return matched, msg, _tempMsg, (msg in visited)
+
+
+    menuMoves = MainMenu.get(firstMenu)
+    NavigateFLMenu(firstMenu)
 

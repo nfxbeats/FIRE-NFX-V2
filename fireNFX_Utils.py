@@ -13,7 +13,7 @@ import general
 from midi import *
 from fireNFX_Colors import *
 from fireNFX_Defs import *
-from fireNFX_DEFAULTS import *
+from fireNFX_DefaultSettings import *
 
 
 # enum code from https://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
@@ -303,7 +303,7 @@ def ColorToRGB(Color):
 def RGBToColor(R,G,B):
     return (R << 16) | (G << 8) | B
 
-def GradTest(stepsize = 8):
+def GradientTest(stepsize = 8):
     #def Gradient(color1, color2, stepsize, padOffs=0):
     #stepsize = 4 # 255//5
     Gradient(cBlue, cOff, stepsize, 0)
@@ -316,7 +316,7 @@ def GradTest(stepsize = 8):
     Gradient(cCyan, cOff, stepsize, 56)
 
 
-def ColorTest(arg1):
+def ShadeTest():
     Shades(cBlue,0)
     Shades(cPurple, 16)
     Shades(cMagenta, 32)
@@ -331,8 +331,6 @@ shDim = 0
 shDark = 1
 shNorm = 2
 shLight = 3
-
-
 def getShade(baseColor, shadeOffs):
     multLighten = 1.33
     multDarken = .23
@@ -352,11 +350,6 @@ def ShowLayout(pads1, color1, pads2, color2):
         SetPadColor(pad, color1, dimDefault)
     for pad in pads2:
         SetPadColor(pad, color2, dimDefault)
-
-dimDim = DEFAULT_DIM_DIM
-dimDefault = DEFAULT_DIM_FACTOR
-dimBright = DEFAULT_DIM_BRIGHT
-dimFull = 0
 
 def Dims(color, padOffs=0):
     SetPadColor(0+padOffs, color, dimDim)
@@ -582,7 +575,7 @@ def TestThreadMove():
         time.sleep(delay)
 
 # menu offsets, use a negatwe go negatiove because it is more reliable to move backwards 
-MainMenu = {'File':'', 'Edit':'LLLLLLL', 'Add':'LLLLLL', 'Patterns':'LLLLL', 'View':'LLLL', 'Options':'LLL', 'Tools':'LL', 'Help':'L'}
+MainMenu = {'File':'', 'Edit':'LLLL,LLL', 'Add':'LLLL,LL', 'Patterns':'LLL,LL', 'View':'LLL,L', 'Options':'LLL', 'Tools':'LL', 'Help':'L'}
 PRToolsMenu = {'Tools', 'LL'}
 PRTools = {}
 
@@ -604,9 +597,10 @@ def ProcessKeys(cmdStr):
         elif(cmd == 'N'):
             ui.next()
         elif(cmd == ','):
-            time.sleep(.05)
+            time.sleep(Settings.MENU_DELAY)
 
-def FLMenuNavigation(cmdString = '', altmenu = False):
+
+def NavigateFLMenu(cmdString = '', altmenu = False):
     # this code was inspired by HDSQ's implementation: 
     # https://github.com/MiguelGuthridge/Universal-Controller-Script/blob/main/src/plugs/windows/piano_roll.py
     #
@@ -623,5 +617,62 @@ def FLMenuNavigation(cmdString = '', altmenu = False):
         ProcessKeys(cmdString)
 
 def ShowScriptDebug():
-    ui.showWindow(widChannelRack)
-    FLMenuNavigation(',LLLLDDDDDDDDDDE')
+    ui.showWindow(widChannelRack)       # make CR the active window so it pulls up the main menu
+    NavigateFLMenu(',LLLLDDDDDDDDDDE')  # series of keys to pass
+
+def ViewArrangeIntoWorkSpace():
+    ui.showWindow(widChannelRack)       # make CR the active window so it pulls up the main menu
+    NavigateFLMenu(',LLLLDDDDDDDDDDDDDDDDDDRDE')  # series of keys to pass
+
+# VERSION Helpers
+# Producer Edition v20.99.3000 [build 3209]
+# # 
+#  def getVersionNum():
+#      return ui.getVersion()[ui.getVersion().index('v')+1:ui.getVersion().index('[')-1]
+# def getVersionTuple(v = ''):
+#     if v == '':
+#         v = getVersionNum()
+#     return tuple(map(int, (v.split("."))))
+
+def checkFLVersionAtLeast(version):
+    res = FLVersionAtLeast(version)
+    if(not res):
+        print('* FL Version is not supported at this time. *')
+    return res   
+
+def hidePLRect():
+    showPLRect(-1,0,0,0)
+
+def showPLRect(startBar, endBar, firstPLTrackIdx, numTracks):
+    if(startBar>0): # 0-based
+        startBar = startBar - 1 
+    playlist.liveDisplayZone(startBar, firstPLTrackIdx, endBar, firstPLTrackIdx+numTracks)
+
+
+
+"""
+Helper code for dealing with version checking.
+Authors:
+* NFX (main implementation)
+* Miguel Guthridge (minor improvements)
+"""
+def getVersionStr() -> str:
+    """
+    Returns the version string with just the version number (eg '20.9.2')
+    """
+    return ui.getVersion()[ui.getVersion().index('v')+1:ui.getVersion().index('[')-1]
+
+def getVersionTuple(v: str) -> tuple[int, int, int]:
+    """
+    Converts a version string into a tuple for easy comparison with other version strings
+    """
+    if v == '':
+        v = getVersionStr()
+    return tuple(map(int, (v.split("."))))
+
+def FLVersionAtLeast(version: str) -> bool:
+    """
+    Expects a three part version string, ie. "20.99.0", return True when FL version is equal or greater than
+    """
+    return getVersionTuple(getVersionStr()) >= getVersionTuple(version)
+

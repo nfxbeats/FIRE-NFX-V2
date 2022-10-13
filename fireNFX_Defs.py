@@ -1,6 +1,6 @@
 # name = FireNFX Definitions
 #
-# most of this is copied from the Image-Line device_Fire code
+# much of this is copied from the Image-Line device_Fire code
 from harmonicScales import *
 
 # PAD Modes
@@ -239,3 +239,4 @@ prnLevels = [level0, levelE, levelH, levelR, levelU, levelD]
 
 FLEFFECTS = 'CHAN FX'
 NOSUPPTEXT = "UNSUPPORTED"
+
