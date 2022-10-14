@@ -116,6 +116,10 @@ class TnfxDefaultSettings:
         # a short delay when navigating FL menus - to allow the menu time to draw.
         self.MENU_DELAY = 0.025
 
+        # some plugins will auto map the user1 and user2 knobs. ex: FLEX would have them mapped to the Macros
+        # when auto mapped, they are locked in to that parameter for that specific plugin.
+        # Set this to False to prevent them from auto mapping.
+        self.AUTO_MAP_KNOWN_PARAMS_TO_USER_KNOBS = True
 
 
 # DO NOT EDIT BELOW:

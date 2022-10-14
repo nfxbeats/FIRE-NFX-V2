@@ -109,7 +109,7 @@ plSampler.addParamToGroup('TIME STRETCHING', TnfxParameter(REC_Chan_StretchTime,
 CUSTOM_PLUGINS = {plFLEX.Name:plFLEX, plFLKeys.Name:plFLKeys, plStrumGS2.Name:plStrumGS2, plSlicex.Name: plSlicex,
                   plFruityDance.Name:plFruityDance, plLoungeLizardEP4.Name: plLoungeLizardEP4}
 
-from pluginSoundFontPlayer import plSoundFontPlayer
+#from pluginSoundFontPlayer import plSoundFontPlayer
 
 
 

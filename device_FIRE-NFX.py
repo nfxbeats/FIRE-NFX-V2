@@ -57,8 +57,7 @@ dimDim = Settings.DIM_DIM
 dimDefault = Settings.DIM_NORMAL
 dimBright = Settings.DIM_BRIGHT
 dimFull = 0
-
-
+Settings.DEV_MODE = -1 
 _debugprint = Settings.SHOW_PRN
 _rectTime = Settings.DISPLAY_RECT_TIME_MS
 _ShiftHeld = False
