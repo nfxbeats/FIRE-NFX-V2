@@ -232,12 +232,12 @@ def getPluginParam(chanIdx, paramIdx, prn = False):
     varName =  "pl" + name.replace(' ', '')
     if(caption != '') and prn:
         print(varName + ".addParamToGroup('ALL', TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
-        print('#    Param', paramIdx, caption )
-        print('#     Value', paramIdx, value )
-        print('#    ValStr', paramIdx, valuestr )
-        print('#    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
-        print('#    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
-        print('----------------------')
+        # print('#    Param', paramIdx, caption )
+        # print('#     Value', paramIdx, value )
+        # print('#    ValStr', paramIdx, valuestr )
+        # print('#    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
+        # print('#    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
+        # print('----------------------')
     return TnfxParameter(paramIdx, caption, value, valuestr, bipolar)
 
 
@@ -247,7 +247,7 @@ def getBeatLenInMS(div):
     #   0 = 1 bar whole not
     #   0.5 = half
     #   1 = Quarter
-    #   1.33333 = dotted 8 
+    #   1.33333 = dotted 8?
     #   2 = Eighth
     #   4 = sixteenth
     #   8 = 32nd
@@ -273,16 +273,24 @@ def getPluginInfo(chanIdx, prn = False, inclBlanks = False):
     res.Parameters.clear()
     pCnt = plugins.getParamCount(chanIdx, -1)
     varName =  "pl" + name.replace(' ', '').replace('-', '') 
+    fileName = "plugin" + name.replace(' ', '').replace('-', '') + '.py'
     if(prn):
+        print('# Save this file as: ', fileName)
+        print('# -----------------------------------------------------------------')   
         print('#   PluginName: ', res.Name)
         print('#   ParamCount: ', pCnt)
         print('# -----------------------------------------------------------------')
         print('from fireNFX_Classes import TnfxParameter, TnfxChannelPlugin')
+        print('from fireNFX_Defs import KM_USER1, KM_USER2') 
+        print('from fireNFX_PluginDefs import CUSTOM_PLUGINS')
         print(varName + " = TnfxChannelPlugin('" + name.replace(' ', '') + "')")
+    knobsSamples = []
     for paramIdx in range(0, pCnt):
         #if(plugins.getParamName(paramIdx, chanIdx, -1) != '') or (inclBlanks):
         param = getPluginParam(chanIdx, paramIdx, prn)
         if(param.Caption != "") or (inclBlanks):
+            if(len(knobsSamples) < 8):
+                knobsSamples.append(param)
             if('MIDI CC' in param.Caption):
                 param.Caption = param.Caption.replace('MIDI CC', '').replace('#', '').lstrip()
                 res.addParamToGroup("MIDI CCs", param)
@@ -292,6 +300,32 @@ def getPluginInfo(chanIdx, prn = False, inclBlanks = False):
     if(prn):
         print('# -----------------------------------------------------------------')   
         print('#    Non Blank Params Count: ' + str(len(res.Parameters)))         
+        print("# ")
+        sampleCount = len(knobsSamples)
+        if(sampleCount > 0 ):
+            if(sampleCount < 4):
+                print("# Sample mapping of first " + str(sampleCount) + " params to USER1 Knobs")
+            else:
+                print("# Sample mapping of first " + str(sampleCount) + " params to the USER1 and USER2 Knobs")
+            print("# ")
+            for idx, sample in enumerate(knobsSamples):
+                km = 'KM_USER1'
+                offs = idx
+                if(idx > 3):
+                    km = 'KM_USER2'
+                    offs = idx - 4
+                #paramCode = "TnfxParameter({}, False)".format(str(sample))
+                paramCode = "{}.getParamFromOffset({})".format(varName, sample.Offset)
+                print("# {}.assignParameterToUserKnob({}, {}, {} ) # {}".format(varName, km, offs, paramCode, sample.Caption))
+            print("# ")
+            print("if({}.Name not in CUSTOM_PLUGINS.keys()):".format(varName))
+            print("    CUSTOM_PLUGINS[{}.Name] = {}".format(varName, varName))
+            print("# ")
+            print("# add the following line (without the #) to the end of fireNFX_PluginDefs.py ")
+            print("# from {} import {}".format(fileName, varName) )
+
+        print('# ')   
+        print('# -----------------------------------------------------------------')   
     return res 
 
 def ShowPluginInfo(chanIdx):
@@ -600,16 +634,19 @@ def ProcessKeys(cmdStr):
             time.sleep(Settings.MENU_DELAY)
 
 
+
 def NavigateFLMenu(cmdString = '', altmenu = False):
     # this code was inspired by HDSQ's implementation: 
     # https://github.com/MiguelGuthridge/Universal-Controller-Script/blob/main/src/plugs/windows/piano_roll.py
     #
+
     if (ui.isInPopupMenu()):
         ui.closeActivePopupMenu()
     # open the File menu
     if(altmenu):
         transport.globalTransport(91, 1)
     else:
+        
         transport.globalTransport(90, 1)
         if(ui.getFocused(widPianoRoll) == 1): # auto move to the tools when the PR is active.
             ProcessKeys('LL')
@@ -619,6 +656,12 @@ def NavigateFLMenu(cmdString = '', altmenu = False):
 def ShowScriptDebug():
     ui.showWindow(widChannelRack)       # make CR the active window so it pulls up the main menu
     NavigateFLMenu(',LLLLDDDDDDDDDDE')  # series of keys to pass
+
+def ShowProject():
+    ui.showWindow(widChannelRack)       # make CR the active window so it pulls up the main menu
+    NavigateFLMenu(',LLL,LUUUUUELL')  # series of keys to pass
+
+
 
 def ViewArrangeIntoWorkSpace():
     ui.showWindow(widChannelRack)       # make CR the active window so it pulls up the main menu

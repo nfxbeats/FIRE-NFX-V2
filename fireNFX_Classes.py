@@ -68,6 +68,12 @@ class TnfxChannelPlugin:
             params.append(p.Caption)
         return params
 
+    def getParamFromOffset(self, offset):
+        for param in self.Parameters:
+            if(param.Offset == offset):
+                return param
+        return None
+
     def getGroupNames(self):
         return list(self.ParameterGroups.keys())
         
@@ -99,10 +105,14 @@ class TnfxParameter:
         self.Bipolar = bipolar 
         self.StepsAfterZero = stepsAfterZero
         self.GroupName = ''
+    def __str__(self):
+        #0, 'Chord Type',  0, 'Movable', False
+        return "{}, '{}', {}, '{}'".format(self.Offset, self.Caption, self.Value, self.ValueStr)
     def getFullName(self):
         return self.GroupName + "-" + self.Caption 
     def updateCaption(self, caption):
         self.Caption = caption 
+    
 
 
 
@@ -169,7 +179,10 @@ nsScale = 2
 nsUDLR = 3
 nsDefaultDrum = 4
 nsDefaultDrumAlt = 5
-
+nsChannel = 6
+nsPlaylist = 7
+nsMixer = 8
+nsPianoRoll = 9
 
 class TnfxNavigationSet:
     def __init__(self, navSet):
@@ -207,7 +220,6 @@ class TnfxNavigationSet:
         elif(navSet == nsNone):
             self.MacroNav = False
             self.NoNav = True 
-        
 
 
 class TnfxPattern:

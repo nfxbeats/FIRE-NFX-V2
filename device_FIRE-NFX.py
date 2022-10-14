@@ -426,10 +426,21 @@ def OnSendTempMsg(msg, duration):
     _tempMsg = msg
     # if(' - ' in msg):
     #     _tempMsg = msg
-    #     print('TempMsg', "[{}]".format(_tempMsg), duration, 'inMenu', ui.isInPopupMenu())
+    #print('TempMsg', "[{}]".format(_tempMsg), duration, 'inMenu', ui.isInPopupMenu())
     # else:
     #     _tempMsg2 = msg
     #     print('TempMsg2', "[{}]".format(_tempMsg2), duration, 'inMenu', ui.isInPopupMenu())
+
+def FLHasFocus():
+    ui.showWindow(widChannelRack)
+    transport.globalTransport(90, 1)
+    time.sleep(0.025)
+    ui.down()
+    res = _tempMsg.startswith("File -") or _tempMsg.startswith("Menu - File")
+    if (ui.isInPopupMenu()):
+        ui.closeActivePopupMenu()
+    print('hasfocus:', res)
+    return res
 
 def isKnownPlugin():
     return getCurrChanPluginID() in _knownPlugins.keys()
@@ -616,37 +627,51 @@ def HandleChannelStrip(padNum): #, isChannelStripB):
     newChanIdx = channel.FLIndex # pMap.FLIndex
     newMixerIdx = channel.Mixer.FLIndex
     if (newChanIdx > -1): #is it a valid chan number?
-        if(_AltHeld):
-            patterns.setPatternColor(patterns.patternNumber(), channels.getChannelColor(newChanIdx))
-            # 
-            for plt in _PlaylistMap:
-                if(plt.ChanIdx == newChanIdx):
-                    playlist.setTrackColor(plt.FLIndex, channels.getChannelColor(newChanIdx))
-                    UpdatePlaylistMap(_isAltMode)
-                    break
+        if(not isChannelStripB): # its the A strip
+            if(_AltHeld):
+                patterns.setPatternColor(patterns.patternNumber(), channels.getChannelColor(newChanIdx))
+                # 
+                for plt in _PlaylistMap:
+                    if(plt.ChanIdx == newChanIdx):
+                        playlist.setTrackColor(plt.FLIndex, channels.getChannelColor(newChanIdx))
+                        UpdatePlaylistMap(_isAltMode)
+                        break
 
-            RefreshAll()
-            return True
+                RefreshAll()
+                return True
+            elif(_ShiftHeld):
+                channels.setChannelColor(getCurrChanIdx(), patterns.getPatternColor(patterns.patternNumber()))
+                # 
+                for plt in _PlaylistMap:
+                    if(plt.ChanIdx == newChanIdx):
+                        playlist.setTrackColor(plt.FLIndex, channels.getChannelColor(newChanIdx))
+                        UpdatePlaylistMap(_isAltMode)
+                        break
 
-        if(_ShiftHeld): # we do the mutes when SHIFTed
-            if(_KnobMode == KM_MIXER):
-                mixer.muteTrack(newMixerIdx)
-                ui.miDisplayRect(newMixerIdx, newMixerIdx, _rectTime, CR_ScrollToView)
-                RefreshChannelStrip(False)
-            else:
-                channels.muteChannel(newChanIdx)
-                ui.crDisplayRect(0, newChanIdx, 0, 1, _rectTime, CR_ScrollToView + CR_HighlightChannelMute) # CR_HighlightChannels + 
-                RefreshChannelStrip(False)
-        else: 
-            #not SHIFTed
-            if(newChanIdx == prevChanIdx): # if it's already on the channel, toggle the windows
-                if (isChannelStripB):
-                    ShowPianoRoll(-1, True) 
+                RefreshAll()
+                return True
+            else: #
+                if(newChanIdx == prevChanIdx): # if it's already on the channel, toggle the windows
+                        ShowChannelEditor(-1, True) 
                 else:
-                    ShowChannelEditor(-1, True) 
+                    SelectAndShowChannel(newChanIdx)
 
-            else: #'new' channel, close the previous windows first
-                SelectAndShowChannel(newChanIdx)
+        else: # is B STrip
+            if(_ShiftHeld): # we do the mutes when SHIFTed
+                if(_KnobMode == KM_MIXER):
+                    mixer.muteTrack(newMixerIdx)
+                    ui.miDisplayRect(newMixerIdx, newMixerIdx, _rectTime, CR_ScrollToView)
+                    RefreshChannelStrip(False)
+                else:
+                    channels.muteChannel(newChanIdx)
+                    ui.crDisplayRect(0, newChanIdx, 0, 1, _rectTime, CR_ScrollToView + CR_HighlightChannelMute) # CR_HighlightChannels + 
+                    RefreshChannelStrip(False)
+            else: 
+                #not SHIFTed
+                if(newChanIdx == prevChanIdx): # if it's already on the channel, toggle the windows
+                        ShowPianoRoll(-1, True) 
+                else: #'new' channel, close the previous windows first
+                    SelectAndShowChannel(newChanIdx)
 
     _CurrentChannel = getCurrChanIdx() # channels.channelNumber()
     _ChannelCount = channels.channelCount()
@@ -680,7 +705,7 @@ def SelectAndShowChannel(newChanIdx, keepPRopen = True):
         if(ui.getVisible(widPianoRoll)): #closes previous instance
             ShowPianoRoll(1, True, False, newChanIdx)
 
-    if(not _ShiftHeld):
+    if(not _ShiftHeld) and (not _AltHeld):
         mixerTrk = channels.getTargetFxTrack(newChanIdx)
         mixer.setTrackNumber(mixerTrk, curfxScrollToMakeVisible)
         ui.crDisplayRect(0, newChanIdx, 0, 1, _rectTime, CR_ScrollToView + CR_HighlightChannels)
@@ -1764,6 +1789,7 @@ def HandleUDLR(padIndex):
     if(padIndex == pdTab):
         ui.selectWindow(0)
     elif(padIndex == pdShiftTab):
+        print('focus:', FLHasFocus())
         NavigateFLMenu('', _AltHeld)
     elif(padIndex == pdUp):
         if(ui.isInPopupMenu()) and (ui.getFocused(widBrowser)) and (_ShiftHeld): 
@@ -3109,7 +3135,10 @@ def NavOctavesList(val):
     elif( _OctaveIdx < 0 ):
         _OctaveIdx = len(OctavesList)-1
 
-def ForceNavSet(navSet):
+def ForceNavSet(navSet, save = False):
+    global _prevNavSet         
+    if(save):
+        _prevNavSet = _PadMode.NavSet.NavSetID
     if(navSet in _PadMode.AllowedNavSets):
         newIdx = _PadMode.AllowedNavSets.index(navSet)
         ForceNavSetIdx(newIdx)
@@ -3217,11 +3246,22 @@ def ShowPianoRoll(showVal, bSave, bUpdateDisplay = False, chanIdx = -1):
     if(bUpdateDisplay):
         DisplayTimedText('Piano Roll: ' + _showText[showVal])
 
+def saveNavSet():
+    global _prevNavSet
+    _prevNavSet = _PadMode.NavSet.NavSetID
+
+def restoreNavSet():
+    global _prevNavSet
+    ForceNavSet(_prevNavSet)
 
 def ShowChannelSettings(showVal, bSave, bUpdateDisplay = False):
     global _PatternMap
     global _ShowCSForm
+
     currVal = 0
+
+    if(True):
+        ForceNavSet(ns, True)
 
     if(len(_PatternMap) > 0):
         selPat = GetPatternMapActive() # _PatternMap[_CurrentPattern-1]  # 0 based
@@ -3816,12 +3856,13 @@ def OnMidiOutMsg(event):
 def OpenMainMenu(menuName = 'Patterns'):
     res = False
     NavigateFLMenu('', False)
+    time.sleep(Settings.MENU_DELAY)
     msg = _tempMsg
 
     if(msg == menuName):
         return True
     
-    for i in range(20):
+    for i in range(10):
         ui.left()
         time.sleep(Settings.MENU_DELAY)
         msg = _tempMsg
@@ -3835,6 +3876,16 @@ def OpenMainMenu(menuName = 'Patterns'):
 def ClonePattern():
     NavigateFLMainMenu('Patterns', 'Clone')
 
+def ViewCurrentProject():
+    if NavMainMenu('View', ['Remote']):
+        ProcessKeys(',ELLLLR')
+
+def ViewCurrentProjec1t():
+    NavMainMenu('View', ['Plugin database'])
+
+
+
+
 def MenuNavTo(menuItemStartsWith, verticalNav = True, hasMenuItems = False):
     visitedMenuItems = []
     matched = False
@@ -3842,13 +3893,13 @@ def MenuNavTo(menuItemStartsWith, verticalNav = True, hasMenuItems = False):
     res = False 
     while (not matched):
         msg = _tempMsg   # getting a copy of this value in case it changes
-        matched = msg.startswith(menuItemStartsWith)
+        matched = msg.startswith(menuItemStartsWith) or " - {}".format(menuItemStartsWith) in msg
         if(not matched):
             if verticalNav:
                 ui.down()
             else:
                 ui.right
-            time.sleep(Settings.MENU_DELAY)
+            #time.sleep(Settings.MENU_DELAY)
         else:
             if(hasMenuItems):
                 ui.right()
@@ -3866,7 +3917,7 @@ def NavMainMenu(mainMenu = 'File', subMenuNav = ['New']):
         lastItem = subMenuNav[-1]
         print(lastItem)
         for menuItem in subMenuNav:
-            print('>', menuItem)
+            print('looking for >', menuItem)
             if not MenuNavTo(menuItem, True, (menuItem != lastItem)):
                 return False
         return True        

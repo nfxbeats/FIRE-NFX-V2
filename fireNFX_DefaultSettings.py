@@ -116,6 +116,9 @@ class TnfxDefaultSettings:
         # a short delay when navigating FL menus - to allow the menu time to draw.
         self.MENU_DELAY = 0.025
 
+
+
+# DO NOT EDIT BELOW:
 Settings = TnfxDefaultSettings()
 try:
     from fireNFX_UserSettings import TnfxUserSettings

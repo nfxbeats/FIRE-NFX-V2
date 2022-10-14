@@ -17,7 +17,7 @@ class TnfxUserSettings(TnfxDefaultSettings):
         #
         # keep indentation as-is to function properly
         #
-        # OK TO EDIT THE FOLLOWING:
+        # OK TO EDIT OR ADD AFTER THIS LINE:
         self.PAD_PRESSED_COLOR = cRed
         self.SHOW_PLAYBACK_NOTES = True 
         self.REOPEN_WINDOWS_AFTER_CLOSE_ALL = True
