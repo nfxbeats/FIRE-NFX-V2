@@ -50,7 +50,7 @@ def DisplayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime = 0
         screen.displayText(Font, Justification, PageTop, Text, CheckIfSame, DisplayTime)
         screen.update()
     except Exception as e:
-        print('Display Text exception: ' + str(e))
+        print('Display Text Exception: ' + str(e))
         return 
     
 def DisplayBar3(p1, p2, Text, Value, Bipolar):    

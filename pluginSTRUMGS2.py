@@ -451,7 +451,8 @@ plStrumGS2.addParamToGroup('MIDI CCs', TnfxParameter(4238, 'MIDI CCs Channel 15 
 plStrumGS2.addParamToGroup('MIDI CCs', TnfxParameter(4239, 'MIDI CCs Channel 16 Aftertouch', 0, '', False) )
 
 # set up the predetermined USER1 and/or USER2 knob parameters to link to the 8 macros
-plStrumGS2.assignParameterToUserKnob(KM_USER1, 0, TnfxParameter(0, 'Play Mode',   0, 'Guitar',  False, 2) )
+#plStrumGS2.assignParameterToUserKnob(KM_USER1, 0, TnfxParameter(0, 'Play Mode',   0, 'Guitar',  False, 2) )
+plStrumGS2.assignParameterToUserKnob(KM_USER1, 0, plStrumGS2.getParamFromOffset(0) )
 plStrumGS2.assignParameterToUserKnob(KM_USER1, 1, TnfxParameter(4, 'Auto Strum',  0, 'Off',     False, 1) )
 plStrumGS2.assignParameterToUserKnob(KM_USER1, 2, TnfxParameter(7, 'Chord Type',  0, 'Movable', False) )
 plStrumGS2.assignParameterToUserKnob(KM_USER1, 3, TnfxParameter(8, 'Voicing Pos', 0, 'Fret 1',  False) )

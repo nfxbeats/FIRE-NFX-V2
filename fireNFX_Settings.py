@@ -17,6 +17,7 @@ class TnfxUserSettings(TnfxDefaultSettings):
         #
         # keep indentation as-is to function properly
         #
+        
         # OK TO EDIT OR ADD AFTER THIS LINE:
         self.PAD_PRESSED_COLOR = cRed
         self.SHOW_PLAYBACK_NOTES = True 
@@ -24,7 +25,7 @@ class TnfxUserSettings(TnfxDefaultSettings):
         self.MARKER_PREFIX_TEXT = "{}-Marker"  #  the {} will be replaced with the bar number
         self.PATTERN_NAME = "{}-Pattern" #  the {} will be replaced with the pattern number
         self.AUTO_SWITCH_KNOBMODE = True
-        self.AUTO_MAP_KNOWN_PARAMS_TO_USER_KNOBS = True
+        self.AUTO_MAP_KNOWN_PARAMS_TO_USER_KNOBS = False
 
 
 

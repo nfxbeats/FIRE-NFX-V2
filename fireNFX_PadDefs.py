@@ -119,7 +119,7 @@ pdWorkArea = [ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,
 pdMacros = [ 12, 13, 14, 15, 28, 29, 30, 31]
 
 # thx to "a candle" for the tab idea
-pdShiftTab = 44
+pdMenu = 44
 pdEsc = 45
 pdUp = 46
 pdEnter = 47
@@ -127,7 +127,7 @@ pdTab = 60
 pdLeft = 61
 pdDown = 62
 pdRight = 63
-pdUDLR = [pdShiftTab, pdEsc, pdUp, pdEnter, pdTab, pdLeft, pdDown, pdRight]
+pdUDLR = [pdMenu, pdEsc, pdUp, pdEnter, pdTab, pdLeft, pdDown, pdRight]
 
 # for modes that need channel specific window control - ie Note mode, FPC, etc
 pdShowChanEditor = 44

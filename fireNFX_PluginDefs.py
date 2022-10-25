@@ -1,5 +1,6 @@
-from fireNFX_Classes import TnfxChannelPlugin, TnfxParameter
+from fireNFX_Classes import TnfxChannelPlugin, TnfxParameter, cpGlobal
 from fireNFX_Defs import FLEFFECTS
+
 from pluginFLEX import plFLEX
 from pluginFLKeys import plFLKeys
 from pluginSTRUMGS2 import plStrumGS2
@@ -8,8 +9,19 @@ from pluginFruityDance import plFruityDance
 from pluginLoungeLizardEP4 import plLoungeLizardEP4
 from midi import *
 
+USER_PLUGINS = {}
+KNOWN_PLUGINS = {plFLEX.Name:plFLEX, plFLKeys.Name:plFLKeys, plStrumGS2.Name:plStrumGS2, plSlicex.Name: plSlicex,
+                  plFruityDance.Name:plFruityDance, plLoungeLizardEP4.Name: plLoungeLizardEP4}
+
+try:
+    from fireNFX_CustomPlugins import *
+    KNOWN_PLUGINS.update(USER_PLUGINS)
+except:
+    pass
+
+
+
 # for the FPC modes
-#plFPC = TnfxChannelPlugin('FPC')
 ppFPC_Volume = TnfxParameter(  0, 'PAD Volume', 0, '', False)
 ppFPC_Pan    = TnfxParameter( 16, 'PAD Pan',    0, '', True)
 ppFPC_Mute   = TnfxParameter( 32, 'PAD Mute',   0, '', True)
@@ -103,13 +115,34 @@ plSampler.addParamToGroup('TIME STRETCHING', TnfxParameter(REC_Chan_StretchTime,
 # plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_Hole+1, '15-Hole', 0, '', False))
 # plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_PLast, '16-PLast', 0, '', False))
 
-#plFLChanFX
+# global
+plGlobal = TnfxChannelPlugin('Global')
+plGlobal.isNative = True
+plGlobalType = cpGlobal
+plGlobal.addParamToGroup('FL Main', TnfxParameter(REC_MainVol, 'Volume', 0, '', False))
+plGlobal.addParamToGroup('FL Main', TnfxParameter(REC_MainShuffle, 'Shuffle', 0, '', False))
+plGlobal.addParamToGroup('FL Main', TnfxParameter(REC_MainPitch, 'Pitch', 0, '', False))
+plGlobal.addParamToGroup('FL Main', TnfxParameter(REC_Tempo, 'Tempo', 0, '', False))
+
+# mixer
+plMixer = TnfxChannelPlugin('Mixer')
+plMixer.isNative = True
+plMixer.addParamToGroup('Main', TnfxParameter(REC_Mixer_Vol, 'Volume'))
+plMixer.addParamToGroup('Main', TnfxParameter(REC_Mixer_Pan, 'Pan'))
+plMixer.addParamToGroup('Main', TnfxParameter(REC_Mixer_SS, 'Stereo Sep'))
+plMixer.addParamToGroup('EQ', TnfxParameter(REC_Mixer_EQ_Gain, 'Lo Gain'))
+plMixer.addParamToGroup('EQ', TnfxParameter(REC_Mixer_EQ_Freq, 'Lo Freq'))
+plMixer.addParamToGroup('EQ', TnfxParameter(REC_Mixer_EQ_Q, 'Lo Q'))
+plMixer.addParamToGroup('EQ', TnfxParameter(REC_Mixer_EQ_Gain+1, 'Mid Gain'))
+plMixer.addParamToGroup('EQ', TnfxParameter(REC_Mixer_EQ_Freq+1, 'Mid Freq'))
+plMixer.addParamToGroup('EQ', TnfxParameter(REC_Mixer_EQ_Q+1, 'Mid Q'))
+plMixer.addParamToGroup('EQ', TnfxParameter(REC_Mixer_EQ_Gain+2, 'Hi Gain'))
+plMixer.addParamToGroup('EQ', TnfxParameter(REC_Mixer_EQ_Freq+2, 'Hi Freq'))
+plMixer.addParamToGroup('EQ', TnfxParameter(REC_Mixer_EQ_Q+2, 'Hi Q'))
 
 
-CUSTOM_PLUGINS = {plFLEX.Name:plFLEX, plFLKeys.Name:plFLKeys, plStrumGS2.Name:plStrumGS2, plSlicex.Name: plSlicex,
-                  plFruityDance.Name:plFruityDance, plLoungeLizardEP4.Name: plLoungeLizardEP4}
 
-#from pluginSoundFontPlayer import plSoundFontPlayer
+
 
 
 

@@ -1,8 +1,9 @@
+import sys
 import math
 import transport
 import time 
 import device
-from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxChannelPlugin
+from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxChannelPlugin, _rd3d2PotParams
 import utils
 import plugins
 import mixer
@@ -228,8 +229,7 @@ def getPluginParam(chanIdx, paramIdx, prn = False):
     value = plugins.getParamValue(paramIdx, chanIdx, -1) 
     valuestr = plugins.getParamValueString(paramIdx, chanIdx, -1)
     bipolar = False
-    name = plugins.getPluginName(chanIdx, -1, 1)
-    varName =  "pl" + name.replace(' ', '')
+    name, uname, varName = getPluginNames(chanIdx)
     if(caption != '') and prn:
         print(varName + ".addParamToGroup('ALL', TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
         # print('#    Param', paramIdx, caption )
@@ -263,69 +263,106 @@ def getBeatLenInMS(div):
     #print('tempo', tempo, 'div', div, 'beatlen', beatlen, 'output', timeval, 'Barlen', barlen) 
     return int(timeval)
 
-def getPluginInfo(chanIdx, prn = False, inclBlanks = False):
+def RemoveBadChars(badChars, textStr):
+    res = textStr
+    for badChar in badChars:
+        res = res.replace(badChar, '')
+    return res
+
+def getAlphaNum(textStr):
+    res = textStr
+    for idx, char in enumerate(textStr):
+        if(not char.isalnum()):
+            res = res.replace(char, '')
+    return res
+
+
+def getPluginNames(chanIdx = -1):
+    badChars = ' -!,.[]+='
+    if chanIdx == -1:
+        chanIdx = channels.selectedChannel()
+    name =  plugins.getPluginName(chanIdx, -1, 0)
+    uname = plugins.getPluginName(chanIdx, -1, 1)
+    vname = getAlphaNum("plugin{}".format(name))
+    return name, uname, vname
+
+def getPluginInfo(chanIdx, prn = False, inclBlanks = False, isChannel = True):
     if chanIdx == -1:
         chanIdx = channels.selectedChannel()
 
-    name = plugins.getPluginName(chanIdx, -1, 0)
-    uname = plugins.getPluginName(chanIdx, -1, 1)
+
+    name, uname, vname = getPluginNames(chanIdx)
     res = TnfxChannelPlugin(name, uname)
     res.Parameters.clear()
     pCnt = plugins.getParamCount(chanIdx, -1)
-    varName =  "pl" + name.replace(' ', '').replace('-', '') 
-    fileName = "plugin" + name.replace(' ', '').replace('-', '') + '.py'
-    if(prn):
-        print('# Save this file as: ', fileName)
-        print('# -----------------------------------------------------------------')   
-        print('#   PluginName: ', res.Name)
-        print('#   ParamCount: ', pCnt)
-        print('# -----------------------------------------------------------------')
-        print('from fireNFX_Classes import TnfxParameter, TnfxChannelPlugin')
-        print('from fireNFX_Defs import KM_USER1, KM_USER2') 
-        print('from fireNFX_PluginDefs import CUSTOM_PLUGINS')
-        print(varName + " = TnfxChannelPlugin('" + name.replace(' ', '') + "')")
     knobsSamples = []
+    varName =  vname
+    fileName = vname + '.py'
+    if(prn):
+        print('# -----[ COPY AFTER THIS LINE ]--------------------------------------------------------')   
+        print('# Save this file as: "{}{}"'.format(sys.path[1],fileName))
+        print('# ')
+        print('#   PluginName: ', res.Name)
+        print('#   Created by: ', '<your name here>')
+        print('# ')
+        print('from fireNFX_Classes import TnfxParameter, TnfxChannelPlugin')
+        print('from fireNFX_PluginDefs import CUSTOM_PLUGINS')
+        print(varName + " = TnfxChannelPlugin('" + name + "')")
+        print("if({}.Name not in CUSTOM_PLUGINS.keys()):".format(varName))
+        print("    CUSTOM_PLUGINS[{}.Name] = {}".format(varName, varName))
+        print(' ')
+
     for paramIdx in range(0, pCnt):
-        #if(plugins.getParamName(paramIdx, chanIdx, -1) != '') or (inclBlanks):
         param = getPluginParam(chanIdx, paramIdx, prn)
         if(param.Caption != "") or (inclBlanks):
-            if(len(knobsSamples) < 8):
-                knobsSamples.append(param)
+            if(param.Caption == ""):
+                param.Caption == "{}.Offset".format(paramIdx)
+
             if('MIDI CC' in param.Caption):
                 param.Caption = param.Caption.replace('MIDI CC', '').replace('#', '').lstrip()
                 res.addParamToGroup("MIDI CCs", param)
             else:    
                 res.addParamToGroup("ALL", param)
+
+            if(res.Name in _rd3d2PotParams.keys()):
+                res.addParamToGroup("rd32d3 Ext", param)
+                knobsSamples.append(param)
+            elif(len(knobsSamples) < 8):
+                knobsSamples.append(param)
+
             res.Parameters.append(param)
+
     if(prn):
-        print('# -----------------------------------------------------------------')   
-        print('#    Non Blank Params Count: ' + str(len(res.Parameters)))         
+        print('# [PARAMETER OFFSETS] ')
+        print('# Notice, the code lines above contains the text "TnfxParameter(" followed by a number')
+        print('# That number represents the parameter offset for the parameter described on that line')
+        print('# You can use the parameter offset number to program your own USER Knob mappings below')
         print("# ")
         sampleCount = len(knobsSamples)
         if(sampleCount > 0 ):
-            if(sampleCount < 4):
-                print("# Sample mapping of first " + str(sampleCount) + " params to USER1 Knobs")
-            else:
-                print("# Sample mapping of first " + str(sampleCount) + " params to the USER1 and USER2 Knobs")
-            print("# ")
+            paramlist = []
             for idx, sample in enumerate(knobsSamples):
-                km = 'KM_USER1'
-                offs = idx
-                if(idx > 3):
-                    km = 'KM_USER2'
-                    offs = idx - 4
-                #paramCode = "TnfxParameter({}, False)".format(str(sample))
-                paramCode = "{}.getParamFromOffset({})".format(varName, sample.Offset)
-                print("# {}.assignParameterToUserKnob({}, {}, {} ) # {}".format(varName, km, offs, paramCode, sample.Caption))
-            print("# ")
-            print("if({}.Name not in CUSTOM_PLUGINS.keys()):".format(varName))
-            print("    CUSTOM_PLUGINS[{}.Name] = {}".format(varName, varName))
-            print("# ")
-            print("# add the following line (without the #) to the end of fireNFX_PluginDefs.py ")
-            print("# from {} import {}".format(fileName, varName) )
-
-        print('# ')   
-        print('# -----------------------------------------------------------------')   
+                if idx < 8:
+                    paramlist.append(sample.Offset)
+                else:
+                    break
+            print('# [HOW TO SET CUSTOM KNOB MAPPINGS]')
+            print('# The assignKnobs() function takes a list of up to 8 parameter offsets.')
+            print('# The list must be in brackets like this [ 21, 12, 3, 7]. Max 8 offsets in list.')
+            print('# it assigns them in order from :')
+            print('#   USER1, KNOBS 1-4 as the first 4 params')
+            print('#   USER2, KNOBS 1-4 as the second 4 params')
+            print('')
+            print('# [ENABLING THE CUSTOM MAPPING]')
+            print("# Comment/Uncomment the next line to disable/enable the knob mappings. ")
+            print("#{}.assignKnobs({}) ".format(varName, str(paramlist)))
+            print(" ")
+            print("# [LAST STEP. DO NOT FORGET. NEEDED TO INCLUDE YOUR MAPPINGS] ")
+            print("# Add the following line (without the #) to the end of fireNFX_PluginDefs.py")
+            print("#from {} import {}".format(fileName, varName) )
+            print(' ')   
+            print('# -----[ COPY UP TO THIS LINE, BUT DO NOT INCLUDE ]---------------')   
+        return ""
     return res 
 
 def ShowPluginInfo(chanIdx):
@@ -613,40 +650,25 @@ MainMenu = {'File':'', 'Edit':'LLLL,LLL', 'Add':'LLLL,LL', 'Patterns':'LLL,LL', 
 PRToolsMenu = {'Tools', 'LL'}
 PRTools = {}
 
+def menuPause(seconds = Settings.MENU_DELAY):
+    time.sleep(seconds)
+
 def ProcessKeys(cmdStr):
+    commands = {'U':ui.up, 'D':ui.down, 'L':ui.left, 'R':ui.right, 
+                'E':ui.enter, 'S': ui.escape, 'N': ui.next, ',':menuPause }
     for cmd in cmdStr:
-        #print(cmd)
-        if(cmd == 'U'):
-            ui.up()
-        elif(cmd == 'D'):
-            ui.down()
-        elif(cmd == 'L'):
-            ui.left()
-        elif(cmd == 'R'):
-            ui.right()
-        elif(cmd == 'E'):
-            ui.enter()
-        elif(cmd == 'S'):
-            ui.escape()
-        elif(cmd == 'N'):
-            ui.next()
-        elif(cmd == ','):
-            time.sleep(Settings.MENU_DELAY)
-
-
+        commands.get(cmd.upper(), menuPause)()
 
 def NavigateFLMenu(cmdString = '', altmenu = False):
     # this code was inspired by HDSQ's implementation: 
     # https://github.com/MiguelGuthridge/Universal-Controller-Script/blob/main/src/plugs/windows/piano_roll.py
     #
-
     if (ui.isInPopupMenu()):
         ui.closeActivePopupMenu()
     # open the File menu
     if(altmenu):
         transport.globalTransport(91, 1)
     else:
-        
         transport.globalTransport(90, 1)
         if(ui.getFocused(widPianoRoll) == 1): # auto move to the tools when the PR is active.
             ProcessKeys('LL')
@@ -660,8 +682,6 @@ def ShowScriptDebug():
 def ShowProject():
     ui.showWindow(widChannelRack)       # make CR the active window so it pulls up the main menu
     NavigateFLMenu(',LLL,LUUUUUELL')  # series of keys to pass
-
-
 
 def ViewArrangeIntoWorkSpace():
     ui.showWindow(widChannelRack)       # make CR the active window so it pulls up the main menu
@@ -691,7 +711,8 @@ def showPLRect(startBar, endBar, firstPLTrackIdx, numTracks):
         startBar = startBar - 1 
     playlist.liveDisplayZone(startBar, firstPLTrackIdx, endBar, firstPLTrackIdx+numTracks)
 
-
+def test():
+    return
 
 """
 Helper code for dealing with version checking.
@@ -719,3 +740,4 @@ def FLVersionAtLeast(version: str) -> bool:
     """
     return getVersionTuple(getVersionStr()) >= getVersionTuple(version)
 
+    

@@ -32,11 +32,16 @@ def clonePluginParams(srcPlugin, destPlugin):
         destPlugin.assignParameterToUserKnob(KM_USER2, knob, newParam2 )
     return destPlugin
 
-
+cpGlobal = 0
+cpChannel = 1
+cpChannelPlugin = 2
+cpMixer = 3
+cpMixerPlugin = 4
 class TnfxChannelPlugin:
     def __init__(self, name, username = ""):
         self.Name = name
         self.PluginName = name
+        self.UserName = username
         self.ParameterGroups = {} # { groupName: [TnfxParameters] }
         self.Parameters = []
         #self.GroupName = ''
@@ -45,7 +50,9 @@ class TnfxChannelPlugin:
         self.User2Knobs = []
         self.isNative = False
         self.AlwaysRescan = True
-        self.ChannelType = -1
+        self.FLChannelType = -1
+        self.PresetGroups = {}
+        self.Type = cpChannel
         for i in range(4): # pre-allocate these to have 4 each
             p = TnfxParameter(-1,'',i,'',False) # offset = -1 to identify it's unassigned
             self.User1Knobs.append(p)
@@ -80,13 +87,35 @@ class TnfxChannelPlugin:
     def addParamToGroup(self, groupName, nfxParameter):
         nfxParameter.GroupName = groupName 
         self.Parameters.append(nfxParameter)            # add to root level Param list
-        
         if(groupName in self.ParameterGroups.keys()):   # add to group 
             self.ParameterGroups[groupName].append(nfxParameter)
         else:
             self.ParameterGroups[groupName] = [nfxParameter]
 
+    def assignKnobsFromParamGroup(self, groupName):
+        offslist = []
+        for param in self.ParameterGroups[groupName]:
+            offslist.append(param.Offset)
+        if(len(offslist) > 0):
+            self.assignKnobs(offslist)
+            return True
+        return False
+
+    def getCurrentKnobParamOffsets(self):
+        u1 = []
+        u2 = []
+        res = []
+        for i in range(4): # pre-allocate these to have 4 each
+            if(self.User1Knobs[i].Offset > -1):
+                u1.append(self.User1Knobs[i].Offset)
+            if(self.User2Knobs[i].Offset > -1):
+                u2.append(self.User2Knobs[i].Offset)
+        res.extend(u1)
+        res.extend(u2)
+        return res 
+        
     def assignParameterToUserKnob(self, knobMode, knobIdx, nfxParameter):
+        #print('ass', knobMode, knobIdx, nfxParameter.Offset )
         if(4 < knobIdx < 0):
             return 
         if(knobMode == KM_USER1):
@@ -94,10 +123,38 @@ class TnfxChannelPlugin:
         elif(knobMode == KM_USER2):
             self.User2Knobs[knobIdx] = nfxParameter
 
+    def assignOffsetToUserKnob(self, usermode, knob, paramOffs):
+        self.assignParameterToUserKnob(usermode, knob, self.getParamFromOffset(paramOffs) )
 
+    def assignKnobsFromParamList(self, paramList):
+        offsetList = []
+        for param in paramList:
+            offsetList.append(param.Offset)
+            #print('appended offset', param.Offset)
+        self.assignKnobs(offsetList)
+
+    def assignKnobs(self, offsetList, PresetGroup = ''):
+        #print('offsets', offsetList)
+        res = 0
+        for idx, offs in enumerate(offsetList):
+            if idx > 7: 
+                return idx
+            km = KM_USER1
+            ko = idx
+            if idx > 3: 
+                km = KM_USER2
+                ko = idx - 4
+            if(offs < 0) or (self.getParamFromOffset(offs) == None):
+                self.assignParameterToUserKnob(km, ko, None)
+            else:
+                self.assignOffsetToUserKnob(km, ko, offs)
+            res = idx + 1
+        if(PresetGroup != ''):
+            self.PresetGroups[PresetGroup] = res
+        return res
 
 class TnfxParameter:
-    def __init__(self, offset, caption, value, valuestr, bipolar, stepsAfterZero = 0):
+    def __init__(self, offset, caption, value=0, valuestr='', bipolar= False, stepsAfterZero = 0):
         self.Offset = offset 
         self.Caption = caption
         self.Value = value
@@ -106,15 +163,12 @@ class TnfxParameter:
         self.StepsAfterZero = stepsAfterZero
         self.GroupName = ''
     def __str__(self):
-        #0, 'Chord Type',  0, 'Movable', False
+        # 0, 'Chord Type',  0, 'Movable', False
         return "{}, '{}', {}, '{}'".format(self.Offset, self.Caption, self.Value, self.ValueStr)
     def getFullName(self):
         return self.GroupName + "-" + self.Caption 
     def updateCaption(self, caption):
         self.Caption = caption 
-    
-
-
 
 class TnfxPadMode:
     def __init__(self, name, mode, btnId = IDStepSeq,  isAlt = False):
@@ -127,7 +181,6 @@ class TnfxPadMode:
         self.AllowedNavSets = [nsDefault]
         self.AllowedNavSetIdx = 0
         self.LayoutIdx = 0
-        
 
 class TnfxProgressStep:
     def __init__(self, padIdx, color, songpos, abspos, barnum, selected = False):
@@ -163,7 +216,10 @@ class TnfxChannel:
         self.Mixer = TnfxMixer(-1, "")
         self.LoopSize = 0
         self.Muted = 0
-        self.Color = 0 
+        self.PadAColor = 0
+        self.DimA = 3
+        self.PadBColor = 0
+        self.DimB = 3 
         self.ChannelType = -1
         self.GlobalIndex = -1
         self.ShowChannelEditor = -1
@@ -289,10 +345,11 @@ class TnfxPadMap:
         self.NoteInfo = TnfxNoteInfo()
 
 class TnfxMacro:
-    def __init__(self, name, color):
+    def __init__(self, name, color, command = None):
         self.Name = name
         self.PadIndex = -1
         self.PadColor = color 
+        self.Execute = command
 
 class TnfxColorMap:
     def __init__(self, padIndex, color, dimFactor):
@@ -328,3 +385,30 @@ class TnfxMenuItems:
                 break
         if(not exists):
             self.SubItems.append(item)
+
+_rd3d2PotParams = {} # 'PluginName':[param1, .., paramX]
+_rd3d2PotParamOffsets = {} 
+try:
+   # from native_pot_parameters import PluginParameter, native_plugin_parameters as npp 
+   # until rd3d2 approves my submitted code I will use the local file.
+    from rd3d2_pot_params import PluginParameter, native_plugin_parameters as npp
+    if(len(npp) < 1): # no error, but no list either
+        print('rd3d2 Pot Parameters found, but the dictionary did not load.')    
+    else:
+        print('rd3d2 Pot Parameters found. {} plugins available in the dictionary.'.format(len(npp)))
+        for plugin in npp.keys():
+            _rd3d2PotParams[plugin] = []
+            # for param in npp[plugin]:
+            #     if param != None:
+            #         bipolar = param.deadzone_centre != None
+            #         name = param.name
+            #         if name == '':
+            #             name = '?' 
+            #         nfxParam = TnfxParameter(param.index, name, 0, '', bipolar)
+            #         _rd3d2PotParams[plugin].append(nfxParam)
+            #         _rd3d2PotParamOffsets[plugin].append(param.index)
+        print('rd3d2 Pot Parameters conversion. {} plugins converted.'.format(len(_rd3d2PotParams)))
+except ImportError:
+    print('rd3d2 Pot Parameters NOT found.')# Failed to import - assume they don't have custom settings
+
+

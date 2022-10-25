@@ -67,9 +67,12 @@ plFLEX.addParamToGroup('LIMITER', TnfxParameter(43, 'Type', 0, 'Limiter', False)
 plFLEX.addParamToGroup('GENERAL', TnfxParameter(36, 'Output volume', 0, '57%', False) )
 plFLEX.addParamToGroup('GENERAL', TnfxParameter(39, 'Pitch', 0, '+0 cent', True) )
 
-# set up the predetermined USER1 and USER2 knob parameters to link to the 8 macros
-for knobIdx in range(4):
-    plFLEX.assignParameterToUserKnob(KM_USER1, knobIdx, TnfxParameter(10 + knobIdx, '?', 0, '', False) )
-    plFLEX.assignParameterToUserKnob(KM_USER2, knobIdx, TnfxParameter(14 + knobIdx, '?', 0, '', False) )
+# set up the predetermined USER1 and USER2 knob parameters to link to the 8 macros, last group is the active one at startup
+plFLEX.assignKnobs([ 0, 2, 3, 4, 5, 7, 8, 9], 'Envelopes')
+plFLEX.assignKnobs([10,11,12,13,14,15,16,17], 'Macros')
+
+# for knobIdx in range(4):
+#     plFLEX.assignParameterToUserKnob(KM_USER1, knobIdx, TnfxParameter(10 + knobIdx, '?', 0, '', False) )
+#     plFLEX.assignParameterToUserKnob(KM_USER2, knobIdx, TnfxParameter(14 + knobIdx, '?', 0, '', False) )
 #-----------------------------------------------------------------
 
