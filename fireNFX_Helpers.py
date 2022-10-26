@@ -2,7 +2,7 @@ import general
 from midi import *
 import channels
 import mixer
-from older.OBS_midi import REC_SetChanged
+#from older.OBS_midi import REC_SetChanged
 
 def getCurrChanIdx(): # backwards compatibility
     return channels.selectedChannel()
