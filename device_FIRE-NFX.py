@@ -701,7 +701,7 @@ def SelectAndShowChannel(newChanIdx, keepPRopen = True):
     channels.selectOneChannel(newChanIdx)
     _CurrentChannel = newChanIdx
     
-    if( oldChanIdx != newChanIdx): # if the channel has changed...
+    if( oldChanIdx != newChanIdx ): # if the channel has changed...
         _ShowChannelEditor = False
         _ShowCSForm = False
 
@@ -756,28 +756,31 @@ def HandleProgressBar(padNum):
         newSongPos = getAbsTicksFromBar(prgMap.BarNumber) 
         transport.setSongPos(newSongPos, SONGLENGTH_ABSTICKS)
 
-    if(_AltHeld):
+    if(_ShiftHeld):
         markerOffs = padOffs + 1
         arrangement.addAutoTimeMarker(prgMap.SongPosAbsTicks, Settings.MARKER_PREFIX_TEXT.format(markerOffs))
 
-    if(_ShiftHeld):
+    if(_DoubleTap):
         select = True
         if( arrangement.selectionEnd() > -1 ): #already selected so lets deselect
             select = False
-            
+        
         if(len(prgMap.Markers) > 0):
             newSongPos = prgMap.Markers[0].SongPosAbsTicks
         else:
-            newSongPos = prgMap[padOffs].SongPosAbsTicks
+            newSongPos = prgMap.SongPosAbsTicks
         transport.setSongPos(newSongPos, SONGLENGTH_ABSTICKS)
         selEnd = transport.getSongLength(SONGLENGTH_ABSTICKS)
         # select to the next marker or song end
         arrangement.jumpToMarker(1, select)
+
         pos = transport.getSongPos(SONGLENGTH_ABSTICKS)
         addedEndMarker = False
         if pos > newSongPos: # if there is another marker later in time we can use it for the end of selection
+            print('xpos', pos, newSongPos)
             selEnd = pos
         else:
+            print('adding EOF', selEnd)
             arrangement.addAutoTimeMarker(selEnd, 'END') # add temp end marker
             addedEndMarker = True
         
