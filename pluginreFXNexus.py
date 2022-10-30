@@ -208,5 +208,5 @@ pluginreFXNexus.assignKnobs([0, 1, 2, 3, 4, 5, 6, 7])
  
 # [LAST STEP. DO NOT FORGET. NEEDED TO INCLUDE YOUR MAPPINGS] 
 # Add the following line (without the #) to the end of fireNFX_CustomPlugins.py
-#from pluginreFXNexus import pluginreFXNexus
+# from pluginreFXNexus import pluginreFXNexus
  
