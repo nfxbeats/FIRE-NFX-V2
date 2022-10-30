@@ -3,7 +3,7 @@ import math
 import transport
 import time 
 import device
-from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxChannelPlugin, _rd3d2PotParams
+from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxChannelPlugin, _rd3d2PotParams, cpChannelPlugin, cpMixerPlugin
 import utils
 import plugins
 import mixer
@@ -221,15 +221,15 @@ def FLColorToPadColor(FLColor):
     b = (FLColor & andVal) // 2
     return utils.RGBToColor(r, g, b)
 
-def getParamCaption(chanIdx, paramIdx):
-    return plugins.getParamName(paramIdx, chanIdx, -1) # -1 denotes not mixer
+def getParamCaption(chanIdx, paramIdx, mixSlotIdx = -1):
+    return plugins.getParamName(paramIdx, chanIdx, mixSlotIdx) # -1 denotes not mixer
 
-def getPluginParam(chanIdx, paramIdx, prn = False):
-    caption = plugins.getParamName(paramIdx, chanIdx, -1) # -1 denotes not mixer
-    value = plugins.getParamValue(paramIdx, chanIdx, -1) 
-    valuestr = plugins.getParamValueString(paramIdx, chanIdx, -1)
+def getPluginParam(chanIdx, paramIdx, prn = False, mixSlotIdx = -1): # -1 denotes not mixer
+    caption = plugins.getParamName(paramIdx, chanIdx, mixSlotIdx) 
+    value = plugins.getParamValue(paramIdx, chanIdx, mixSlotIdx) 
+    valuestr = plugins.getParamValueString(paramIdx, chanIdx, mixSlotIdx)
     bipolar = False
-    name, uname, varName = getPluginNames(chanIdx)
+    name, uname, varName = getPluginNames(chanIdx, mixSlotIdx)
     if(caption != '') and prn:
         print(varName + ".addParamToGroup('ALL', TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
         # print('#    Param', paramIdx, caption )
@@ -276,44 +276,56 @@ def getAlphaNum(textStr):
             res = res.replace(char, '')
     return res
 
-
-def getPluginNames(chanIdx = -1):
-    badChars = ' -!,.[]+='
-    if chanIdx == -1:
-        chanIdx = channels.selectedChannel()
-    name =  plugins.getPluginName(chanIdx, -1, 0)
-    uname = plugins.getPluginName(chanIdx, -1, 1)
+def getPluginNames(chanIdx = -1, mixSlotIdx = -1):
+    if(mixSlotIdx > -1):
+        if (chanIdx == -1):
+            chanIdx = mixer.trackNumber()
+    else:        
+        if chanIdx == -1:
+            chanIdx = channels.selectedChannel()
+    name =  plugins.getPluginName(chanIdx, mixSlotIdx, 0)
+    uname = plugins.getPluginName(chanIdx, mixSlotIdx, 1)
     vname = getAlphaNum("plugin{}".format(name))
     return name, uname, vname
 
-def getPluginInfo(chanIdx, prn = False, inclBlanks = False, isChannel = True):
-    if chanIdx == -1:
-        chanIdx = channels.selectedChannel()
+def getPluginInfo(chanIdx, prn = False, inclBlanks = False, mixSlotIdx = -1):
+    if(mixSlotIdx > -1):
+        if (chanIdx == -1):
+            chanIdx = mixer.trackNumber()
+    else:        
+        if chanIdx == -1:
+            chanIdx = channels.selectedChannel()
 
-
-    name, uname, vname = getPluginNames(chanIdx)
+    name, uname, vname = getPluginNames(chanIdx, mixSlotIdx)
     res = TnfxChannelPlugin(name, uname)
+    res.Type = cpChannelPlugin
+    type = 'cpChannelPlugin'
+    if(mixSlotIdx > -1):
+        res.Type = cpMixerPlugin
+        type = 'cpMixerPlugin'
+
     res.Parameters.clear()
-    pCnt = plugins.getParamCount(chanIdx, -1)
+    pCnt = plugins.getParamCount(chanIdx, mixSlotIdx)
     knobsSamples = []
     varName =  vname
     fileName = vname + '.py'
     if(prn):
-        print('# -----[ COPY AFTER THIS LINE ]--------------------------------------------------------')   
+        print('# -----[ COPY AFTER THIS LINE, BUT DO NOT INCLUDE ]--------------------------------------------------------')   
         print('# Save this file as: "{}{}"'.format(sys.path[1],fileName))
         print('# ')
         print('#   PluginName: ', res.Name)
         print('#   Created by: ', '<your name here>')
         print('# ')
-        print('from fireNFX_Classes import TnfxParameter, TnfxChannelPlugin')
-        print('from fireNFX_PluginDefs import CUSTOM_PLUGINS')
-        print(varName + " = TnfxChannelPlugin('" + name + "')")
-        print("if({}.Name not in CUSTOM_PLUGINS.keys()):".format(varName))
-        print("    CUSTOM_PLUGINS[{}.Name] = {}".format(varName, varName))
-        print(' ')
+        print('from fireNFX_Classes import TnfxParameter, TnfxChannelPlugin, cpChannelPlugin, cpMixerPlugin')
+        print('from fireNFX_PluginDefs import USER_PLUGINS')
+        print(varName + " = TnfxChannelPlugin('" + name + "', '', " + type + ")")
+        print("if({}.Name not in USER_PLUGINS.keys()):".format(varName))
+        print("    USER_PLUGINS[{}.Name] = {}".format(varName, varName))
+        print("    print('{} parameter definitions loaded.')".format(res.Name))
+        print(" ")
 
     for paramIdx in range(0, pCnt):
-        param = getPluginParam(chanIdx, paramIdx, prn)
+        param = getPluginParam(chanIdx, paramIdx, prn, mixSlotIdx)
         if(param.Caption != "") or (inclBlanks):
             if(param.Caption == ""):
                 param.Caption == "{}.Offset".format(paramIdx)
@@ -358,8 +370,8 @@ def getPluginInfo(chanIdx, prn = False, inclBlanks = False, isChannel = True):
             print("#{}.assignKnobs({}) ".format(varName, str(paramlist)))
             print(" ")
             print("# [LAST STEP. DO NOT FORGET. NEEDED TO INCLUDE YOUR MAPPINGS] ")
-            print("# Add the following line (without the #) to the end of fireNFX_PluginDefs.py")
-            print("#from {} import {}".format(fileName, varName) )
+            print("# Add the following line (without the #) to the end of fireNFX_CustomPlugins.py")
+            print("#from {} import {}".format(varName, varName) )
             print(' ')   
             print('# -----[ COPY UP TO THIS LINE, BUT DO NOT INCLUDE ]---------------')   
         return ""

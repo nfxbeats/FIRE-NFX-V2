@@ -1,4 +1,5 @@
 from midi import *
+from older.OBS_midi import GT_Form, PME_System
 import transport
 import ui
 import general
@@ -16,7 +17,6 @@ def Undo():
 
 def ZoomSelection(zoomVal = Settings.DBL_TAP_ZOOM):
     zStr = 'DDDDDDDD'[0:zoomVal]
-    print("[{}]".format(zStr))
     NavigateFLMenu(',DRDDDDDR,DD,{}E'.format(zStr) )
 
 def Articulate():

@@ -414,6 +414,7 @@ def OnProjectLoad(status):
     if(status == 0):
         DisplayTextAll('Project Loading', '-', 'Please Wait...')
     if(status >= 100): #finished loading
+        print('project loaded')
         SetPadMode()
         #UpdateMarkerMap()
         RefreshPadModeButtons()        
@@ -3483,12 +3484,10 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
     global _resetAutoHide
     global _prevNavSet
 
+    isAutoHide = ui.isBrowserAutoHide()
     _resetAutoHide = (ui.isBrowserAutoHide()==1) or _resetAutoHide
-    wasHidden = not ui.getVisible(widBrowser) # curr value
+    isHidden = not ui.getVisible(widBrowser) # curr value
     hasFocus = ui.getFocused(widBrowser)
-
-    if(_resetAutoHide):
-        ui.setBrowserAutoHide(False)  # if hidden it will become visible
 
     if(showVal == -1): # toggle
         if(hasFocus):
@@ -3499,19 +3498,31 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
     if(showVal == 1):
         if(Settings.TOGGLE_CR_AND_BROWSER):
             ui.hideWindow(widChannelRack)  
-        ui.showWindow(widBrowser)
+
+        if(_resetAutoHide):
+            ui.setBrowserAutoHide(False)  # if hidden it will become visible
+        
+        ui.showWindow(widBrowser) 
+        
         _ShowBrowser = 1
+
         if(Settings.FORCE_UDLR_ON_BROWSER):
             _prevNavSet = _PadMode.NavSet.NavSetID
             ForceNavSet(nsUDLR)
 
     else:
         if(_resetAutoHide):
-            ui.setBrowserAutoHide(True)
-            ui.hideWindow(widBrowser)
+            #print('resetting ah')
+            ui.setBrowserAutoHide(True) # BUG? does not auto close
             _resetAutoHide = False
-        ShowChannelRack(1) # to take focus off the Browser
+        else:
+            ui.hideWindow(widBrowser)
+
+        if(Settings.TOGGLE_CR_AND_BROWSER):
+            ShowChannelRack(1) 
+        
         _ShowBrowser = 0
+
         if(Settings.FORCE_UDLR_ON_BROWSER):
             if(_prevNavSet > -1):
                 ForceNavSet(_prevNavSet)
@@ -3675,6 +3686,8 @@ def UpdateWindowStates():
     dimB = dimDefault
     bColor = cOff
     currChan = getCurrChanIdx()
+    UpdateChannelMap()
+
     if(currChan >= 0):
         bColor = cDimWhite
         if(ui.getFocused(widPlugin) or ui.getFocused(widPluginGenerator)):

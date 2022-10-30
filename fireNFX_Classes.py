@@ -38,7 +38,7 @@ cpChannelPlugin = 2
 cpMixer = 3
 cpMixerPlugin = 4
 class TnfxChannelPlugin:
-    def __init__(self, name, username = ""):
+    def __init__(self, name, username = "", type = cpChannelPlugin):
         self.Name = name
         self.PluginName = name
         self.UserName = username
@@ -52,7 +52,7 @@ class TnfxChannelPlugin:
         self.AlwaysRescan = True
         self.FLChannelType = -1
         self.PresetGroups = {}
-        self.Type = cpChannel
+        self.Type = type
         for i in range(4): # pre-allocate these to have 4 each
             p = TnfxParameter(-1,'',i,'',False) # offset = -1 to identify it's unassigned
             self.User1Knobs.append(p)

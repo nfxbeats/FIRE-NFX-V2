@@ -1,5 +1,6 @@
 from fireNFX_Classes import TnfxChannelPlugin, TnfxParameter, cpGlobal
 from fireNFX_Defs import FLEFFECTS
+from older.OBS_midi import REC_Chan_Misc
 
 from pluginFLEX import plFLEX
 from pluginFLKeys import plFLKeys
@@ -16,9 +17,9 @@ KNOWN_PLUGINS = {plFLEX.Name:plFLEX, plFLKeys.Name:plFLKeys, plStrumGS2.Name:plS
 try:
     from fireNFX_CustomPlugins import *
     KNOWN_PLUGINS.update(USER_PLUGINS)
-except:
-    pass
-
+    print('loaded custom plugins', USER_PLUGINS)
+except e:
+    print('except: {}'.format(e))
 
 
 # for the FPC modes
@@ -35,6 +36,7 @@ plFLChanFX.addParamToGroup('CHANNEL', TnfxParameter(REC_Chan_Pan, 'CHAN Pan', 0,
 plFLChanFX.addParamToGroup('CHANNEL', TnfxParameter(REC_Chan_Vol, 'CHAN Volume', 0, '', False))
 plFLChanFX.addParamToGroup('CHANNEL', TnfxParameter(REC_Chan_Pitch, 'CHAN Pitch', 0, '', False, 128))
 plFLChanFX.addParamToGroup('CHANNEL', TnfxParameter(REC_Chan_FXTrack, 'CHAN Mixer Trk', 0, '', False, 128))
+
 REC_Chan_Arp_Mode = REC_Chan_Arp_First
 REC_Chan_Arp_Range = REC_Chan_Arp_First + 1
 plFLChanFX.addParamToGroup('ARPEGGIATOR', TnfxParameter( REC_Chan_Arp_Mode, 'ARP Mode', 0, '', False)) # NO Value return
@@ -58,12 +60,21 @@ plFLChanFX.addParamToGroup('DELAY', TnfxParameter( REC_Chan_Delay_Pitch, 'DLY Pi
 plFLChanFX.addParamToGroup('DELAY', TnfxParameter( REC_Chan_Delay_Time, 'DLY Time', 0, '', False))
 plFLChanFX.addParamToGroup('DELAY', TnfxParameter( REC_Chan_Delay_Echoes, 'DLY Echoes', 0, '', False))
 #plFLChanFX.addParamToGroup('DELAY', TnfxParameter( REC_Chan_Delay_First+7, '7-DLY Feed', 0, '', False)) #crash
-plFLChanFX.addParamToGroup('LEVELS', TnfxParameter(REC_Chan_OfsPan, 'LVL Pan', 0, '', True))
-plFLChanFX.addParamToGroup('LEVELS', TnfxParameter(REC_Chan_OfsVol, 'LVL Volume', 0, '', False))
+plFLChanFX.addParamToGroup('LEVELS', TnfxParameter(REC_Chan_OfsPan, 'Pan', 0, '', True))
+plFLChanFX.addParamToGroup('LEVELS', TnfxParameter(REC_Chan_OfsVol, 'Volume', 0, '', False))
 # plFLChanFX.addParamToGroup('X', TnfxParameter(REC_Chan_OfsPitch, 'OfsPitch', 0, '', False)) # crash
-plFLChanFX.addParamToGroup('LEVELS', TnfxParameter(REC_Chan_OfsFCut, 'LVL Mod X', 0, '', False))
-plFLChanFX.addParamToGroup('LEVELS', TnfxParameter(REC_Chan_OfsFRes, 'LVL Mod Y', 0, '', False))
-plFLChanFX.addParamToGroup('POLYPHONY', TnfxParameter(REC_Chan_PortaTime, 'POLY Slide Time', 0, '', False)) # NO Value return
+plFLChanFX.addParamToGroup('LEVELS', TnfxParameter(REC_Chan_OfsFCut, 'Mod X', 0, '', False))
+plFLChanFX.addParamToGroup('LEVELS', TnfxParameter(REC_Chan_OfsFRes, 'Mod Y', 0, '', False))
+
+
+REC_Chan_MaxPoly = REC_Chan_Misc + 271
+REC_Chan_MaxPoly2 = REC_Chan_Misc + 279
+REC_Chan_PortaMono = REC_Chan_Misc + 289
+
+plFLChanFX.addParamToGroup('POLYPHONY', TnfxParameter(REC_Chan_MaxPoly, 'Max Poly', 0, '', False)) 
+plFLChanFX.addParamToGroup('POLYPHONY', TnfxParameter(REC_Chan_PortaMono, 'Porta/Mono', 0, '', False)) 
+plFLChanFX.addParamToGroup('POLYPHONY', TnfxParameter(REC_Chan_PortaTime, 'Slide Time', 0, '', False)) # NO Value return
+
 plFLChanFX.addParamToGroup('TIME', TnfxParameter(REC_Chan_GateTime, 'TIME Gate', 0, '', False)) # NO Value return
 # plFLChanFX.addParamToGroup('X', TnfxParameter(REC_Chan_Crossfade, 'Crossfade', 0, '', False)) # does nothing, also no return value
 plFLChanFX.addParamToGroup('TIME', TnfxParameter(REC_Chan_TimeOfs, 'TIME Shift', 0, '', False, 24))
@@ -75,9 +86,29 @@ REC_Chan_Tracking_ModX_Setter = REC_Chan_Arp_First + 7
 REC_Chan_Tracking_ModX_Getter = REC_Chan_Track_First
 REC_Chan_Tracking_ModY_Setter = REC_Chan_Arp_First + 8 
 REC_Chan_Tracking_ModY_Getter = REC_Chan_Track_First
-plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_Pan_Setter, 'TRK Pan', 0, '', True))
-plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_ModX_Setter, 'TRK Mod X', 0, '', True))
-plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_ModY_Setter, 'TRK Mod Y', 0, '', True))
+# plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_Pan_Setter, 'TRK Pan', 0, '', True))
+# plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_ModX_Setter, 'TRK Mod X', 0, '', True))
+# plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_ModY_Setter, 'TRK Mod Y', 0, '', True))
+
+REC_Chan_Tracking_Vol_Pan  =  REC_Chan_Track_First
+REC_Chan_Tracking_Vol_ModX =  REC_Chan_Track_First + 1
+REC_Chan_Tracking_Vol_ModY =  REC_Chan_Track_First + 2
+REC_Chan_Tracking_Vol_Mid  =  REC_Chan_Track_First + 3 # returns weird value from -2147483648 (0%) to -1082130432 (100%)
+REC_Chan_Tracking_Key_Mid  =  REC_Chan_Track_First + 7 # MIDI note value. 60 decimal = note C5
+REC_Chan_Tracking_Key_Pan  =  REC_Chan_Track_First + 16
+REC_Chan_Tracking_Key_ModX =  REC_Chan_Track_First + 17
+REC_Chan_Tracking_Key_ModY =  REC_Chan_Track_First + 18
+
+plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_Vol_Pan, 'Vol Pan', 0, '', True))
+plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_Vol_ModX, 'Vol Mod X', 0, '', True))
+plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_Vol_ModY, 'Vol Mod Y', 0, '', True))
+plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_Vol_Mid, 'Vol Middle', 0, '', True))
+plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_Vol_Pan, 'Key Pan', 0, '', True))
+plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_Vol_ModX, 'Key Mod X', 0, '', True))
+plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_Vol_ModY, 'Key Mod Y', 0, '', True))
+plFLChanFX.addParamToGroup('TRACKING', TnfxParameter( REC_Chan_Tracking_Vol_Mid, 'Key Middle', 0, '', True))
+
+
 
 # Sampler / Audio
 plSampler = TnfxChannelPlugin("Sampler")
@@ -87,6 +118,13 @@ plSampler.addParamToGroup('MAIN', TnfxParameter(REC_Chan_Pan, 'MAIN Pan', 0, '',
 plSampler.addParamToGroup('MAIN', TnfxParameter(REC_Chan_Vol, 'MAIN Volume', 0, '', False))
 plSampler.addParamToGroup('MAIN', TnfxParameter(REC_Chan_Pitch, 'MAIN Pitch', 0, '', False, 128))
 plSampler.addParamToGroup('MAIN', TnfxParameter(REC_Chan_FXTrack, 'MAIN Mixer Trk', 0, '', False, 128))
+
+REC_Chan_Env_Panning_PreDelay  = REC_Chan_Env_First + 9
+REC_Chan_Env_Panning_Attack  = REC_Chan_Env_First + 10
+REC_Chan_Env_Panning_Amount  = REC_Chan_Env_First + 11
+REC_Chan_Env_Panning_LFO_Speed = REC_Chan_Env_First + 12
+
+
 plSampler.addParamToGroup('FILTER', TnfxParameter(REC_Chan_FCut, 'FLT Cut/Mod X', 0, '', False))
 plSampler.addParamToGroup('FILTER', TnfxParameter(REC_Chan_FRes, 'FLT Res/Mod Y', 0, '', False))
 plSampler.addParamToGroup('FILTER', TnfxParameter(REC_Chan_FType, 'FLT Type', 0, '', False))
@@ -95,25 +133,6 @@ plSampler.addParamToGroup('PLAYBACK', TnfxParameter(REC_Chan_SmpOfs, 'PLAY Sampl
 plSampler.addParamToGroup('TIME STRETCHING', TnfxParameter(REC_Chan_StretchTime, 'STRETCH Time', 0, '', False)) # NO Value return
 # plSampler.addParamToGroup('X', TnfxParameter(REC_Chan_OfsPitch, 'OfsPitch', 0, '', False)) # crash
 
-# # envelope
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_First, '0-EnvFirst', 0, '', False)) 
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_First + 1, '1-EnvFirst', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_First + 2, '2-EnvFirst', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_First + 3, '3-EnvFirst', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_First + 4, '4-EnvFirst', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_First + 5, '5-EnvFirst', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_First + 6, '6-EnvFirst', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_First + 7, '7-EnvFirst', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_First + 8, '8-EnvFirst', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_MA, '8-MA', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_LFO_First, '9-LFO1st', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_LFO_First+1, '10-LFO1st', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_LFOA, '11-LFOA', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_LFOA+1, '12-LFOA', 0, '', False))
-# #plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_Hole, '13-Hole', 0, '', False)) # crash
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_Hole+1, '14-Hole', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_Hole+1, '15-Hole', 0, '', False))
-# plSampler.addParamToGroup('ENV', TnfxParameter(REC_Chan_Env_PLast, '16-PLast', 0, '', False))
 
 # global
 plGlobal = TnfxChannelPlugin('Global')

@@ -2,6 +2,7 @@ from fireNFX_Classes import TnfxParameter, TnfxChannelPlugin
 from fireNFX_PluginDefs import USER_PLUGINS
 pluginSoundFontPlayer = TnfxChannelPlugin('SoundFont Player')
 if(pluginSoundFontPlayer.Name not in USER_PLUGINS.keys()):
+    print('sfp loaded')
     USER_PLUGINS[pluginSoundFontPlayer.Name] = pluginSoundFontPlayer
 pluginSoundFontPlayer.addParamToGroup('MISC', TnfxParameter(4, 'Modulation', 0, '0', False) )
 pluginSoundFontPlayer.addParamToGroup('MISC', TnfxParameter(12, 'Initial filter cutoff', 0, 'Disabled', False) )
