@@ -1,6 +1,5 @@
 from fireNFX_Classes import TnfxChannelPlugin, TnfxParameter, cpGlobal
 from fireNFX_Defs import FLEFFECTS
-from older.OBS_midi import REC_Chan_Misc
 
 from pluginFLEX import plFLEX
 from pluginFLKeys import plFLKeys
