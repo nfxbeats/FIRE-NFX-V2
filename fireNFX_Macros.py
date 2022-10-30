@@ -1,5 +1,4 @@
 from midi import *
-from older.OBS_midi import GT_Form, PME_System
 import transport
 import ui
 import general
