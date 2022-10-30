@@ -16,9 +16,9 @@ KNOWN_PLUGINS = {plFLEX.Name:plFLEX, plFLKeys.Name:plFLKeys, plStrumGS2.Name:plS
 try:
     from fireNFX_CustomPlugins import *
     KNOWN_PLUGINS.update(USER_PLUGINS)
-    print('loaded custom plugins', USER_PLUGINS)
-except e:
-    print('except: {}'.format(e))
+    print('{} custom plugins loaded', USER_PLUGINS)
+except Exception as e:
+    print('exception: {}'.format(e))
 
 
 # for the FPC modes
