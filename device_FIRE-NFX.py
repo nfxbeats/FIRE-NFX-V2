@@ -3907,11 +3907,12 @@ def getPlugin(pluginName):
     '''
     global LOADED_PLUGINS
 
-    if(pluginName == "") and (isSampler()):
-        return plSampler
-
     if(pluginName == "GLOBAL CTRL") and (isSampler()):
         return plGlobal
+
+    if(isSampler()):
+        return plSampler
+
 
     if(pluginName == FLEFFECTS):
         plFLChanFX.FLChannelType = getChannelType()
