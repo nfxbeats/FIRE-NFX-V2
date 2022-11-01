@@ -905,6 +905,7 @@ def HandleNav(padIdx):
         RefreshNotes()
     elif(_PadMode.Mode == MODE_DRUM):
         RefreshDrumPads()
+
     RefreshNavPads()
     
     return True 
@@ -1217,6 +1218,10 @@ def HandleGridLR(ctrlID):
     elif(ctrlID == IDBankR):
         NavSetList(1)
     _ScrollTo = True
+    if(isNoNav()):
+        for pad in pdNav :
+            SetPadColor(pad, cOff, dimDefault)
+
     RefreshModes()
     return True
 
@@ -2055,15 +2060,18 @@ def RefreshNavPads():
     RefreshGridLR()        
     currChan = getCurrChanIdx()
 
+    if(showUDLRNav):
+        RefreshUDLR()
+        return 
+
     if(isNoNav()):
         return
 
     for pad in pdNav :
         SetPadColor(pad, cOff, dimDefault)
-    
-    if(showUDLRNav):
-        RefreshUDLR()
-        return 
+        
+    if(showChanWinNav):
+        RefreshChanWinNav(currChan)
 
     # these two are exclusive as they use the same pads in diff modes
     if(showScaleNav):
@@ -2080,10 +2088,6 @@ def RefreshNavPads():
             color = colPresetNav[idx]
             SetPadColor(pad, color, dimDefault)
 
-    if(showChanWinNav):
-        SetPadColor(pdShowChanEditor, _ChannelMap[currChan].PadAColor, _ChannelMap[currChan].DimA)
-        SetPadColor(pdShowChanPianoRoll, _ChannelMap[currChan].PadBColor, _ChannelMap[currChan].DimB)
-
     if(showNoteRepeat):
         if(_NoteRepeat):
             SetPadColor(pdNoteRepeat, colNoteRepeat, dimBright)
@@ -2099,6 +2103,13 @@ def RefreshNavPads():
     elif(showLayoutNav):
         SetPadColor(pdLayoutPrev, colLayoutPrev, dimDefault)
         SetPadColor(pdLayoutNext, colLayoutNext, dimDefault)
+
+def RefreshChanWinNav(currChan = -1):
+    if (_PadMode.NavSet.ChanNav):
+        if(currChan == -1):
+            currChan = getCurrChanIdx()
+        SetPadColor(pdShowChanEditor, _ChannelMap[currChan].PadAColor, _ChannelMap[currChan].DimA)
+        SetPadColor(pdShowChanPianoRoll, _ChannelMap[currChan].PadBColor, _ChannelMap[currChan].DimB)
 
 
 def RefreshPageLights(clearOnly = False):
@@ -2190,8 +2201,8 @@ def RefreshNotes():
 
     # set the specific mode related funcs here
 
-    RefreshMacros() 
-    RefreshNavPads()
+    # RefreshMacros() 
+    # RefreshNavPads()
     RefreshDisplay()
 
 def RefreshChordType():
@@ -2264,8 +2275,8 @@ def RefreshDrumPads():
                 SetPadColor(p, cOff, dimDefault)
                 _PadMap[p].Color = cOff
 
-    RefreshMacros() 
-    RefreshNavPads()
+    #RefreshMacros() 
+    #RefreshNavPads()
 
 def MapNoteToPad(padNum, note):
     global _NoteMap
@@ -2457,8 +2468,8 @@ def RefreshChannelStrip(scrollToChannel = False):
             _ChannelMap[channel.FLIndex].PadBColor = bColor
             _ChannelMap[channel.FLIndex].Dimb = dimB
 
-            if(_PadMode.NavSet.ChanNav):
-                RefreshNavPads()
+            # if(_PadMode.NavSet.ChanNav):
+            #     RefreshNavPads()
 
             if(_ShiftHeld): # Shifted will display Mute states
                 col = cNotMuted
@@ -2470,8 +2481,13 @@ def RefreshChannelStrip(scrollToChannel = False):
                     if(channels.isChannelMuted(channel.FLIndex)):
                         col = cMuted
                 SetPadColor(padBIdx, col, dimBright) #cWhite, dimBright
+        else:
+            #not used
+            SetPadColor(padAIdx, cOff, dimDefault)
+            SetPadColor(padBIdx, cOff, dimDefault)
+
     #SelectAndShowChannel(currChan)
-    RefreshNavPads()
+    RefreshChanWinNav(-1)
 
 def getChannelOffsetFromPage():
     # returns the index of the first pattern to show on the pattern strip based on the active page
@@ -3114,8 +3130,8 @@ def SetPadMode():
             UpdateMarkerMap()
             UpdateProgressMap()
             RefreshProgress()
-    elif(_PadMode.Mode == MODE_DRUM):
-        RefreshNavPads()
+    # elif(_PadMode.Mode == MODE_DRUM):
+    #     RefreshNavPads()
 
     RefreshPadModeButtons() # lights the button
     RefreshAll()
