@@ -83,15 +83,15 @@ You can find basic video tutorials on each mode here:
 * [FIRE-NFX V2.0 Mode Usage Playlist at YouTube](
 https://www.youtube.com/watch?v=OioXZP5parw&list=PLcoTHKe9_nBqurVeWsaSKxhbmhQIU3xRH) (recommended)
 
-* [Google Slideshow used in video presentation](https://docs.google.com/presentation/d/1k-Fgw1TsIK6J4SiKqOlBo5jZJZRIx5ZqUcfcWG0MuSA/edit?usp=sharing) (incomplete but useful)
+* [Google Slideshow used in video presentation](https://docs.google.com/presentation/d/18H4eEFmZKqKtpXtdgnVxO4Pf-vFTQKxcoGKxqe7uSs4/edit#slide=id.g187abea832f_0_2) (incomplete but very useful as an intro)
 
 Please leave me feedback/bug reports on one of the following:  
-* [/r/warbeats subreddit](https://reddit.com/r/warbeats/) (preferred)
 * [Official FL Studio MIDI Scripting Forum Thread](https://forum.image-line.com/viewtopic.php?f=1994&t=284003)
+* [/r/warbeats subreddit](https://reddit.com/r/warbeats/) 
 
 ## *Credits*
 Much of this work was helped along by the following:
 * Miguel Guthridge, aka HDSQ in the forums. His [FL Studio API Stubs](https://github.com/MiguelGuthridge/FL-Studio-API-Stubs) have been invaluable to me while developing. He's also a powerhouse of help in the forums and even has his own FL script - [Universal Controller Script](https://github.com/MiguelGuthridge/Universal-Controller-Script) - that supports several devices.
-* Anyone who gave me some honest and sccurate feedback - you guys help tremendously with ideas and bugs, thank you.
+* Anyone who gave me some honest and accurate feedback - you guys help tremendously with ideas and bugs, thank you.
 * The author of the original AKAI Fire python script - I don't know who it is specifically (Miro?). Thank for the great code to learn from..
 
