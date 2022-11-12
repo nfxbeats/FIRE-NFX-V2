@@ -181,3 +181,5 @@ colOctaveNext = cBlue
 
 pdNoteFuncs = [pdScalePrev, pdScaleNext, pdRootNotePrev, pdRootNoteNext, pdOctavePrev, pdOctaveNext]
 colNoteFuncs = [getShade(cGreen, shLight), cGreen, getShade(cPurple, shLight), cPurple, colOctavePrev, colOctaveNext]
+
+pdNavMacros = [45, 61, 46, 62, 47, 63]

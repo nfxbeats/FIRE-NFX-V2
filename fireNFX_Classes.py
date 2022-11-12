@@ -4,11 +4,12 @@
 from fireNFX_Defs import *
 import plugins
 import channels
+import mixer
 
 def clonePluginParams(srcPlugin, destPlugin):
     # enumerate the plugins list. no deepcopy :(  
     for param in srcPlugin.Parameters:
-        newParam = TnfxParameter(param.Offset, param.Caption, param.Value, param.ValueStr, param.Bipolar, param.StepsAfterZero)
+        newParam = TnfxParameter(param.Offset, param.Caption, param.Value, param.ValueStr, param.Bipolar, param.StepsInclZero)
         if(newParam.Caption in ['?', ''] and newParam.Offset > -1):
             if(plugins.isValid(channels.selectedChannel())):
                 newParam.Caption = plugins.getParamName(newParam.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
@@ -17,8 +18,8 @@ def clonePluginParams(srcPlugin, destPlugin):
     for knob in range(4):
         param1 = srcPlugin.User1Knobs[knob] 
         param2 = srcPlugin.User2Knobs[knob] 
-        newParam1 = TnfxParameter(param1.Offset, param1.Caption, param1.Value, param1.ValueStr, param1.Bipolar, param1.StepsAfterZero)
-        newParam2 = TnfxParameter(param2.Offset, param2.Caption, param2.Value, param2.ValueStr, param2.Bipolar, param2.StepsAfterZero)
+        newParam1 = TnfxParameter(param1.Offset, param1.Caption, param1.Value, param1.ValueStr, param1.Bipolar, param1.StepsInclZero)
+        newParam2 = TnfxParameter(param2.Offset, param2.Caption, param2.Value, param2.ValueStr, param2.Bipolar, param2.StepsInclZero)
 
         if(param1.Caption in ['?', ''] and param1.Offset > -1):
             if(plugins.isValid(channels.selectedChannel())):
@@ -115,7 +116,6 @@ class TnfxChannelPlugin:
         return res 
         
     def assignParameterToUserKnob(self, knobMode, knobIdx, nfxParameter):
-        #print('ass', knobMode, knobIdx, nfxParameter.Offset )
         if(4 < knobIdx < 0):
             return 
         if(knobMode == KM_USER1):
@@ -130,11 +130,9 @@ class TnfxChannelPlugin:
         offsetList = []
         for param in paramList:
             offsetList.append(param.Offset)
-            #print('appended offset', param.Offset)
         self.assignKnobs(offsetList)
 
     def assignKnobs(self, offsetList, PresetGroup = ''):
-        #print('offsets', offsetList)
         res = 0
         for idx, offs in enumerate(offsetList):
             if idx > 7: 
@@ -154,13 +152,13 @@ class TnfxChannelPlugin:
         return res
 
 class TnfxParameter:
-    def __init__(self, offset, caption, value=0, valuestr='', bipolar= False, stepsAfterZero = 0):
+    def __init__(self, offset, caption, value=0, valuestr='', bipolar= False, stepsInclZero = 0):
         self.Offset = offset 
         self.Caption = caption
         self.Value = value
         self.ValueStr = valuestr
         self.Bipolar = bipolar 
-        self.StepsAfterZero = stepsAfterZero
+        self.StepsInclZero = stepsInclZero
         self.GroupName = ''
     def __str__(self):
         # 0, 'Chord Type',  0, 'Movable', False
@@ -179,8 +177,28 @@ class TnfxPadMode:
         self.NavSet = TnfxNavigationSet(nsDefault)
         self.AltNavSet = TnfxNavigationSet(nsDefault)
         self.AllowedNavSets = [nsDefault]
-        self.AllowedNavSetIdx = 0
+        self.CurrentNavSetIdx = 0 # keeps track of the modes last selected macro grid 
         self.LayoutIdx = 0
+        self.TempNavSets = [nsPianoRoll, nsPlaylist, nsChannel, nsMixer]
+        self.NavSetHist = []
+    
+    def isTempNavSet(self):
+        return self.NavSet.NavSetID in self.TempNavSets
+    
+    def SetNavSet(self, navSet):
+        if(navSet not in self.TempNavSets) and (navSet != self.NavSet.NavSetID):
+            self.NavSetHist.append(self.NavSet.NavSetID) # store current NS to recall later
+            if(len(self.NavSetHist) > 10):
+                self.NavSetHist.pop(0)
+        self.NavSet.SetNavSet(navSet)
+
+    def RecallPrevNavSet(self):
+        self.NavSet.InitData()
+        prevNS = self.AllowedNavSets[0] # default
+        if(len(self.NavSetHist) > 0):
+            prevNS = self.NavSetHist.pop()
+        self.NavSet.SetNavSet(prevNS)
+
 
 class TnfxProgressStep:
     def __init__(self, padIdx, color, songpos, abspos, barnum, selected = False):
@@ -203,31 +221,62 @@ class TnfxMarker:
         return "Marker #{}, {}, SongPos: {}".format(self.Number, self.Name, self.SongPosAbsTicks)
 
 class TnfxMixer:
-    def __init__(self, flIdx, name):
-        self.Name = name 
+    def __init__(self, flIdx):
         self.FLIndex = flIdx
-        self.Muted = 0
+        self.Name = ''
+        self.Color = 0x000000 
+        self.Muted = False
+        self.Selected = False
+        self.Update()
+    def __str__(self):
+        return "Mixer #{}.{}  ({})  Muted:{}, Selected:{}".format(self.FLIndex, self.Name, self.Color, self.Muted, self.Selected)
+    def getRecEventID(self, pluginOffs = 0): # 1 is first plugin, 0 is the main mixer channel itself
+        mixer.getTrackPluginId(self.FLIndex, pluginOffs)
+    def Update(self):
+        self.Name = mixer.getTrackName(self.FLIndex)
+        self.Color = mixer.getTrackColor(self.FLIndex)
+        self.Muted = mixer.isTrackMuted(self.FLIndex)
+        self.Selected = mixer.isTrackSelected(self.FLIndex)
+
 
 class TnfxChannel:
-    def __init__(self, flIdx, name):
-        self.Name = name 
+    def __init__(self, flIdx):
+        if(flIdx == -1):
+            flIdx = channels.channelNumber()
+
         self.FLIndex = flIdx 
-        self.ItemIndex = flIdx
-        self.Mixer = TnfxMixer(-1, "")
-        self.LoopSize = 0
+        self.Name = ''
+        self.Color = 0x000000
         self.Muted = 0
+        self.Selected = False 
+        self.Mixer = None
+        self.ChannelType = -1
+
+        self.GlobalIndex = -1
+        self.ItemIndex = flIdx
+        self.LoopSize = 0
         self.PadAColor = 0
         self.DimA = 3
         self.PadBColor = 0
         self.DimB = 3 
-        self.ChannelType = -1
-        self.GlobalIndex = -1
         self.ShowChannelEditor = -1
         self.ShowCSForm = -1
         self.ShowPianoRoll = -1
-        self.Selected = False 
+
+        self.Update()
+
     def __str__(self):
         return "Channel #{} - {} - Selected: {}".format(self.FLIndex, self.Name, self.Selected)        
+    def Update(self):
+        self.Name = channels.getChannelName(self.FLIndex)
+        self.Color = channels.getChannelColor(self.FLIndex)
+        self.Muted = channels.isChannelMuted(self.FLIndex)
+        self.Selected = channels.isChannelSelected(self.FLIndex)
+        self.Mixer = TnfxMixer(channels.getTargetFxTrack(self.FLIndex))
+        self.ChannelType = channels.getChannelType(self.FLIndex)
+
+    def getRecEventID(self): 
+        return channels.getRecEventId(self.FLIndex)
 
 nsNone = 0
 nsDefault = 1
@@ -239,11 +288,14 @@ nsChannel = 6
 nsPlaylist = 7
 nsMixer = 8
 nsPianoRoll = 9
-
 class TnfxNavigationSet:
     def __init__(self, navSet):
         self.NavSetID = navSet
         self.Index = -1
+        self.InitData()
+        self.SetNavSet(navSet) 
+
+    def InitData(self):
         self.ChanNav = False
         self.ScaleNav = False
         self.SnapNav = False
@@ -254,9 +306,21 @@ class TnfxNavigationSet:
         self.UDLRNav = False 
         self.MacroNav = True 
         self.NoNav = False
+        self.PianoRollNav = False
+        self.ChannelNav = False
+        self.PlaylistNav = False
+        self.MixerNav = False
+
+    def SetNavSet(self, navSet):
+        self.NavSetID = navSet
+        self.InitData()
         if navSet == nsDefault:
             self.ChanNav = True
             self.SnapNav = True
+            self.PresetNav = True
+        elif navSet == nsPianoRoll:
+            self.ChanNav = True
+            self.PianoRollNav = True
             self.PresetNav = True
         elif navSet == nsDefaultDrum:
             self.ChanNav = True
@@ -275,7 +339,8 @@ class TnfxNavigationSet:
             self.UDLRNav = True
         elif(navSet == nsNone):
             self.MacroNav = False
-            self.NoNav = True 
+            self.NoNav = True
+
 
 
 class TnfxPattern:
@@ -284,7 +349,7 @@ class TnfxPattern:
         self.FLIndex = flIdx 
         self.ItemIndex = flIdx - 1
         self.Channels = list()
-        self.Mixer = TnfxMixer(-1, "")
+        self.Mixer = None
         self.Muted = 0
         self.ShowChannelEditor = 0
         self.ShowPianoRoll = 0
@@ -409,6 +474,6 @@ try:
             #         _rd3d2PotParamOffsets[plugin].append(param.index)
         print('rd3d2 Pot Parameters conversion. {} plugins converted.'.format(len(_rd3d2PotParams)))
 except ImportError:
-    print('rd3d2 Pot Parameters NOT found.')# Failed to import - assume they don't have custom settings
+    print('rd3d2 Pot Parameters NOT found.') # Failed to import - assume they don't have custom settings
 
 

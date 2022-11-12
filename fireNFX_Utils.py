@@ -93,11 +93,8 @@ def TestColorMap():
                 
 def SetPadColorBuffer(idx, col, dimFactor, flushBuffer = False):
     global _ColorMap
-    
     if(col == -1):
         col = _ColorMap[idx].PadColor
-
-    #print('SetLEDCol', idx, col)
     r = (col & 0x7F0000) >> 16
     g = (col & 0x007F00) >> 8
     b = (col & 0x7F)
@@ -145,7 +142,6 @@ def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True):
         col = _ColorMap[idx].PadColor
         dimFactor = _ColorMap[idx].DimFactor
 
-    #print('SetLEDCol', idx, col)
     r = (col & 0x7F0000) >> 16
     g = (col & 0x007F00) >> 8
     b = (col & 0x7F)
@@ -166,7 +162,6 @@ def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True):
         _ColorMap[idx].DimFactor = dimFactor
 
 def SetPadRGB(idx, r, g, b):  
-    #print('SetLED', idx, r, g, b)
     dataOut = bytearray(4)
     i = 0
     dataOut[i] = idx
@@ -260,7 +255,6 @@ def getBeatLenInMS(div):
     else: #when div = 0...
         timeval = beatlen * 4000 # one bar aka whole note.
     barlen = playlist.getVisTimeTick()
-    #print('tempo', tempo, 'div', div, 'beatlen', beatlen, 'output', timeval, 'Barlen', barlen) 
     return int(timeval)
 
 def RemoveBadChars(badChars, textStr):

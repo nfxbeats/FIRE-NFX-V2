@@ -128,6 +128,10 @@ class TnfxDefaultSettings:
         self.DBL_TAP_DELAY_MS = 220
         self.DBL_TAP_ZOOM = 4
 
+        self.GLOBAL_CONTROL_NAME = 'GLOBAL CTRL'
+
+        self.SHOW_PIANO_ROLL_MACROS = False
+
 
 # DO NOT EDIT BELOW:
 Settings = TnfxDefaultSettings()

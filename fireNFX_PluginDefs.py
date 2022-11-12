@@ -1,5 +1,6 @@
 from fireNFX_Classes import TnfxChannelPlugin, TnfxParameter, cpGlobal
 from fireNFX_Defs import FLEFFECTS
+from fireNFX_DefaultSettings import Settings 
 
 from pluginFLEX import plFLEX
 from pluginFLKeys import plFLKeys
@@ -16,9 +17,9 @@ KNOWN_PLUGINS = {plFLEX.Name:plFLEX, plFLKeys.Name:plFLKeys, plStrumGS2.Name:plS
 try:
     from fireNFX_CustomPlugins import *
     KNOWN_PLUGINS.update(USER_PLUGINS)
-    print('{} custom plugins loaded', USER_PLUGINS)
+    #print('{} custom plugins loaded', USER_PLUGINS)
 except Exception as e:
-    print('exception: {}'.format(e))
+    print('Custom Plugin Exception: {}'.format(e))
 
 
 # for the FPC modes
@@ -134,13 +135,15 @@ plSampler.addParamToGroup('TIME STRETCHING', TnfxParameter(REC_Chan_StretchTime,
 
 
 # global
-plGlobal = TnfxChannelPlugin('Global')
+plGlobal = TnfxChannelPlugin(Settings.GLOBAL_CONTROL_NAME)
 plGlobal.isNative = True
-plGlobalType = cpGlobal
+plGlobal.Type = cpGlobal
 plGlobal.addParamToGroup('FL Main', TnfxParameter(REC_MainVol, 'Volume', 0, '', False))
 plGlobal.addParamToGroup('FL Main', TnfxParameter(REC_MainShuffle, 'Shuffle', 0, '', False))
 plGlobal.addParamToGroup('FL Main', TnfxParameter(REC_MainPitch, 'Pitch', 0, '', False))
 plGlobal.addParamToGroup('FL Main', TnfxParameter(REC_Tempo, 'Tempo', 0, '', False))
+plGlobal.assignKnobs([REC_MainVol, REC_MainShuffle, REC_MainPitch, REC_Tempo])
+KNOWN_PLUGINS[Settings.GLOBAL_CONTROL_NAME] = plGlobal
 
 # mixer
 plMixer = TnfxChannelPlugin('Mixer')
