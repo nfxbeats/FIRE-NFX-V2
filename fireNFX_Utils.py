@@ -3,7 +3,7 @@ import math
 import transport
 import time 
 import device
-from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxChannelPlugin, _rd3d2PotParams, cpChannelPlugin, cpMixerPlugin
+from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxChannelPlugin, cpChannelPlugin, cpMixerPlugin #, _rd3d2PotParams 
 import utils
 import plugins
 import mixer
@@ -330,7 +330,7 @@ def getPluginInfo(chanIdx, prn = False, inclBlanks = False, mixSlotIdx = -1):
             else:    
                 res.addParamToGroup("ALL", param)
 
-            if(res.Name in _rd3d2PotParams.keys()):
+            if(False): #(res.Name in _rd3d2PotParams.keys()):
                 res.addParamToGroup("rd32d3 Ext", param)
                 knobsSamples.append(param)
             elif(len(knobsSamples) < 8):

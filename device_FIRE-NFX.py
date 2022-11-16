@@ -143,7 +143,7 @@ _VelocityMax = 126
 _DebugPrn = True
 _DebugMin = lvlD
 
-from fireNFX_Classes import _rd3d2PotParams, _rd3d2PotParamOffsets
+#from fireNFX_Classes import _rd3d2PotParams, _rd3d2PotParamOffsets
 from fireNFX_Macros import * 
 
 # list of notes that are mapped to pads
@@ -552,6 +552,7 @@ def OnMidiIn(event):
             if(padNum in pdMacros) and (pMap.Pressed): 
                 event.handled = HandleMacros(pdMacros.index(padNum))
                 RefreshMacros()
+                RefreshWindowStates()
                 return 
 
             # always handle nav
@@ -904,7 +905,7 @@ def HandleNav(padIdx):
         RefreshDrumPads()
 
     RefreshNavPads()
-    RefreshDisplay()
+    #RefreshDisplay()
     
     return True 
 
@@ -916,7 +917,7 @@ def RunMacro(macro):
         macro.Execute()    
         return True
     else:
-        DisplayTimedText('Failed! ' + macro.Name)
+        #DisplayTimedText('Failed! ' + macro.Name)
         return False
 
 def ToggleRepeat():
@@ -942,7 +943,8 @@ def HandleMacros(macIdx):
     if(_PadMode.NavSet.MacroNav == False):
         return 
     macro = _MacroList[macIdx]
-    if(not RunMacro(macro)):
+    # print('Macro:', macro.Name, (macro.Execute==None))
+    if(macro.Execute == None):
         if( macro.Name == "Chan Rack"): #macIdx == 1):
             ShowChannelRack(-1)
             if(Settings.TOGGLE_CR_AND_BROWSER):
@@ -957,17 +959,18 @@ def HandleMacros(macIdx):
                 ShowPlaylist(-1)
         elif(macro.Name == "Mixer"): #"macIdx == 3):
             ShowMixer(-1)        
-        elif(macro.Name == "Close All"): #macIdx == 0):
-            # DisplayTimedText('Reset Windows')
-            transport.globalTransport(FPT_F12, 1)  # close all...
-            if(Settings.REOPEN_WINDOWS_AFTER_CLOSE_ALL):
-                ShowBrowser(1)
-                ShowMixer(1)
-                ShowChannelRack(1)
-                ShowPlaylist(1)
+        # elif(macro.Name == "Close All"): #macIdx == 0):
+        #     # DisplayTimedText('Reset Windows')
+        #     transport.globalTransport(FPT_F12, 1)  # close all...
+        #     if(Settings.REOPEN_WINDOWS_AFTER_CLOSE_ALL):
+        #         ShowBrowser(1)
+        #         ShowMixer(1)
+        #         ShowChannelRack(1)
+        #         ShowPlaylist(1)
         else:
             return False 
-
+    else:
+        RunMacro(macro)
     return True 
 
 def HandleNotes(event, padNum):
@@ -2021,6 +2024,8 @@ def RefreshMacros():
         return 
     for idx, pad in enumerate(pdMacros):
         SetPadColor(pad, _MacroList[idx].PadColor, dimDefault)
+    
+    
 
 
 def RefreshMarkers():
@@ -3466,7 +3471,8 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
         if(Settings.TOGGLE_CR_AND_BROWSER):
             ui.hideWindow(widChannelRack)  
 
-        if(_resetAutoHide):
+        #if(_resetAutoHide):
+        if(isAutoHide):
             ui.setBrowserAutoHide(False)  # if hidden it will become visible
         
         ui.showWindow(widBrowser) 
@@ -3482,7 +3488,8 @@ def ShowBrowser(showVal, bUpdateDisplay = False):
             ui.setBrowserAutoHide(True) # BUG? does not auto close
             _resetAutoHide = False
         else:
-            ui.hideWindow(widBrowser)
+            if(ui.getVersion(0) > 20): # BUG: can't reopen pre FL 21, so we don't close it.
+                ui.hideWindow(widBrowser)
 
         if(Settings.TOGGLE_CR_AND_BROWSER):
             ShowChannelRack(1) 
@@ -3629,8 +3636,6 @@ def ShowNote(note, isOn = True):
 def UpdateWindowStates():
     global _PadMode
     
-    prn(lvlA, 'UpdateWindowStates')
-
     if(Settings.TOGGLE_CR_AND_BROWSER) and (ui.getFocused(widBrowser)):
         if ui.getVisible(widChannelRack) == 1:
             ShowChannelRack(0)
@@ -3875,14 +3880,14 @@ def getPlugin(pluginName):
     else:
         pl = getPluginInfo(-1) # unknown, read the info
     
-    rd3d2Present = ('rd3d2 Ext' in pl.ParameterGroups.keys())
-    UseExternalKnobPresets = (len(pl.getCurrentKnobParamOffsets()) == 0) and rd3d2Present
+    # rd3d2Present = ('rd3d2 Ext' in pl.ParameterGroups.keys())
+    # UseExternalKnobPresets = (len(pl.getCurrentKnobParamOffsets()) == 0) and rd3d2Present
 
-    if(UseExternalKnobPresets):
-        pl.assignKnobs(_rd3d2PotParamOffsets)
-        plist = _rd3d2PotParams.get(pl.PluginName)
-        pl.assignKnobsFromParamList(plist)
-        print('rd3d2 params loaded for {}'.format(pl.Name))
+    # if(UseExternalKnobPresets):
+    #     pl.assignKnobs(_rd3d2PotParamOffsets)
+    #     plist = _rd3d2PotParams.get(pl.PluginName)
+    #     pl.assignKnobsFromParamList(plist)
+    #     print('rd3d2 params loaded for {}'.format(pl.Name))
     
     LOADED_PLUGINS[pl.getID()] = pl
     return pl 

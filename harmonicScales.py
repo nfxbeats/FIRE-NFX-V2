@@ -1,3 +1,4 @@
+print("Loading...")
 # name=harmonic scales
 # url=
 
@@ -27,9 +28,19 @@ HARMONICSCALE_CHROMATIC = 22
 
 HARMONICSCALE_LAST = 22
 
-HarmonicScaleNamesT = ('Ionian/Major', 'Harmonic minor', 'Melodic minor', 'Whole tone', 'Diminished', 'Major penta', 'Minor penta', 'Jap in sen', 'Major bebop', 'Dominant bebop', 'Blues', 'Arabic', 'Enigmatic', 'Neapolitan', 'Neap. minor', 'Hungarian minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Aeolian/Minor', 'Locrian', 'Chromatic')
+HarmonicScaleNamesT = ['Ionian/Major', 'Harmonic minor', 'Melodic minor', 'Whole tone', 'Diminished', 'Major penta', 'Minor penta', 'Jap in sen', 'Major bebop', 'Dominant bebop', 'Blues', 'Arabic', 'Enigmatic', 'Neapolitan', 'Neap. minor', 'Hungarian minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Aeolian/Minor', 'Locrian', 'Chromatic']
 
 HarmonicScaleList = [[0 for x in range(13)] for y in range(23)]
+
+
+def addScale(scaleName, noteList): # addScale('nfx', [9,8,7,6,5,4,3,2,1,0,9,8,7])
+    global HARMONICSCALE_LAST
+    global HarmonicScaleNamesT
+    global HarmonicScaleList
+    HarmonicScaleList.append(noteList)
+    HarmonicScaleNamesT.append(scaleName)
+    HARMONICSCALE_LAST = len(HarmonicScaleList)-1
+    return HarmonicScaleNamesT[-1], HarmonicScaleList[-1], HARMONICSCALE_LAST
 
 def GetScaleNoteCount(scale):
     Result = 0

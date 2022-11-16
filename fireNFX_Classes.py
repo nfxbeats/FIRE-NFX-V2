@@ -451,29 +451,29 @@ class TnfxMenuItems:
         if(not exists):
             self.SubItems.append(item)
 
-_rd3d2PotParams = {} # 'PluginName':[param1, .., paramX]
-_rd3d2PotParamOffsets = {} 
-try:
-   # from native_pot_parameters import PluginParameter, native_plugin_parameters as npp 
-   # until rd3d2 approves my submitted code I will use the local file.
-    from rd3d2_pot_params import PluginParameter, native_plugin_parameters as npp
-    if(len(npp) < 1): # no error, but no list either
-        print('rd3d2 Pot Parameters found, but the dictionary did not load.')    
-    else:
-        print('rd3d2 Pot Parameters found. {} plugins available in the dictionary.'.format(len(npp)))
-        for plugin in npp.keys():
-            _rd3d2PotParams[plugin] = []
-            # for param in npp[plugin]:
-            #     if param != None:
-            #         bipolar = param.deadzone_centre != None
-            #         name = param.name
-            #         if name == '':
-            #             name = '?' 
-            #         nfxParam = TnfxParameter(param.index, name, 0, '', bipolar)
-            #         _rd3d2PotParams[plugin].append(nfxParam)
-            #         _rd3d2PotParamOffsets[plugin].append(param.index)
-        print('rd3d2 Pot Parameters conversion. {} plugins converted.'.format(len(_rd3d2PotParams)))
-except ImportError:
-    print('rd3d2 Pot Parameters NOT found.') # Failed to import - assume they don't have custom settings
+# _rd3d2PotParams = {} # 'PluginName':[param1, .., paramX]
+# _rd3d2PotParamOffsets = {} 
+# try:
+#    # from native_pot_parameters import PluginParameter, native_plugin_parameters as npp 
+#    # until rd3d2 approves my submitted code I will use the local file.
+#     from rd3d2_pot_params import PluginParameter, native_plugin_parameters as npp
+#     if(len(npp) < 1): # no error, but no list either
+#         print('rd3d2 Pot Parameters found, but the dictionary did not load.')    
+#     else:
+#         print('rd3d2 Pot Parameters found. {} plugins available in the dictionary.'.format(len(npp)))
+#         for plugin in npp.keys():
+#             _rd3d2PotParams[plugin] = []
+#             # for param in npp[plugin]:
+#             #     if param != None:
+#             #         bipolar = param.deadzone_centre != None
+#             #         name = param.name
+#             #         if name == '':
+#             #             name = '?' 
+#             #         nfxParam = TnfxParameter(param.index, name, 0, '', bipolar)
+#             #         _rd3d2PotParams[plugin].append(nfxParam)
+#             #         _rd3d2PotParamOffsets[plugin].append(param.index)
+#         print('rd3d2 Pot Parameters conversion. {} plugins converted.'.format(len(_rd3d2PotParams)))
+# except ImportError:
+#     print('rd3d2 Pot Parameters NOT found.') # Failed to import - assume they don't have custom settings
 
 
