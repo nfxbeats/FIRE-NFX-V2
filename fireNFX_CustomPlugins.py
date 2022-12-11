@@ -7,4 +7,6 @@ from pluginreFXNexus import pluginreFXNexus
 
 #mixer
 from pluginFruityLimiter import pluginFruityLimiter
+from pluginGrossBeat import pluginGrossBeat
+
 

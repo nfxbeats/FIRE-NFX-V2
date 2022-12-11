@@ -54,6 +54,7 @@ class TnfxChannelPlugin:
         self.FLChannelType = -1
         self.PresetGroups = {}
         self.Type = type
+        self.ParamPadMaps = []
         for i in range(4): # pre-allocate these to have 4 each
             p = TnfxParameter(-1,'',i,'',False) # offset = -1 to identify it's unassigned
             self.User1Knobs.append(p)
@@ -64,11 +65,15 @@ class TnfxChannelPlugin:
         return newPlugin
 
     def getID(self):
-        chanName= channels.getChannelName(channels.selectedChannel())
+        chanName = channels.getChannelName(channels.selectedChannel())
+        number = channels.selectedChannel()
+        if(self.Type == cpMixerPlugin):
+            number = mixer.trackNumber()
+            chanName = mixer.getTrackName(number)
         presetName = "NONE"
         if(plugins.isValid(channels.selectedChannel())):
             presetName = plugins.getName(channels.selectedChannel(), -1, 6, -1)
-        return "{}-{}-{}".format(self.PluginName, chanName, presetName)    
+        return "{}-{}-{}-{}".format(self.PluginName, chanName, presetName, number)    
 
     def getParamNamesForGroup(self, groupName):
         params = []
@@ -186,18 +191,18 @@ class TnfxPadMode:
         return self.NavSet.NavSetID in self.TempNavSets
     
     def SetNavSet(self, navSet):
-        if(navSet not in self.TempNavSets) and (navSet != self.NavSet.NavSetID):
+        if(self.NavSet.NavSetID in self.AllowedNavSets): 
             self.NavSetHist.append(self.NavSet.NavSetID) # store current NS to recall later
             if(len(self.NavSetHist) > 10):
                 self.NavSetHist.pop(0)
         self.NavSet.SetNavSet(navSet)
 
     def RecallPrevNavSet(self):
-        self.NavSet.InitData()
         prevNS = self.AllowedNavSets[0] # default
         if(len(self.NavSetHist) > 0):
             prevNS = self.NavSetHist.pop()
-        self.NavSet.SetNavSet(prevNS)
+        self.SetNavSet(prevNS)
+
 
 
 class TnfxProgressStep:
@@ -220,6 +225,14 @@ class TnfxMarker:
     def __str__(self):
         return "Marker #{}, {}, SongPos: {}".format(self.Number, self.Name, self.SongPosAbsTicks)
 
+class TnfxMixerEffectSlot:
+    def __init__(self, slotIdx, pluginName, color = 0x000000) -> None:
+        self.SlotIndex = slotIdx
+        self.PluginName = pluginName
+        self.Color = color
+        self.Muted = False
+        self.MixLevel = 0
+
 class TnfxMixer:
     def __init__(self, flIdx):
         self.FLIndex = flIdx
@@ -227,6 +240,7 @@ class TnfxMixer:
         self.Color = 0x000000 
         self.Muted = False
         self.Selected = False
+        self.Effects = []
         self.Update()
     def __str__(self):
         return "Mixer #{}.{}  ({})  Muted:{}, Selected:{}".format(self.FLIndex, self.Name, self.Color, self.Muted, self.Selected)
@@ -395,6 +409,21 @@ ptDrum = 4
 ptMacro = 5
 ptNav = 6
 ptProgress = 7
+ptParameter = 8
+
+class TnfxParamPadMapping:
+    def __init__(self, offset, color = 0x000000, padList = []):
+        self.Offset = offset
+        self.Color = color
+        self.Pads = padList
+        def getValueFromPad(self, padIdx):
+            val = -1
+            if(padIdx in self.Pads):
+                size = len(self.Pads) - 1 # -1 because FL calcs this way
+                incby = 1 / size
+                val = self.Pads.index(padIdx) * incby 
+            return val
+
 
 class TnfxPadMap:
     def __init__(self, padIndex, flIndex, color, tag):

@@ -168,13 +168,11 @@ def SetPadRGB(idx, r, g, b):
     dataOut[i + 1] = r
     dataOut[i + 2] = g
     dataOut[i + 3] = b
-
     SendMessageToDevice(MsgIDSetRGBPadLedState, len(dataOut), dataOut)
 
 
 
 def SendCC(ID, Val):
-
     if (not device.isAssigned()):
         return
     device.midiOutNewMsg(MIDI_CONTROLCHANGE + (ID << 8) + (Val << 16), ID)
@@ -225,14 +223,20 @@ def getPluginParam(chanIdx, paramIdx, prn = False, mixSlotIdx = -1): # -1 denote
     valuestr = plugins.getParamValueString(paramIdx, chanIdx, mixSlotIdx)
     bipolar = False
     name, uname, varName = getPluginNames(chanIdx, mixSlotIdx)
-    if(caption != '') and prn:
-        print(varName + ".addParamToGroup('ALL', TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
-        # print('#    Param', paramIdx, caption )
-        # print('#     Value', paramIdx, value )
-        # print('#    ValStr', paramIdx, valuestr )
-        # print('#    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
-        # print('#    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
-        # print('----------------------')
+    spclCnt = plugins.getPadInfo(chanIdx, mixSlotIdx, PAD_Count, paramIdx)
+    if(caption != ''):
+        if prn:
+            print(varName + ".addParamToGroup('ALL', TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
+            if( spclCnt > 0 ):
+                semitone = plugins.getPadInfo(chanIdx, mixSlotIdx, PAD_Semitone, paramIdx)
+                padcolor = plugins.getPadInfo(chanIdx, mixSlotIdx, PAD_Color, paramIdx)
+                for spclIdx in range(plugins.getPadInfo(chanIdx, mixSlotIdx, 0, paramIdx)):
+                    print('#    Semitone: ', semitone )
+                    print('#     Color:', hex(padcolor), padcolor )
+            # print('#    ValStr', paramIdx, valuestr )
+            # print('#    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
+            # print('#    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
+            # print('----------------------')
     return TnfxParameter(paramIdx, caption, value, valuestr, bipolar)
 
 
@@ -263,10 +267,12 @@ def RemoveBadChars(badChars, textStr):
         res = res.replace(badChar, '')
     return res
 
-def getAlphaNum(textStr):
+def getAlphaNum(textStr, allowSpaces = False):
     res = textStr
     for idx, char in enumerate(textStr):
-        if(not char.isalnum()):
+        if (allowSpaces) and (char == ' '):
+            pass
+        elif(not char.isalnum()):
             res = res.replace(char, '')
     return res
 

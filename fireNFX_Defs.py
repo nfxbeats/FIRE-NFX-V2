@@ -1,7 +1,7 @@
 # name = FireNFX Definitions
 #
 # much of this is copied from the Image-Line device_Fire code
-from harmonicScales import *
+from fireNFX_HarmonicScales import *
 
 # PAD Modes
 MODE_PATTERNS = 0 # was MODE_STEP
@@ -96,6 +96,11 @@ IDLoop = 53
 # Pads
 IDPadFirst = 54
 IDPadLast = 117
+
+PAD_Count = 0
+PAD_Semitone =	1	#Retrieve semitone for pad specified by padIndex
+PAD_Color =	2	#Retrieve color for pad specified by padIndex    
+
 
 TransportCtrls = [IDPatternSong, IDPlay, IDStop, IDRec]
 ShiftAltCtrls = [IDShift, IDAlt]
@@ -193,33 +198,34 @@ NoteValueList = [0,1,2,3,4,5,6,7,8,9,10,11]
 
 OctavesList = [1,2,3,4,5]
 
-ScalesList = [
-        HARMONICSCALE_CHROMATIC, 
+#build a scales list
+# ScalesList = [
+#         HARMONICSCALE_CHROMATIC, 
         
-        # descriptions/key notes from jake @ signals music studio - https://www.youtube.com/channel/UCRDDHLvQb8HjE2r7_ZuNtWA
-                                             # Tonality     KeyNote       Description
-        HARMONICSCALE_MAJOR,             # Major         7th         Bright, Happy, Melodic, Joyous
-        HARMONICSCALE_DORIAN ,           # Minor         6th         Mellow, Smooth, Semi-dark, Spicy 
-        HARMONICSCALE_PHRYGIAN ,         # Minor         2nd         Dark, Tense, Creepy, Exotic
-        HARMONICSCALE_LYDIAN ,           # Major         4th         Floaty, Quirky, Sci-Fi, Spacy   *Jakes fave.
-        HARMONICSCALE_MIXOLYDIAN  ,      # Major         7th         Bright, Upbeat, Rockish, Irish
-        HARMONICSCALE_AEOLIAN ,          # Minor         6th         Dark, Rock, Sad-ish, 
-        HARMONICSCALE_LOCRIAN ,          # Diminished    ???         ??? (No natural fifth, hard to use)
-        HARMONICSCALE_MAJORPENTATONIC,   # Major 
-        HARMONICSCALE_MINORPENTATONIC,    # Minor
-        HARMONICSCALE_BLUES,
-        HARMONICSCALE_HARMONICMINOR,
-        HARMONICSCALE_MELODICMINOR,
-        HARMONICSCALE_WHOLETONE,
-        HARMONICSCALE_DIMINISHED,
-        HARMONICSCALE_MAJORBEBOP,
-        HARMONICSCALE_DOMINANTBEBOP,
-        HARMONICSCALE_ENIGMATIC,
-        HARMONICSCALE_NEAPOLITAN,
-        HARMONICSCALE_NEAPOLITANMINOR,
-        HARMONICSCALE_HUNGARIANMINOR,
-        HARMONICSCALE_ARABIC,
-        HARMONICSCALE_JAPINSEN]
+#         # descriptions/key notes from jake @ signals music studio - https://www.youtube.com/channel/UCRDDHLvQb8HjE2r7_ZuNtWA
+#                                              # Tonality     KeyNote       Description
+#         HARMONICSCALE_MAJOR,             # Major         7th         Bright, Happy, Melodic, Joyous
+#         HARMONICSCALE_DORIAN ,           # Minor         6th         Mellow, Smooth, Semi-dark, Spicy 
+#         HARMONICSCALE_PHRYGIAN ,         # Minor         2nd         Dark, Tense, Creepy, Exotic
+#         HARMONICSCALE_LYDIAN ,           # Major         4th         Floaty, Quirky, Sci-Fi, Spacy   *Jakes fave.
+#         HARMONICSCALE_MIXOLYDIAN  ,      # Major         7th         Bright, Upbeat, Rockish, Irish
+#         HARMONICSCALE_AEOLIAN ,          # Minor         6th         Dark, Rock, Sad-ish, 
+#         HARMONICSCALE_LOCRIAN ,          # Diminished    ???         ??? (No natural fifth, hard to use)
+#         HARMONICSCALE_MAJORPENTATONIC,   # Major 
+#         HARMONICSCALE_MINORPENTATONIC,    # Minor
+#         HARMONICSCALE_BLUES,
+#         HARMONICSCALE_HARMONICMINOR,
+#         HARMONICSCALE_MELODICMINOR,
+#         HARMONICSCALE_WHOLETONE,
+#         HARMONICSCALE_DIMINISHED,
+#         HARMONICSCALE_MAJORBEBOP,
+#         HARMONICSCALE_DOMINANTBEBOP,
+#         HARMONICSCALE_ENIGMATIC,
+#         HARMONICSCALE_NEAPOLITAN,
+#         HARMONICSCALE_NEAPOLITANMINOR,
+#         HARMONICSCALE_HUNGARIANMINOR,
+#         HARMONICSCALE_ARABIC,
+#         HARMONICSCALE_JAPINSEN]
 
 lvlN = -2 # Never
 lvlA = -1 # Always
