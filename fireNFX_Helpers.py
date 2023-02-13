@@ -9,6 +9,7 @@ import mixer
 import plugins 
 
 
+
 # Global
 def SetNativeParam(offset, value):
     return general.processRECEvent(offset, value, midi.REC_SetAll)  # REC_SetAll forces the refresh...
@@ -19,6 +20,18 @@ def GetNativeParam(offset):
 # Channel
 def getCurrChanIdx(): # backwards compatibility
     return channels.selectedChannel()
+
+def SetChannelPluginParam(offset, value, chanNum = -1):
+    if(chanNum == -1):
+        chanNum = channels.selectedChannel()
+    recEventID = channels.getRecEventId(chanNum) + midi.REC_Chan_Plugin_First
+    return general.processRECEvent(recEventID + offset, value, midi.REC_SetAll) # REC_SetAll forces the refresh...
+
+def GetChannelPluginParam(offset, chanNum = -1):
+    if(chanNum == -1):
+        chanNum = channels.selectedChannel()
+    recEventID = channels.getRecEventId(chanNum) + midi.REC_Chan_Plugin_First
+    return general.processRECEvent(recEventID + offset, 0, midi.REC_GetValue)
 
 def SetChannelFXParam(offset, value, chanNum = -1):
     if(chanNum == -1):
@@ -33,19 +46,23 @@ def GetChannelFXParam(offset, chanNum = -1):
     return general.processRECEvent(recEventID + offset, 0, midi.REC_GetValue)
 
 # MIXER
-def SetMixerGenParamVal(offset, value, trkNum = -1):
+def SetMixerGenParamVal(offset, value, trkNum = -1, slotIndex = 0):
     # usage: SetMixerGenParamVal(midi.REC_Mixer_Vol, 11400, 1) to set the volume of mixer channel # 1 to 11400
     if(trkNum == -1):
         trkNum = mixer.trackNumber() 
-    recEventID = mixer.getTrackPluginId(trkNum, 0)
+    recEventID = mixer.getTrackPluginId(trkNum, slotIndex)
     return general.processRECEvent(recEventID + offset, value, midi.REC_SetAll) # REC_SetAll forces the refresh...
 
-def GetMixerGenParamVal(offset, trkNum = -1):
+def GetMixerGenParamVal(offset, trkNum = -1, slotIndex = 0):
     # usage: GetMixerGenParamVal(midi.REC_Mixer_Vol, 1) to get the volume of mixer channel #1
     if(trkNum == -1):
         trkNum = mixer.trackNumber()
-    recEventID = mixer.getTrackPluginId(trkNum, 0)
+    recEventID = mixer.getTrackPluginId(trkNum, slotIndex)
     return general.processRECEvent(recEventID + offset, 0, midi.REC_GetValue)
+
+
+# GetMixerGenParamVal((REC_Plug_General_First, 0, 0)
+#ScanParams(REC_Plug_General_First + (REC_ItemRange*2), 2, True)
 
 def SetMixerPluginParamVal(offset, value, trkNum = 0, slotIdx = 0):
     if(trkNum == -1):
@@ -59,22 +76,16 @@ def GetMixerPluginParamVal(offset, trkNum = 0, slotIdx = 0):
     val = plugins.getParamValue(offset, trkNum, slotIdx)
     return val
 
-def GetMixerSlotPluginName(trkNum = -1, slotIdx = 0):
+def GetMixerSlotPluginNames(trkNum = -1, slotIdx = 0):
     if(trkNum == -1):
         trkNum = mixer.trackNumber()
     if(plugins.isValid(trkNum, slotIdx)):
-        return plugins.getPluginName(trkNum, slotIdx, 0), plugins.getPluginName(trkNum, slotIdx, 1)
+        name = plugins.getPluginName(trkNum, slotIdx, 0)
+        uname = plugins.getPluginName(trkNum, slotIdx, 1)
+        uname = uname.partition(" (")[0].strip()
+        return name, uname
     else:
         return 'INVALID', 'INVALID'
-
-def GetMixerSlotEffects(trkNum = -1):
-    # return a dict of  slotNum:'Plguin Name'
-    res = {}
-    for fx in range(10): # 0-9
-        name, uname = GetMixerSlotPluginName(trkNum, fx)
-        if(name != 'INVALID'):
-            res[fx+1] = name
-    return res
 
 # Utility
 def ScanParams(offsetStart, scanLength = 10, includeBlank = False):  

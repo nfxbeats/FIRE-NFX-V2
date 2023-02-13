@@ -2,11 +2,19 @@
 # Various class definitions
 #
 from fireNFX_Defs import *
+from fireNFX_FireUtils import FLColorToPadColor
 import plugins
 import channels
 import mixer
+import midi 
+from fireNFX_Helpers import GetMixerGenParamVal
 
 def clonePluginParams(srcPlugin, destPlugin):
+    # some basic copies 
+    destPlugin.InvertOctaves = srcPlugin.InvertOctaves
+    destPlugin.isNative = srcPlugin.isNative 
+    destPlugin.AlwaysRescan = srcPlugin.AlwaysRescan 
+
     # enumerate the plugins list. no deepcopy :(  
     for param in srcPlugin.Parameters:
         newParam = TnfxParameter(param.Offset, param.Caption, param.Value, param.ValueStr, param.Bipolar, param.StepsInclZero)
@@ -18,8 +26,10 @@ def clonePluginParams(srcPlugin, destPlugin):
     for knob in range(4):
         param1 = srcPlugin.User1Knobs[knob] 
         param2 = srcPlugin.User2Knobs[knob] 
+        param3 = srcPlugin.User3Knobs[knob] 
         newParam1 = TnfxParameter(param1.Offset, param1.Caption, param1.Value, param1.ValueStr, param1.Bipolar, param1.StepsInclZero)
         newParam2 = TnfxParameter(param2.Offset, param2.Caption, param2.Value, param2.ValueStr, param2.Bipolar, param2.StepsInclZero)
+        newParam3 = TnfxParameter(param3.Offset, param3.Caption, param3.Value, param3.ValueStr, param3.Bipolar, param3.StepsInclZero)
 
         if(param1.Caption in ['?', ''] and param1.Offset > -1):
             if(plugins.isValid(channels.selectedChannel())):
@@ -29,8 +39,14 @@ def clonePluginParams(srcPlugin, destPlugin):
             if(plugins.isValid(channels.selectedChannel())):
                 newParam2.Caption = plugins.getParamName(param2.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
 
+        if(param3.Caption in ['?', ''] and param3.Offset > -1):
+            if(plugins.isValid(channels.selectedChannel())):
+                newParam3.Caption = plugins.getParamName(param3.Offset, channels.selectedChannel(), -1) # -1 denotes not mixer
+
         destPlugin.assignParameterToUserKnob(KM_USER1, knob, newParam1 )
         destPlugin.assignParameterToUserKnob(KM_USER2, knob, newParam2 )
+        destPlugin.assignParameterToUserKnob(KM_USER3, knob, newParam3 )
+
     return destPlugin
 
 cpGlobal = 0
@@ -49,18 +65,21 @@ class TnfxChannelPlugin:
         self.TweakableParam = None
         self.User1Knobs = []
         self.User2Knobs = []
+        self.User3Knobs = []
         self.isNative = False
         self.AlwaysRescan = True
         self.FLChannelType = -1
         self.PresetGroups = {}
         self.Type = type
+        self.InvertOctaves = False
         self.ParamPadMaps = []
         for i in range(4): # pre-allocate these to have 4 each
             p = TnfxParameter(-1,'',i,'',False) # offset = -1 to identify it's unassigned
             self.User1Knobs.append(p)
             self.User2Knobs.append(p)
+            self.User3Knobs.append(p)
     def copy(self):
-        newPlugin = TnfxChannelPlugin(self.PluginName)
+        newPlugin = TnfxChannelPlugin(self.PluginName, self.UserName, self.Type)
         clonePluginParams(self, newPlugin)
         return newPlugin
 
@@ -110,14 +129,18 @@ class TnfxChannelPlugin:
     def getCurrentKnobParamOffsets(self):
         u1 = []
         u2 = []
+        u3 = []
         res = []
         for i in range(4): # pre-allocate these to have 4 each
             if(self.User1Knobs[i].Offset > -1):
                 u1.append(self.User1Knobs[i].Offset)
             if(self.User2Knobs[i].Offset > -1):
                 u2.append(self.User2Knobs[i].Offset)
+            if(self.User3Knobs[i].Offset > -1):
+                u3.append(self.User3Knobs[i].Offset)
         res.extend(u1)
         res.extend(u2)
+        res.extend(u3)
         return res 
         
     def assignParameterToUserKnob(self, knobMode, knobIdx, nfxParameter):
@@ -127,6 +150,8 @@ class TnfxChannelPlugin:
             self.User1Knobs[knobIdx] = nfxParameter
         elif(knobMode == KM_USER2):
             self.User2Knobs[knobIdx] = nfxParameter
+        elif(knobMode == KM_USER3):
+            self.User3Knobs[knobIdx] = nfxParameter
 
     def assignOffsetToUserKnob(self, usermode, knob, paramOffs):
         self.assignParameterToUserKnob(usermode, knob, self.getParamFromOffset(paramOffs) )
@@ -144,7 +169,10 @@ class TnfxChannelPlugin:
                 return idx
             km = KM_USER1
             ko = idx
-            if idx > 3: 
+            if idx > 7: 
+                km = KM_USER3
+                ko = idx - 8
+            elif idx > 3: 
                 km = KM_USER2
                 ko = idx - 4
             if(offs < 0) or (self.getParamFromOffset(offs) == None):
@@ -226,31 +254,45 @@ class TnfxMarker:
         return "Marker #{}, {}, SongPos: {}".format(self.Number, self.Name, self.SongPosAbsTicks)
 
 class TnfxMixerEffectSlot:
-    def __init__(self, slotIdx, pluginName, color = 0x000000) -> None:
+    def __init__(self, slotIdx, pluginName, color = 0xFFFFFF, trackNum = -1) -> None:
         self.SlotIndex = slotIdx
-        self.PluginName = pluginName
+        self.Name = pluginName
         self.Color = color
         self.Muted = False
         self.MixLevel = 0
+        self.TrackNumber = trackNum
+        self.Used = False
+        self.Update()
+    def __str__(self) -> str:
+        return "Effect Slot #{}, {}, Muted: {}, Mix: {}, , color: {}, Slot In Use: {}".format(self.SlotIndex, self.Name, self.Muted, self.MixLevel, hex(self.Color), self.Used)
+    def Update(self):
+        if(self.TrackNumber < 0):
+            self.TrackNumber = mixer.trackNumber()
+        self.Muted = GetMixerGenParamVal(midi.REC_Plug_Mute, self.TrackNumber, self.SlotIndex) == 0
+        self.MixLevel = GetMixerGenParamVal(midi.REC_Plug_MixLevel, self.TrackNumber, self.SlotIndex)
+        self.Used = plugins.isValid(self.TrackNumber, self.SlotIndex)
+        # if(self.Used):
+        #     self.Color = plugins.getColor(self.TrackNumber, self.SlotIndex, midi.GC_BackgroundColor, 0)
 
 class TnfxMixer:
-    def __init__(self, flIdx):
+    def __init__(self, flIdx, fxSlots = {}):
         self.FLIndex = flIdx
         self.Name = ''
         self.Color = 0x000000 
         self.Muted = False
         self.Selected = False
-        self.Effects = []
+        self.EffectSlots = fxSlots
         self.Update()
     def __str__(self):
-        return "Mixer #{}.{}  ({})  Muted:{}, Selected:{}".format(self.FLIndex, self.Name, self.Color, self.Muted, self.Selected)
+        return "Mixer #{}.{}  (color = {})  Muted:{}, Selected:{}, SlotsInUse({}/10)".format(self.FLIndex, self.Name, self.Color, self.Muted, self.Selected, len(self.EffectSlots))
     def getRecEventID(self, pluginOffs = 0): # 1 is first plugin, 0 is the main mixer channel itself
         mixer.getTrackPluginId(self.FLIndex, pluginOffs)
     def Update(self):
         self.Name = mixer.getTrackName(self.FLIndex)
-        self.Color = mixer.getTrackColor(self.FLIndex)
+        self.Color =  FLColorToPadColor(mixer.getTrackColor(self.FLIndex))
         self.Muted = mixer.isTrackMuted(self.FLIndex)
         self.Selected = mixer.isTrackSelected(self.FLIndex)
+        
 
 
 class TnfxChannel:
@@ -302,6 +344,8 @@ nsChannel = 6
 nsPlaylist = 7
 nsMixer = 8
 nsPianoRoll = 9
+nsColorPicker = 10
+
 class TnfxNavigationSet:
     def __init__(self, navSet):
         self.NavSetID = navSet
@@ -324,6 +368,7 @@ class TnfxNavigationSet:
         self.ChannelNav = False
         self.PlaylistNav = False
         self.MixerNav = False
+        self.ColorPicker = False 
 
     def SetNavSet(self, navSet):
         self.NavSetID = navSet
@@ -351,6 +396,8 @@ class TnfxNavigationSet:
             self.ScaleNav = True
         elif(navSet == nsUDLR):
             self.UDLRNav = True
+        elif(navSet == nsColorPicker):
+            self.ColorPicker = True
         elif(navSet == nsNone):
             self.MacroNav = False
             self.NoNav = True
@@ -444,17 +491,6 @@ class TnfxMacro:
         self.PadIndex = -1
         self.PadColor = color 
         self.Execute = command
-
-class TnfxColorMap:
-    def __init__(self, padIndex, color, dimFactor):
-        self.PadIndex = padIndex
-        self.PadColor = color
-        self.DimFactor = dimFactor
-        self.R = 0
-        self.G = 0
-        self.B = 0
-        self.Anim = ''
-        self.AnimStep = -1
 
 class TnfxMenuItems:
     def __init__(self, text, object = None) -> None:

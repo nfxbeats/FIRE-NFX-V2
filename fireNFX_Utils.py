@@ -3,7 +3,7 @@ import math
 import transport
 import time 
 import device
-from fireNFX_Classes import TnfxColorMap, TnfxParameter, TnfxChannelPlugin, cpChannelPlugin, cpMixerPlugin #, _rd3d2PotParams 
+from fireNFX_Classes import TnfxParameter, TnfxChannelPlugin, cpChannelPlugin, cpMixerPlugin #, _rd3d2PotParams 
 import utils
 import plugins
 import mixer
@@ -15,12 +15,13 @@ from midi import *
 from fireNFX_Colors import *
 from fireNFX_Defs import *
 from fireNFX_DefaultSettings import *
+from fireNFX_FireUtils import *
+import colorsys
 
-
-# enum code from https://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
+# # enum code from https://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
 def enum(**enums):
-    return type('Enum', (), enums)
- 
+     return type('Enum', (), enums)
+
 
 # snap defs are in MIDI.py aka Snap_Cell, Snap_line, etc
 SnapModes = enum(   Line = 0,
@@ -66,182 +67,41 @@ RepeatSnapIdx = 7 # for repeat mode
 
 
 BeatLengthNames = ['Bar/Whole', 'Half', 'Quarter', 'Dotted 8th', '8th', '16th', '32nd', '64th']
-BeatLengthDivs  = [0, .5, 1, 1.33333, 2, 4, 8, 16]
+BeatLengthDivs  = [0, .5, 1, 1.5, 2, 4, 8, 16] #  or [0, .5, 1, 1.33333, 2, 4, 8, 16] ? 
 BeatLengthSnap  = [Snap_Beat, Snap_Beat, Snap_Beat, Snap_ThirdBeat, Snap_FourthBeat, Snap_Step, Snap_HalfStep, Snap_FourthStep]
 BeatLengthsDefaultOffs = 6 #  offset of above 
-
-# init the color map
-_ColorMap = list()
-for p in range(64):
-    colorMap = TnfxColorMap(p, 0, 0)
-    _ColorMap.append(colorMap)
-
-def getPadColor(padIdx):
-    return _ColorMap[padIdx].PadColor
-
-def TestColorMap():
-    global _ColorMap
-
-    for r in range(0, 127, 16):
-        for g in range(0, 127, 16):
-            for b in range(0, 127, 16):
-                for cMap in _ColorMap:
-                    cMap.R = r
-                    cMap.G = g
-                    cMap.B = b 
-                FlushColorMap()  
-                
-def SetPadColorBuffer(idx, col, dimFactor, flushBuffer = False):
-    global _ColorMap
-    if(col == -1):
-        col = _ColorMap[idx].PadColor
-    r = (col & 0x7F0000) >> 16
-    g = (col & 0x007F00) >> 8
-    b = (col & 0x7F)
-
-    # reduce brightness by half time dimFactor
-    if(dimFactor > 0):
-        for i in range(dimFactor):
-            r = r >> 1
-            g = g >> 1
-            b = b >> 1
-
-    _ColorMap[idx].PadColor = col 
-    _ColorMap[idx].DimFactor = dimFactor
-    _ColorMap[idx].R = r
-    _ColorMap[idx].G = g
-    _ColorMap[idx].B = b
-    
-    if(flushBuffer):
-        FlushColorMap()
-
-def FlushColorMap():
-    dataOut = bytearray(4 * 64)
-    bufOffs = 0
-    for cMap in _ColorMap:
-        dataOut[bufOffs] = cMap.PadIndex
-        dataOut[bufOffs + 1] = cMap.R
-        dataOut[bufOffs + 2] = cMap.G
-        dataOut[bufOffs + 3] = cMap.B
-        bufOffs += 4
-    SendMessageToDevice(MsgIDSetRGBPadLedState, len(dataOut), dataOut)
-
-def getColorMap():
-    return _ColorMap
-
-def SetPadColor(idx, col, dimFactor, bSaveColor = True):
-    global _ColorMap
-    SetPadColorDirect(idx, col, dimFactor, bSaveColor)
-    #SetPadColorBuffer(idx, col, dimFactor, False)
-
-def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True):
-    global _ColorMap
-    global _PadMap 
-
-    if(col == -1):
-        col = _ColorMap[idx].PadColor
-        dimFactor = _ColorMap[idx].DimFactor
-
-    r = (col & 0x7F0000) >> 16
-    g = (col & 0x007F00) >> 8
-    b = (col & 0x7F)
-
-    # reduce brightness by half times dimFactor
-    if(dimFactor > 0):
-        for i in range(dimFactor):
-            r = r >> 1
-            g = g >> 1
-            b = b >> 1
-
-    SetPadRGB(idx, r, g, b)
-
-    #_PadMap[idx].Color = col 
-    
-    if(bSaveColor):
-        _ColorMap[idx].PadColor = col 
-        _ColorMap[idx].DimFactor = dimFactor
-
-def SetPadRGB(idx, r, g, b):  
-    dataOut = bytearray(4)
-    i = 0
-    dataOut[i] = idx
-    dataOut[i + 1] = r
-    dataOut[i + 2] = g
-    dataOut[i + 3] = b
-    SendMessageToDevice(MsgIDSetRGBPadLedState, len(dataOut), dataOut)
-
-
 
 def SendCC(ID, Val):
     if (not device.isAssigned()):
         return
     device.midiOutNewMsg(MIDI_CONTROLCHANGE + (ID << 8) + (Val << 16), ID)
 
-
-def SendMessageToDevice(ID, l, data):
-
-    ManufacturerIDConst = 0x47
-    DeviceIDBroadCastConst = 0x7F
-    ProductIDConst = 0x43
-
-    if not device.isAssigned():
-        return
-    
-    msg = bytearray(7 + l + 1)
-    lsb = l & 0x7F
-    msb = (l & (~ 0x7F)) >> 7
-
-    msg[0] = MIDI_BEGINSYSEX
-    msg[1] = ManufacturerIDConst
-    msg[2] = DeviceIDBroadCastConst
-    msg[3] = ProductIDConst
-    msg[4] = ID
-    msg[5] = msb
-    msg[6] = lsb
-    if (l > 63):
-        for n in range(0, len(data)):
-            msg[7 + n] = data[n]
-    else:
-        for n in range(0, l):
-            msg[7 + n] = data[n]
-    msg[len(msg) - 1] = MIDI_ENDSYSEX
-    device.midiOutSysex(bytes(msg))
-
-def FLColorToPadColor(FLColor):
-    andVal = 0xC7 # was 0xFF
-    r = ((FLColor >> 16) & andVal) // 2
-    g = ((FLColor >> 8) & andVal) // 2
-    b = (FLColor & andVal) // 2
-    return utils.RGBToColor(r, g, b)
-
 def getParamCaption(chanIdx, paramIdx, mixSlotIdx = -1):
     return plugins.getParamName(paramIdx, chanIdx, mixSlotIdx) # -1 denotes not mixer
 
 def getPluginParam(chanIdx, paramIdx, prn = False, mixSlotIdx = -1): # -1 denotes not mixer
+    hasCaption = (len(plugins.getParamName(paramIdx, chanIdx, mixSlotIdx)) > 0)
     caption = plugins.getParamName(paramIdx, chanIdx, mixSlotIdx) 
     value = plugins.getParamValue(paramIdx, chanIdx, mixSlotIdx) 
     valuestr = plugins.getParamValueString(paramIdx, chanIdx, mixSlotIdx)
     bipolar = False
     name, uname, varName = getPluginNames(chanIdx, mixSlotIdx)
     spclCnt = plugins.getPadInfo(chanIdx, mixSlotIdx, PAD_Count, paramIdx)
-    if(caption != ''):
+    if(hasCaption): # if(caption != ''):
         if prn:
             print(varName + ".addParamToGroup('ALL', TnfxParameter(" + str(paramIdx) +", '" + caption +"', 0, '" + valuestr + "', " + str(bipolar) + ") )")
-            if( spclCnt > 0 ):
-                semitone = plugins.getPadInfo(chanIdx, mixSlotIdx, PAD_Semitone, paramIdx)
-                padcolor = plugins.getPadInfo(chanIdx, mixSlotIdx, PAD_Color, paramIdx)
-                for spclIdx in range(plugins.getPadInfo(chanIdx, mixSlotIdx, 0, paramIdx)):
-                    print('#    Semitone: ', semitone )
-                    print('#     Color:', hex(padcolor), padcolor )
+            # if( spclCnt > 0 ):
+            #     semitone = plugins.getPadInfo(chanIdx, mixSlotIdx, PAD_Semitone, paramIdx)
+            #     padcolor = plugins.getPadInfo(chanIdx, mixSlotIdx, PAD_Color, paramIdx)
+            #     for spclIdx in range(plugins.getPadInfo(chanIdx, mixSlotIdx, 0, paramIdx)):
+            #         print('#    Semitone: ', semitone )
+            #         print('#     Color:', hex(padcolor), padcolor )
             # print('#    ValStr', paramIdx, valuestr )
             # print('#    Color0', paramIdx, plugins.getColor(chanIdx, -1, 0, paramIdx) )
             # print('#    Color1', paramIdx, plugins.getColor(chanIdx, -1, 1, paramIdx) )
             # print('----------------------')
     return TnfxParameter(paramIdx, caption, value, valuestr, bipolar)
 
-
-            
-        
 def getBeatLenInMS(div):
     #   0 = 1 bar whole not
     #   0.5 = half
@@ -258,7 +118,6 @@ def getBeatLenInMS(div):
         timeval = (beatlen/div) * 1000 #
     else: #when div = 0...
         timeval = beatlen * 4000 # one bar aka whole note.
-    barlen = playlist.getVisTimeTick()
     return int(timeval)
 
 def RemoveBadChars(badChars, textStr):
@@ -379,188 +238,6 @@ def getPluginInfo(chanIdx, prn = False, inclBlanks = False, mixSlotIdx = -1):
 
 def ShowPluginInfo(chanIdx):
     getPluginInfo(chanIdx, True)
-
-def ColorToRGB(Color):
-    return (Color >> 16) & 0xFF, (Color >> 8) & 0xFF, Color & 0xFF
-
-def RGBToColor(R,G,B):
-    return (R << 16) | (G << 8) | B
-
-def GradientTest(stepsize = 8):
-    #def Gradient(color1, color2, stepsize, padOffs=0):
-    #stepsize = 4 # 255//5
-    Gradient(cBlue, cOff, stepsize, 0)
-    Gradient(cPurple, cOff, stepsize, 16)
-    Gradient(cMagenta, cOff, stepsize, 32)
-    Gradient(cRed, cOff, stepsize, 48)
-    Gradient(cOrange, cOff, stepsize, 8)
-    Gradient(cYellow, cOff, stepsize, 24)
-    Gradient(cGreen, cOff, stepsize, 40)
-    Gradient(cCyan, cOff, stepsize, 56)
-
-
-def ShadeTest():
-    Shades(cBlue,0)
-    Shades(cPurple, 16)
-    Shades(cMagenta, 32)
-    Shades(cRed, 48)
-    Shades(cOrange, 4)
-    Shades(cYellow, 20)
-    Shades(cGreen, 36)
-    Shades(cCyan, 52)
-
-
-shDim = 0
-shDark = 1
-shNorm = 2
-shLight = 3
-def getShade(baseColor, shadeOffs):
-    multLighten = 1.33
-    multDarken = .23
-    if(shadeOffs == shDim):
-        return Shade(baseColor, multDarken, 2)    # dim
-    elif(shadeOffs == shDark):
-        return Shade(baseColor, multDarken, 1)    # dark
-    elif(shadeOffs == shNorm):
-        return baseColor                           # norm
-    elif(shadeOffs == shLight):
-        return Shade(baseColor, multLighten, 1)   # light
-    else: 
-        return baseColor
-
-def ShowLayout(pads1, color1, pads2, color2):
-    for pad in pads1:
-        SetPadColor(pad, color1, dimDefault)
-    for pad in pads2:
-        SetPadColor(pad, color2, dimDefault)
-
-def Dims(color, padOffs=0):
-    SetPadColor(0+padOffs, color, dimDim)
-    SetPadColor(1+padOffs, color, dimDefault)
-    SetPadColor(2+padOffs, color, dimBright)
-    SetPadColor(3+padOffs, color, dimFull)
-
-
-def Shades(color, padOffs=0):
-    SetPadColor(0+padOffs, getShade(color, shDim), 0)
-    SetPadColor(1+padOffs, getShade(color, shDark), 0)
-    SetPadColor(2+padOffs, getShade(color, shNorm), 0)
-    SetPadColor(3+padOffs, getShade(color, shLight), 0)
-
-def Grads(color, stepsize = 64):
-    Gradient(cOff, color, stepsize, 0, 32)
-    Gradient(color, cWhite, stepsize, 32, 32)
-
-
-def Gradient(color1, color2, stepsize, padOffs=0, len=8):
-    gradientList = []
-    for pad in range(len):
-        step = (127//stepsize) * pad
-        col = FadeColor(color1, color2, step)
-        if(padOffs > -1):
-            SetPadColor(pad+padOffs, col, 0)
-        gradientList.append(col)
-    return gradientList
-
-
-goDim = 0
-goDark = 16
-goNorm = 32
-goLight = 48
-_gradientOffs = [goLight, goNorm, goDark, goDim] # light to dark
-def getGradientOffs(baseColor, goVal):
-    gradientList = Gradient(cOff, baseColor, 64, -1, 32)
-    gradientList.extend(Gradient(baseColor, cWhite, 64, -1, 32))
-    return gradientList[goVal]  #, gradientList
-
-
-
-
-
-
-def Shade(color, mul = 1.1, offs = 0):
-    color1 = color
-    for i in range(3):
-        if(i > 0):
-            color = ColorMult(color, mul)
-            color1 = ColorMult2(color, mul)
-        if(i == offs):
-            return color1
-
-def AnimOff(padIdx, color, steps = 16, wait = 0.1):
-    OrigColor = _ColorMap[padIdx].PadColor 
-    Color1 = cWhite # getShade(color, shLight)
-    Color2 = cOff # getShade(color, shDim)
-    for step in range(steps):
-        stepSize = 255//steps
-        col = FadeColor(OrigColor, Color2, step * stepSize)
-        SetPadColor(padIdx, col, 0)    
-        time.sleep(wait)
-
-def AnimOn(padIdx, color, steps = 16, wait = 0.1):
-    OrigColor = _ColorMap[padIdx].PadColor 
-    Color1 = cWhite # getShade(color, shLight)
-    Color2 = cOff # getShade(color, shDim)
-    for step in range(steps):
-        stepSize = 255//steps
-        col = FadeColor(Color2, OrigColor, step * stepSize)
-        SetPadColor(padIdx, col, 0)    
-        time.sleep(wait)
-
-
-def CycleColors(len = 64, steps = 8, freq = 0.5):
-    center = 128
-    amplitude = 127
-    for inc in range(len):
-        # value = Math.sin(frequency*increment)*amplitude + center;
-        rPhase =  0 
-        gPhase =  2 * math.pi/2
-        bPhase =  4 * math.pi/steps
-        rFreq = 2 * math.pi/steps
-        gFreq = 2 * math.pi/steps
-        bFreq = 2 * math.pi/steps
-        red = int( math.sin(rFreq * inc + rPhase) * amplitude + center )
-        green = int( math.sin(gFreq * inc + gPhase) * amplitude + center )
-        blue = int( math.sin(bFreq * inc + bPhase) * amplitude + center )
-        col = RGBToColor(red, green, blue)
-        print(inc % 64, "color =",hex(col), '#', col,  'rgb', red, green, blue)
-        #if(inc < 64):
-        SetPadColor(inc % 64, col, 0)
-        #time.sleep(0.001)
-
-def ColorMult(color, mul):
-    r, g, b = ColorToRGB(color)
-    r *= mul
-    g *= mul
-    b *= mul
-    r2, g2, b2 = redistribute_rgb(r, g, b)
-    return RGBToColor(r2, g2, b2)
-
-def ColorMult2(color, mul):
-    r, g, b = ColorToRGB(color)
-    r *= mul
-    g *= mul
-    b *= mul
-    r2, g2, b2 = clamp_rgb(r, g, b)
-    return RGBToColor(r2, g2, b2)
-
-
-def clamp_rgb(r, g, b):
-    # from https://stackoverflow.com/questions/141855/programmatically-lighten-a-color
-    return min(127, int(r)), min(127, int(g)), min(127, int(b))
-
-def redistribute_rgb(r, g, b):
-    # from https://stackoverflow.com/questions/141855/programmatically-lighten-a-color
-    threshold = 255.999
-    m = max(r, g, b)
-    if m <= threshold:
-        return int(r), int(g), int(b)
-    total = r + g + b
-    if total >= 3 * threshold:
-        return int(threshold), int(threshold), int(threshold)
-    x = (3 * threshold - total) / (3 * m - total)
-    gray = threshold - x * m
-    return int(gray + x * r), int(gray + x * g), int(gray + x * b)
 
 def getBarFromAbsTicks(absticks):
     return ( absticks // general.getRecPPB() ) + 1
@@ -751,5 +428,207 @@ def FLVersionAtLeast(version: str) -> bool:
     Expects a three part version string, ie. "20.99.0", return True when FL version is equal or greater than
     """
     return getVersionTuple(getVersionStr()) >= getVersionTuple(version)
+
+# color funcs
+def ColorToRGB(Color):
+    return (Color >> 16) & 0xFF, (Color >> 8) & 0xFF, Color & 0xFF
+
+def RGBToColor(R,G,B):
+    return (R << 16) | (G << 8) | B
+
+def GradientTest(stepsize = 8):
+    #def Gradient(color1, color2, stepsize, padOffs=0):
+    #stepsize = 4 # 255//5
+    Gradient(cBlue, cOff, stepsize, 0)
+    Gradient(cPurple, cOff, stepsize, 16)
+    Gradient(cMagenta, cOff, stepsize, 32)
+    Gradient(cRed, cOff, stepsize, 48)
+    Gradient(cOrange, cOff, stepsize, 8)
+    Gradient(cYellow, cOff, stepsize, 24)
+    Gradient(cGreen, cOff, stepsize, 40)
+    Gradient(cCyan, cOff, stepsize, 56)
+
+
+def ShadeTest():
+    Shades(cBlue,0)
+    Shades(cPurple, 16)
+    Shades(cMagenta, 32)
+    Shades(cRed, 48)
+    Shades(cOrange, 4)
+    Shades(cYellow, 20)
+    Shades(cGreen, 36)
+    Shades(cCyan, 52)
+
+
+shDim = 0
+shDark = 1
+shNorm = 2
+shLight = 3
+def getShade(baseColor, shadeOffs):
+    multLighten = 1.33
+    multDarken = .23
+    if(shadeOffs == shDim):
+        return Shade(baseColor, multDarken, 2)    # dim
+    elif(shadeOffs == shDark):
+        return Shade(baseColor, multDarken, 1)    # dark
+    elif(shadeOffs == shNorm):
+        return baseColor                           # norm
+    elif(shadeOffs == shLight):
+        return Shade(baseColor, multLighten, 1)   # light
+    else: 
+        return baseColor
+
+def ShowLayout(pads1, color1, pads2, color2):
+    for pad in pads1:
+        SetPadColor(pad, color1, dimDefault)
+    for pad in pads2:
+        SetPadColor(pad, color2, dimDefault)
+
+def Dims(color, padOffs=0):
+    SetPadColor(0+padOffs, color, dimDim)
+    SetPadColor(1+padOffs, color, dimDefault)
+    SetPadColor(2+padOffs, color, dimBright)
+    SetPadColor(3+padOffs, color, dimFull)
+
+
+def Shades(color, padOffs=0):
+    SetPadColor(0+padOffs, getShade(color, shDim), 0)
+    SetPadColor(1+padOffs, getShade(color, shDark), 0)
+    SetPadColor(2+padOffs, getShade(color, shNorm), 0)
+    SetPadColor(3+padOffs, getShade(color, shLight), 0)
+
+def Grads(color, stepsize = 64):
+    Gradient(cOff, color, stepsize, 0, 32)
+    Gradient(color, cWhite, stepsize, 32, 32)
+
+
+def Gradient(color1, color2, stepsize, padOffs=0, len=8):
+    gradientList = []
+    for pad in range(len):
+        step = (127//stepsize) * pad
+        col = FadeColor(color1, color2, step)
+        if(padOffs > -1):
+            SetPadColor(pad+padOffs, col, 0)
+        gradientList.append(col)
+    return gradientList
+
+
+goDim = 0
+goDark = 16
+goNorm = 32
+goLight = 48
+_gradientOffs = [goLight, goNorm, goDark, goDim] # light to dark
+def getGradientOffs(baseColor, goVal):
+    gradientList = Gradient(cOff, baseColor, 64, -1, 32)
+    gradientList.extend(Gradient(baseColor, cWhite, 64, -1, 32))
+    return gradientList[goVal]  #, gradientList
+
+
+
+
+
+
+def Shade(color, mul = 1.1, offs = 0):
+    color1 = color
+    for i in range(3):
+        if(i > 0):
+            color = ColorMult(color, mul)
+            color1 = ColorMult2(color, mul)
+        if(i == offs):
+            return color1
+
+def AnimOff(padIdx, color, steps = 16, wait = 0.1):
+    OrigColor = _ColorMap[padIdx].PadColor 
+    Color1 = cWhite # getShade(color, shLight)
+    Color2 = cOff # getShade(color, shDim)
+    for step in range(steps):
+        stepSize = 255//steps
+        col = FadeColor(OrigColor, Color2, step * stepSize)
+        SetPadColor(padIdx, col, 0)    
+        time.sleep(wait)
+
+def AnimOn(padIdx, color, steps = 16, wait = 0.1):
+    OrigColor = _ColorMap[padIdx].PadColor 
+    Color1 = cWhite # getShade(color, shLight)
+    Color2 = cOff # getShade(color, shDim)
+    for step in range(steps):
+        stepSize = 255//steps
+        col = FadeColor(Color2, OrigColor, step * stepSize)
+        SetPadColor(padIdx, col, 0)    
+        time.sleep(wait)
+
+
+def CycleColors(len = 64, steps = 8, freq = 0.5):
+    center = 128
+    amplitude = 127
+    for inc in range(len):
+        # value = Math.sin(frequency*increment)*amplitude + center;
+        rPhase =  0 
+        gPhase =  2 * math.pi/2
+        bPhase =  4 * math.pi/steps
+        rFreq = 2 * math.pi/steps
+        gFreq = 2 * math.pi/steps
+        bFreq = 2 * math.pi/steps
+        red = int( math.sin(rFreq * inc + rPhase) * amplitude + center )
+        green = int( math.sin(gFreq * inc + gPhase) * amplitude + center )
+        blue = int( math.sin(bFreq * inc + bPhase) * amplitude + center )
+        col = RGBToColor(red, green, blue)
+        print(inc % 64, "color =",hex(col), '#', col,  'rgb', red, green, blue)
+        #if(inc < 64):
+        SetPadColor(inc % 64, col, 0)
+        #time.sleep(0.001)
+
+def ColorMult(color, mul):
+    r, g, b = ColorToRGB(color)
+    r *= mul
+    g *= mul
+    b *= mul
+    r2, g2, b2 = redistribute_rgb(r, g, b)
+    return RGBToColor(r2, g2, b2)
+
+def ColorMult2(color, mul):
+    r, g, b = ColorToRGB(color)
+    r *= mul
+    g *= mul
+    b *= mul
+    r2, g2, b2 = clamp_rgb(r, g, b)
+    return RGBToColor(r2, g2, b2)
+
+def clamp_rgb(r, g, b):
+    # from https://stackoverflow.com/questions/141855/programmatically-lighten-a-color
+    return min(127, int(r)), min(127, int(g)), min(127, int(b))
+
+def redistribute_rgb(r, g, b):
+    # from https://stackoverflow.com/questions/141855/programmatically-lighten-a-color
+    threshold = 255.999
+    m = max(r, g, b)
+    if m <= threshold:
+        return int(r), int(g), int(b)
+    total = r + g + b
+    if total >= 3 * threshold:
+        return int(threshold), int(threshold), int(threshold)
+    x = (3 * threshold - total) / (3 * m - total)
+    gray = threshold - x * m
+    return int(gray + x * r), int(gray + x * g), int(gray + x * b)
+
+from fireNFX_DefaultSettings import Settings
+
+def TestPallette(dimMult = 4):
+    for idx, color in enumerate(Settings.Pallette.values()):
+        SetPadColor(idx+0, color, 0, False, False, dimMult)
+        SetPadColor(idx+16, color, Settings.DIM_BRIGHT, False, False, dimMult)
+        SetPadColor(idx+32, color, Settings.DIM_NORMAL, False, False, dimMult)
+        SetPadColor(idx+48, color, Settings.DIM_DIM, False, False, dimMult)
+
+def Pallette(jumpBy = 64):
+    pad = 0
+    offs = 0
+    for r in range(0,128, jumpBy):
+        for g in range(0,128, jumpBy):
+            for b in range(0,128, jumpBy):
+                print('pad', pad % 64, 'rgb', r,g,b, 'hex', hex(RGBToColor(r,g,b)) )
+                SetPadColor(pad % 64, RGBToColor(r,g,b), 0)
+                pad+= 1
+                
 
     

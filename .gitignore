@@ -162,3 +162,14 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+nfx_pot_params.zip
+native_pot_parameters.py
+nfx_pot_params.py
+request.txt
+import sys.txt
+myfile.txt
+research.txt
+rd3d2_pot_params.zip
+rd3d2_pot_params.py
+midi.py
+XharmonicScales.py

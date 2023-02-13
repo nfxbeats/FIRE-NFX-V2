@@ -44,10 +44,10 @@ def ShowScriptOutputWindow():
 def CloseAll():
     transport.globalTransport(FPT_F12, 1)  # close all...
     if(Settings.REOPEN_WINDOWS_AFTER_CLOSE_ALL):
-        ui.showWindow(widBrowser)
-        ui.showWindow(widChannelRack)
         ui.showWindow(widPlaylist)
         ui.showWindow(widMixer)
+        ui.showWindow(widBrowser)
+        ui.showWindow(widChannelRack)
 
 # BUILT-IN MACROS DEFINED HERE
 # 

@@ -121,7 +121,7 @@ class TnfxDefaultSettings:
         # Set this to False to prevent them from auto mapping.
         self.AUTO_MAP_KNOWN_PARAMS_TO_USER_KNOBS = True
 
-        self.STARTUP_TEXT_TOP = "-={ FIRE-NFX-V2 }=-"
+        self.STARTUP_TEXT_TOP = "-={FIRE-NFX}=-"
         self.STARTUP_TEXT_BOT = "Version 2.0"
         self.STARTUP_FL_HINT = 'FIRE-NFX-V2 loaded.'
 
@@ -132,6 +132,9 @@ class TnfxDefaultSettings:
 
         self.SHOW_PIANO_ROLL_MACROS = False
 
+        self.AUTO_SWITCH_TO_MAPPED_MIXER_EFFECTS = False 
+
+        self.Pallette = pallette1
 
 # DO NOT EDIT BELOW:
 Settings = TnfxDefaultSettings()
