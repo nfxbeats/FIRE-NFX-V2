@@ -7,6 +7,7 @@ from fireNFX_Classes import TnfxMacro
 from fireNFX_Colors import *
 from fireNFX_DefaultSettings import Settings
 from fireNFX_Utils import getShade, shDark, shDim, shLight, shNorm, NavigateFLMenu
+from fireNFX_PadDefs import pdMacroNav, pdMacros
 
 # code for macros
 def Undo():
@@ -70,11 +71,34 @@ macQuickQuantize            = TnfxMacro("Quantize", getShade(cGreen, shLight), Q
 macQuickPRFix               = TnfxMacro("Quant / Art", getShade(cGreen, shNorm), QuickPRFix)
 macTransposePROctaveUp      = TnfxMacro("Octave Up", getShade(cBlue, shLight), TransposePROctaveUp)
 macTransposePROctaveDown    = TnfxMacro("Octave Down", getShade(cBlue, shDark), TransposePROctaveDown)
+
 _PianoRollMacros = [macQuickQuantize, macQuickPRFix, macTransposePROctaveUp, macTransposePROctaveDown]
 
 # master macro list
-_MacroList = [macCloseAll,  macTogChanRack, macTogPlaylist, macTogMixer, 
-              macUndo,      macCopy,        macCut,         macPaste ]
+_DefaultMacros = [macCloseAll,  macTogChanRack, macTogPlaylist, macTogMixer, 
+                  macUndo,      macCopy,        macCut,         macPaste ]
+
+_MacroList = _DefaultMacros
+_CustomMacros = []
+
+if(len(Settings.DEFAULT_MACROS) > 0):
+    _MacroList.clear()
+    for idx, pad in enumerate(pdMacros):
+        if(idx < len(Settings.DEFAULT_MACROS)):
+            _MacroList.append(Settings.DEFAULT_MACROS[idx])
+        elif(idx < len(_DefaultMacros)):
+            _MacroList.append(_DefaultMacros[idx])
+        else:
+            _MacroList.append(TnfxMacro('', cOff, None)) # empty macro
+
+if(len(Settings.CUSTOM_MACROS) == 0):
+    for idx, pad in enumerate(pdMacroNav):
+        if(idx < len(Settings.CUSTOM_MACROS)):
+            _CustomMacros.append(Settings.CUSTOM_MACROS[idx])
+        else:
+            _CustomMacros.append(TnfxMacro('', cOff, None)) # empty macro
+
+
 
 
 

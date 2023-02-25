@@ -345,6 +345,7 @@ nsPlaylist = 7
 nsMixer = 8
 nsPianoRoll = 9
 nsColorPicker = 10
+nsCustomMacros = 11
 
 class TnfxNavigationSet:
     def __init__(self, navSet):
@@ -369,6 +370,8 @@ class TnfxNavigationSet:
         self.PlaylistNav = False
         self.MixerNav = False
         self.ColorPicker = False 
+        self.CustomMacros = False
+        self.BlinkButtons = False
 
     def SetNavSet(self, navSet):
         self.NavSetID = navSet
@@ -398,6 +401,10 @@ class TnfxNavigationSet:
             self.UDLRNav = True
         elif(navSet == nsColorPicker):
             self.ColorPicker = True
+            self.BlinkButtons = True
+        elif(navSet == nsCustomMacros):
+            self.CustomMacros = True
+            self.BlinkButtons = True
         elif(navSet == nsNone):
             self.MacroNav = False
             self.NoNav = True
@@ -491,6 +498,7 @@ class TnfxMacro:
         self.PadIndex = -1
         self.PadColor = color 
         self.Execute = command
+        self.PadModesAllowed = []
 
 class TnfxMenuItems:
     def __init__(self, text, object = None) -> None:

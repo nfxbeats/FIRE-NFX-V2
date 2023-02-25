@@ -1,7 +1,7 @@
 # special
 cOff        = 0x000000
 cSilver     = 0X606060
-cDimWhite   = 0x101010
+cDimWhite   = 0x202020
 cChannel    = -1   # value to indicate to use the previous channel color in specific cases.
 cNotMuted   = cDimWhite
 cMuted      = cOff

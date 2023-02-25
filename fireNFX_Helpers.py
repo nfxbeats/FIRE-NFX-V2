@@ -90,6 +90,7 @@ def GetMixerSlotPluginNames(trkNum = -1, slotIdx = 0):
 # Utility
 def ScanParams(offsetStart, scanLength = 10, includeBlank = False):  
     # usage: ScanParams(midi.REC_Mixer_First, 127) 
+    # may crash FL when attempting to scan certain ranges. 
     for offset in range(scanLength):
         try:
             offs = offset + offsetStart

@@ -129,12 +129,17 @@ class TnfxDefaultSettings:
         self.DBL_TAP_ZOOM = 4
 
         self.GLOBAL_CONTROL_NAME = 'GLOBAL CTRL'
-
         self.SHOW_PIANO_ROLL_MACROS = False
-
         self.AUTO_SWITCH_TO_MAPPED_MIXER_EFFECTS = False 
+        self.SHOW_CUSTOM_MACROS = False
+        self.WATCH_WINDOW_SWITCHING = True
+
+        self.DEFAULT_MACROS = []
+        self.CUSTOM_MACROS = []
 
         self.Pallette = pallette1
+
+        self.SHOW_AUDIO_PEAKS = True
 
 # DO NOT EDIT BELOW:
 Settings = TnfxDefaultSettings()

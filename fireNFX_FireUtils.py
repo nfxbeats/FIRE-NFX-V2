@@ -1,11 +1,11 @@
 # Fire device specific functions.
-# init the color map
-from fireNFX_Defs import MsgIDSetRGBPadLedState
+
 import device 
 import midi
 import utils 
 
 
+# define and initialize A COLORMAP
 class TnfxColorMap:
     def __init__(self, padIndex, color, dimFactor):
         self.PadIndex = padIndex
@@ -14,35 +14,27 @@ class TnfxColorMap:
         self.R = 0
         self.G = 0
         self.B = 0
-        # self.Anim = ''
-        # self.AnimStep = -1
 
-# define and initialize
 _ColorMap = []
+
+# init the color map
 for p in range(64):
     _ColorMap.append(TnfxColorMap(p, 0, 0))
 
 def getPadColor(padIdx):
     return _ColorMap[padIdx].PadColor
 
-# def TestColorMap():
-#     global _ColorMap
-#     for r in range(0, 127, 16):
-#         for g in range(0, 127, 16):
-#             for b in range(0, 127, 16):
-#                 for cMap in _ColorMap:
-#                     cMap.R = r
-#                     cMap.G = g
-#                     cMap.B = b 
-#                 FlushColorMap()  
-                
-def SetPadColorBuffer(idx, col, dimFactor, flushBuffer = False):
+
+def SetPadColorBuffer(idx, col, dimFactor, flushBuffer = False, bSave = True):
     global _ColorMap
     if(col == -1):
         col = _ColorMap[idx].PadColor
-    r = (col & 0x7F0000) >> 16
-    g = (col & 0x007F00) >> 8
-    b = (col & 0x7F)
+
+    # r = (col & 0x7F0000) >> 16
+    # g = (col & 0x007F00) >> 8
+    # b = (col & 0x7F)
+
+    newCol, r, g, b = AdjustedFirePadColor(FLColorToPadColor(col))
 
     # reduce brightness by half time dimFactor
     if(dimFactor > 0):
@@ -51,16 +43,18 @@ def SetPadColorBuffer(idx, col, dimFactor, flushBuffer = False):
             g = g >> 1
             b = b >> 1
 
-    _ColorMap[idx].PadColor = col 
-    _ColorMap[idx].DimFactor = dimFactor
-    _ColorMap[idx].R = r
-    _ColorMap[idx].G = g
-    _ColorMap[idx].B = b
+    if(bSave):
+        _ColorMap[idx].PadColor = newCol 
+        _ColorMap[idx].DimFactor = dimFactor
+        _ColorMap[idx].R = r
+        _ColorMap[idx].G = g
+        _ColorMap[idx].B = b
     
     if(flushBuffer):
         FlushColorMap()
 
 def FlushColorMap():
+    MsgIDSetRGBPadLedState = 0x65
     dataOut = bytearray(4 * 64)
     bufOffs = 0
     for cMap in _ColorMap:
@@ -81,6 +75,25 @@ def SetPadColor(idx, col, dimFactor, bSaveColor = True, bUseBuffer = False, dimM
     else:
         SetPadColorDirect(idx, col, dimFactor, bSaveColor, dimMult)
 
+def AdjustedFirePadColor(color):
+    r, g, b = utils.ColorToRGB(color)
+    reduceRed = 1
+    reduceBlue = 1
+    if(b > r) :
+        reduceRed  = r / b
+    if(g > b):
+        reduceBlue = b / g
+    if(g > r) and (reduceRed == 1):
+        reduceRed  = r / g
+    if reduceRed < 1:
+        r = int(r * reduceRed)  # red adjust
+    if(reduceBlue < 1):
+        b = int(b * reduceBlue)  # blue adjust
+    # reduce by half to support 0..127 range
+    r = r//2
+    g = g//2
+    b = b//2
+    return utils.RGBToColor(r, g, b), r, g, b    
 
 def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True, dimMult = 2.5):
     # if col is -1, it will remember the previously saved color for that idx.
@@ -95,51 +108,22 @@ def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True, dimMult = 2.5):
     if(bSaveColor):
         _ColorMap[idx].PadColor = col 
         _ColorMap[idx].DimFactor = dimFactor
-
-    r, g, b = utils.ColorToRGB(col)
-
-    reduceRed = 1
-    reduceBlue = 1
-
-    if(_FixChannelColors):
-        if(b > r) :
-            reduceRed  = r / b
-
-        if(g > b):
-            reduceBlue = b / g
-
-        if(g > r) and (reduceRed == 1):
-            reduceRed  = r / g
-        
-        if reduceRed < 1:
-            r = int(r * reduceRed)  # red adjust
-
-        if(reduceBlue < 1):
-            b = int(b * reduceBlue)  # blue adjust
-
-
-    # reduce by half to support 0..127 range
-    r = r//2
-    g = g//2
-    b = b//2
     
-    #print('RGB To Pad - No dim', hex(r), hex(g), hex(b) )
+    newCol, r, g, b = AdjustedFirePadColor(col)
 
     # reduce brightness by half times dimFactor
     if(dimFactor > 0):
+            
         for i in range(dimFactor):
             r = int(r / dimMult)
             g = int(g / dimMult)
             b = int(b / dimMult)
-            # r = r >> 1
-            # g = g >> 1
-            # b = b >> 1
-    #print('RGB To Pad - After dim', hex(r), hex(g), hex(b) )
 
     SetPadRGB(idx, r, g, b)
 
 
 def SetPadRGB(idx, r, g, b):  
+    MsgIDSetRGBPadLedState = 0x65
     #print('Actual RGB To Pad', hex(r), hex(g), hex(b) )
     dataOut = bytearray(4)
     i = 0
