@@ -88,6 +88,17 @@ def GetMixerSlotPluginNames(trkNum = -1, slotIdx = 0):
         return 'INVALID', 'INVALID'
 
 # Utility
+def scanPluginFPN(chanIdx=-1, slotIdx = -1, FPN_FLAG = midi.FPN_Param, scanStart = 0, scanLength = 10):
+    if chanIdx==-1:
+        chanIdx = getCurrChanIdx()
+    for offset in range(scanLength):
+        try:
+            offs = offset + scanStart
+            val = plugins.getName(chanIdx, slotIdx, FPN_FLAG, offs)
+            print('offset {} + {}, value "{}"'.format(scanStart, offset, val))
+        except Exception as e:
+            print('Offset +{}, Scan Exception: {}'.format(offset, e))
+    
 def ScanParams(offsetStart, scanLength = 10, includeBlank = False):  
     # usage: ScanParams(midi.REC_Mixer_First, 127) 
     # may crash FL when attempting to scan certain ranges. 

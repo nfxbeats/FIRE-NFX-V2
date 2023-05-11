@@ -12,11 +12,13 @@ MODE_PERFORM = 3
 #PAD_MODE = MODE_PATTERNS
 
 # Knob Modes
-KM_CHANNEL = 0
-KM_MIXER = 1
-KM_USER1 = 2
-KM_USER2 = 3
-KM_USER3 = 4
+KM_USER0 = 0
+KM_CHANNEL = 1
+KM_MIXER = 2
+KM_USER1 = 3
+KM_USER2 = 4
+KM_USER3 = 5
+
 
 #Fire specific
 ManufacturerIDConst = 0x47
@@ -115,10 +117,12 @@ for ctrlID in range(IDPadFirst, IDPadLast+1):
     PadCtrls.append(ctrlID)
 MuteControls = [IDMute1, IDMute2, IDMute3, IDMute4]
 # the operating knobs mode NOT Pad mode
-KnobModeNames = ["Channel", "Mixer", "User1", "User2", "User3"]
-KnobModeShortNames = ["Ch", "Mx", "U1", "U2", "U3"]
+#KnobModeNames = ["Channel", "Mixer", "User1", "User2", "User3"]
+KnobModeNames = ["", "User1", "User2", "User3"]
+#KnobModeShortNames = ["Ch", "Mx", "U1", "U2", "U3"]
+KnobModeShortNames = ["", "U1", "U2", "U3"]
 KnobModeCtrlID = IDKnobMode
-IDKnobModeLEDVals = [1,2,4,8, 12]
+IDKnobModeLEDVals = [0, 1, 2, 4, 8, 12]
 
 PattUpDnCtrls = [IDPatternUp, IDPatternDown]
 GridLRCtrls = [IDBankL, IDBankR]

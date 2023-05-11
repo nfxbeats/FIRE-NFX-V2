@@ -5,6 +5,7 @@ from fireNFX_Defs import *
 from fireNFX_FireUtils import FLColorToPadColor
 import plugins
 import channels
+import playlist 
 import mixer
 import midi 
 from fireNFX_Helpers import GetMixerGenParamVal
@@ -243,7 +244,7 @@ class TnfxProgressStep:
         self.BarNumber = barnum 
         self.Markers = list()
     def __str__(self):
-        return "ProgressStep PadIdx: {}, SongPos: {}%, {} ticks, Bar #{}".format(self.PadIndex, self.SongPos, self.SongPosAbsTicks, self.BarNumber)
+        return "ProgressStep PadIdx: {}, SongPos: {}%, {} ticks, Bar #{}, color:{} ".format(self.PadIndex, self.SongPos, self.SongPosAbsTicks, self.BarNumber, hex(self.Color))
 
 class TnfxMarker:
     def __init__(self, number, name, ticks):
@@ -280,7 +281,10 @@ class TnfxMixer:
         self.Name = ''
         self.Color = 0x000000 
         self.Muted = False
+        self.Solo = False
         self.Selected = False
+        self.Enabled = False
+        self.Armed = False
         self.EffectSlots = fxSlots
         self.Update()
     def __str__(self):
@@ -292,6 +296,10 @@ class TnfxMixer:
         self.Color =  FLColorToPadColor(mixer.getTrackColor(self.FLIndex))
         self.Muted = mixer.isTrackMuted(self.FLIndex)
         self.Selected = mixer.isTrackSelected(self.FLIndex)
+        self.Solo = mixer.isTrackSolo(self.FLIndex)
+        self.Enabled = mixer.isTrackEnabled(self.FLIndex)
+        self.Armed = mixer.isTrackArmed(self.FLIndex)
+        
         
 
 
@@ -303,7 +311,8 @@ class TnfxChannel:
         self.FLIndex = flIdx 
         self.Name = ''
         self.Color = 0x000000
-        self.Muted = 0
+        self.Muted = False
+        self.Solo = False
         self.Selected = False 
         self.Mixer = None
         self.ChannelType = -1
@@ -315,10 +324,9 @@ class TnfxChannel:
         self.DimA = 3
         self.PadBColor = 0
         self.DimB = 3 
-        self.ShowChannelEditor = -1
-        self.ShowCSForm = -1
-        self.ShowPianoRoll = -1
-
+        # self.ShowChannelEditor = -1
+        # self.ShowCSForm = -1
+        # self.ShowPianoRoll = -1
         self.Update()
 
     def __str__(self):
@@ -327,9 +335,10 @@ class TnfxChannel:
         self.Name = channels.getChannelName(self.FLIndex)
         self.Color = channels.getChannelColor(self.FLIndex)
         self.Muted = channels.isChannelMuted(self.FLIndex)
+        self.Solo = channels.isChannelSolo(self.FLIndex)
         self.Selected = channels.isChannelSelected(self.FLIndex)
-        self.Mixer = TnfxMixer(channels.getTargetFxTrack(self.FLIndex))
         self.ChannelType = channels.getChannelType(self.FLIndex)
+        self.Mixer = TnfxMixer(channels.getTargetFxTrack(self.FLIndex))
 
     def getRecEventID(self): 
         return channels.getRecEventId(self.FLIndex)
@@ -436,14 +445,25 @@ class TnfxPattern:
         return "Pattern #{} - {} - Selected: {}".format(self.FLIndex, self.Name, self.Selected)
 
 class TnfxPlaylistTrack:
-    def __init__(self, flIdx, name, color):
+    def __init__(self, flIdx):
         self.FLIndex = flIdx
-        self.Name = name
-        self.Color = color
-        self.Muted = -1
+        self.Name = ''
+        self.Color = 0x000000
+        self.Muted = False
+        self.Solo = False
         self.Selected = False 
         self.ChanIdx = -1
         self.MixerIdx = -1
+        if(flIdx > -1):
+            self.Update()
+    
+    def Update(self):
+        self.Color = playlist.getTrackColor(self.FLIndex)
+        self.Name = playlist.getTrackName(self.FLIndex)
+        self.Muted = playlist.isTrackMuted(self.FLIndex)
+        self.Selected = playlist.isTrackSelected(self.FLIndex)
+        self.Solo = playlist.isTrackSolo(self.FLIndex)
+        
         
 class TnfxNoteInfo:
     def __init__(self):

@@ -75,9 +75,9 @@ pdChanStripBNoNav    = pdRowD
 pdPlaylistSelStripA = pdRowA 
 pdPlaylistSelMutesA = pdRowB 
 pdMarkers  = pdRowC
-pdProgress = [] 
-pdProgress.extend(pdRowC)
-pdProgress.extend(pdRowD) 
+res = [] 
+res.extend(pdRowC)
+res.extend(pdRowD) 
 
 pdPlaylistStripA = pdWorkAreaRowA
 pdPlaylistMutesA = pdWorkAreaRowB
@@ -87,6 +87,8 @@ pdPlaylistStripANoNav = pdRowA
 pdPlaylistMutesANoNav = pdRowB
 pdPlaylistStripBNoNav = pdRowC
 pdPlaylistMutesBNoNav = pdRowD
+
+
 
 # these are defined in "FPC" order. Bottom Left FPC Pad is first value in index
 # so I define them bottom to top order for each set.

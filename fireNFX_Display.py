@@ -21,9 +21,9 @@ TextDisplayTime = 4000
 
 TimedTextRow = 1
 FPSRow = 3
-FireFontSize = 15 # was 16
+FireFontSize = 18 #15 # was 16
 TextOffset = -4
-TextRowHeight = 18 #was 20
+TextRowHeight = 20 #18 #was 20
 
 Idle_Interval = 100
 Idle_Interval_Max = 8
@@ -102,7 +102,6 @@ def DisplayTimedText2(Text1, Text2, Text3):
 
 def AddText(text):
     screen.addTextLine(text, 1)
-
 
 def DisplayTextCenter(text, row):
     DisplayText(Font6x16 , JustifyCenter, row, text, True)

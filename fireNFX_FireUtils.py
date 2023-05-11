@@ -99,6 +99,9 @@ def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True, dimMult = 2.5):
     # if col is -1, it will remember the previously saved color for that idx.
     global _ColorMap
 
+    if(idx < 0) or (idx > 63):
+        return
+
     if(col == -1): # reads the stored color
         col = _ColorMap[idx].PadColor
         dimFactor = _ColorMap[idx].DimFactor
@@ -113,7 +116,6 @@ def SetPadColorDirect(idx, col, dimFactor, bSaveColor = True, dimMult = 2.5):
 
     # reduce brightness by half times dimFactor
     if(dimFactor > 0):
-            
         for i in range(dimFactor):
             r = int(r / dimMult)
             g = int(g / dimMult)

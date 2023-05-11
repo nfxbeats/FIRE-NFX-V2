@@ -16,7 +16,7 @@ from fireNFX_Colors import *
 from fireNFX_Defs import *
 from fireNFX_DefaultSettings import *
 from fireNFX_FireUtils import *
-import colorsys
+import fireNFX_Anim as anim
 
 # # enum code from https://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
 def enum(**enums):
@@ -356,9 +356,9 @@ def NavigateFLMenu(cmdString = '', altmenu = False):
         ui.closeActivePopupMenu()
     # open the File menu
     if(altmenu):
-        transport.globalTransport(91, 1)
+        transport.globalTransport(FPT_ItemMenu, 1)
     else:
-        transport.globalTransport(90, 1)
+        transport.globalTransport(FPT_Menu, 1)
         if(ui.getFocused(widPianoRoll) == 1): # auto move to the tools when the PR is active.
             ProcessKeys('LL')
     if(len(cmdString) > 0):
@@ -630,5 +630,200 @@ def Pallette(jumpBy = 64):
                 SetPadColor(pad % 64, RGBToColor(r,g,b), 0)
                 pad+= 1
                 
+def TestQuad(path = "DRULLDDRRRUUULLL", mirrMode = 0):
+    TestTraveler(cPurple, 4, 4, path, mirrMode)
 
+def SetColorPadColorMatrix(submatrices, padIdx, color, dimF, altMode = 0):
+    #altMode 0 = None, 1 = X only, 2 = Y only, 3 = x,y, 4 = x y and xy
+    for idx, matrix in enumerate(submatrices):
+        if altMode > 0:
+            if altMode == 1 and (idx % 2 != 0):
+                matrix = anim.MirrorMatrix(matrix, True, False)
+            if altMode == 2 and (idx %2 != 0):
+                matrix = anim.MirrorMatrix(matrix, False, True)
+            if altMode == 3 and (idx %2 != 0):
+                matrix = anim.MirrorMatrix(matrix, True, True)
+            if altMode == 4:
+                matrixOffs = idx % 4
+                if matrixOffs > 0:
+                    if (matrixOffs == 1): # alternate
+                        matrix = anim.MirrorMatrix(matrix, True, False)
+                    if (matrixOffs == 2): # alternate
+                        matrix = anim.MirrorMatrix(matrix, False, True)
+                    if (matrixOffs == 3): # alternate
+                        matrix = anim.MirrorMatrix(matrix, True, True)
+
+        pads = anim.FlattenMatrix(matrix)
+        padNum = pads[padIdx] 
+        SetPadColor(padNum, color, dimF)
+
+
+def DrawTraveler(submatrices, traveler, mirrorMode = 0):
+    # modes 0 = none, 1 = X, 2 = y, 3 = x, y 
+    dimF = 0 # no dim
+    color = traveler.color
+    SetColorPadColorMatrix(submatrices, traveler.getPadIndex(), color, dimF)
+    if mirrorMode > 0:
+        if mirrorMode in [1,3]:
+            SetColorPadColorMatrix(submatrices, traveler.getPadIndex(True, False), color, dimF)
+        if mirrorMode in [2,3]:
+            SetColorPadColorMatrix(submatrices, traveler.getPadIndex(False, True), color, dimF)
+        if mirrorMode in [3]:
+            SetColorPadColorMatrix(submatrices, traveler.getPadIndex(True, True), color, dimF)
+
+def DrawTail(submatrices, traveler, mirrorMode = 0):
+    # modes 0 = none, 1 = X, 2 = y, 3 = x, y 
+    dimF = 0
+    print('tail', traveler.tail)
     
+    sorted_tuples = sorted(traveler.tail.items(), key=lambda x: x[1], reverse=True)  # Sort the list of tuples by the values in descending order
+    sorted_tail = dict(sorted_tuples)  # Create a new dictionary from the sorted list of tuples
+
+    for padOffs, dimF in sorted_tail.items():
+        color = traveler.color
+        print('item', padOffs, dimF, traveler.color)
+        # if(dimF == 0):
+        #     color = cRed
+        if(dimF >= traveler.tailSize):
+            color = cOff
+
+        # while we can use the traveler's color, we cannot rely upon it's position
+        # to give us the mirrored locations of the tail
+        SetColorPadColorMatrix(submatrices, padOffs, color, dimF, 0)
+        if mirrorMode > 0:
+            if mirrorMode in [1]:
+                x, y = anim.PadIndexToXY(padOffs, traveler.width, traveler.height, 1)
+                SetColorPadColorMatrix(submatrices, anim.XYToPadIndex(x, y, traveler.width), color, dimF, 1)
+            if mirrorMode in [2]:
+                x, y = anim.PadIndexToXY(padOffs, traveler.width, traveler.height, 2)
+                SetColorPadColorMatrix(submatrices, anim.XYToPadIndex(x, y, traveler.width), color, dimF, 2)
+            if mirrorMode in [3]:
+                x, y = anim.PadIndexToXY(padOffs, traveler.width, traveler.height, 3)
+                SetColorPadColorMatrix(submatrices, anim.XYToPadIndex(x, y, traveler.width), color, dimF, 3)
+
+def TestTravelerLoop(color = cRed, width = 16, height = 4, path = 'LDLLUURRD', mirrMode = 0, centerStart = True, Looptimes = 4):
+    newpath = ''
+    for i in range(Looptimes):
+        newpath += path
+    TestTraveler(color, width, height, newpath, mirrMode, centerStart)
+
+def TestTraveler(color = cRed, width = 16, height = 4, path = 'LDLLUURRD', mirrMode = 0, centerStart = True):
+    delay = 0.1
+    startX = 0 
+    startY = 0 
+    if(centerStart):
+        startX = (width//2) - 1 
+        startY = (height//2) - 1
+    
+    traveler = anim.Traveler(color, startX, startY, width, height) # init
+    submatrices = anim.SubDivideMatrix(anim._PadMatrix, height, width) # h, w
+
+    for step in path:
+        time.sleep(delay)
+        if step in ["Z", "0"]:
+            traveler.stay()
+        if step in ['L', '4']:
+            traveler.move_left()
+        if step in ['R', '6']:
+            traveler.move_right()
+        if step in ['U', '8']:
+            traveler.move_up()
+        if step in ['D', '2']:
+            traveler.move_down()
+        if step in ["7"]:
+            traveler.move_up(False)
+            traveler.move_left()
+        if step in ["9"]:
+            traveler.move_up(False)
+            traveler.move_right()
+        if step in ["1"]:
+            traveler.move_down(False)
+            traveler.move_left()
+        if step in ["3"]:
+            traveler.move_down(False)
+            traveler.move_right()
+    
+        DrawTail(submatrices, traveler, mirrMode)
+
+
+    # finish tail
+    while len(traveler.tail.keys()) > 0:
+        traveler.stay()
+        time.sleep(delay)
+        print('cu', traveler.tail)
+        DrawTail(submatrices, traveler, mirrMode)
+
+    return 
+
+
+def get_note_time(note_length, tempo, dotted=False):
+    """
+    Calculates the time (in milliseconds) for a note of the given length
+    at the given tempo (in beats per minute).
+    If `dotted` is True, the note is dotted (lengthened by 50%).
+    """
+    # Define the number of milliseconds per minute
+    ms_per_minute = 60000
+    
+    # Calculate the time for one beat at the given tempo
+    beat_time = ms_per_minute / tempo
+    
+    # Calculate the time for the requested note length
+    if note_length == 1:
+        # Whole note
+        note_time = 4 * beat_time
+    elif note_length == 2:
+        # Half note
+        note_time = 2 * beat_time
+    elif note_length == 4:
+        # Quarter note
+        note_time = beat_time
+    elif note_length == 8:
+        # Eighth note
+        note_time = beat_time / 2
+    elif note_length == 16:
+        # Sixteenth note
+        note_time = beat_time / 4
+    elif note_length == 32:
+        # Thirty-second note
+        note_time = beat_time / 8
+    elif note_length == 64:
+        # Sixty-fourth note
+        note_time = beat_time / 16
+    else:
+        # Invalid note length
+        raise ValueError("Invalid note length")
+    
+    # Check if the note is dotted
+    if dotted:
+        note_time *= 1.5
+    
+    return note_time
+
+last_time = None
+def printts(text):
+    global last_time
+    
+    # Get the current time in milliseconds
+    current_time = time.time() * 1000
+    
+    # Calculate the time difference since the last call
+    if last_time is not None:
+        time_diff = current_time - last_time
+    else:
+        time_diff = 0
+    
+    # Print the text with the timestamp
+    print(f"{text} ({time_diff:.2f} ms)")
+    
+    # Update the last_time variable
+    last_time = current_time
+
+
+
+# TestQuad("U", 1)
+# TestTraveler(16, 4, 'UDDD9R-R-R-R-R-R-R-R-R-R-R-R-R-99DDD9R-R-R-R-R-R-R-R-R-R-R-R-R-9-9', 0)        
+        
+        
+
+
