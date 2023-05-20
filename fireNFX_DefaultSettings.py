@@ -152,6 +152,11 @@ class TnfxDefaultSettings:
 
         self.DETECT_AND_FIX_DEFAULT_PATTERNS = True 
 
+        self.ACCENT_ENABLED = False     #GS
+        self.ACCENT_CURVE_SHAPE = 0.4   #GS - The value should be in a range between 0.1 (very steep) and 1.0 (linear). 
+
+        self.SHOW_CHANNEL_MUTES = True
+
 # DO NOT EDIT BELOW:
 Settings = TnfxDefaultSettings()
 try:
