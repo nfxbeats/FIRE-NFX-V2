@@ -82,7 +82,6 @@ def DeInitDisplay():
     DisplayTextMiddle(' ')
     DisplayTextBottom(' ')
     #screen.update()
-
     #screen.deInit()
     #screen.update()
 

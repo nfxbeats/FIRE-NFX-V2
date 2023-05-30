@@ -112,8 +112,9 @@ def XYToPadIndex(x, y, width):
 def GetBankNumber(matrix, offset):
     submatrix = []
     if offset >= 0 and offset < len(matrix[0]):
+        start = offset * 4
         for row in matrix:
-            submatrix.append(row[offset:offset+4])
+            submatrix.append(row[start:start+4])
     return submatrix
 
 def Get2x2(matrix, row_offset, col_offset):
@@ -191,6 +192,11 @@ _BankAMatrix = GetBankNumber(_PadMatrix, 0) # 0-based
 _BankBMatrix = GetBankNumber(_PadMatrix, 1) # 0-based
 _BankCMatrix = GetBankNumber(_PadMatrix, 2) # 0-based
 _BankDMatrix = GetBankNumber(_PadMatrix, 3) # 0-based
+_BankList = []
+_BankList.append(_BankAMatrix)
+_BankList.append(_BankBMatrix)
+_BankList.append(_BankCMatrix)
+_BankList.append(_BankDMatrix)
 
 
 

@@ -23,7 +23,7 @@ import general
 import plugins 
 import playlist
 import arrangement
-
+\
 from math import exp, log   #GS
 
 from fireNFX_Utils import * 
@@ -450,6 +450,9 @@ def OnUpdateBeatIndicator(value):
                 SendCC(BeatIndicators[i], SingleColorFull) # green
         else:
             SendCC(BeatIndicators[i], SingleColorOff)
+    
+    if(_PadMode.Mode == MODE_PERFORM):
+        RefreshPerformanceMode(_Beat)
 
 
 
@@ -805,7 +808,7 @@ def OnMidiIn(event):
                 return 
             elif(_PadMode.Mode == MODE_PERFORM): # handles on and off for PERFORMANCE
                 if(pMap.Pressed == 1):
-                    event.handled = HandlePlaylist(padNum)
+                    event.handled = HandlePerform(padNum)
                 else:
                     event.handled = True 
                 return 
@@ -999,9 +1002,21 @@ def SelectAndShowChannel(newChanIdx):
         elif(ui.getVisible(widPianoRoll)):
             ShowPianoRoll(0)
 
+def HandlePerform(padNum):
+    if(padNum in _PerformancePads.keys()):
+        block = _PerformancePads[padNum]
+        tlcMode = TLC_MuteOthers | TLC_Fill
+        if(_AltHeld and _ShiftHeld):
+            playlist.soloTrack(block.FLTrackIndex, -1)
+        elif(_ShiftHeld):
+            tlcMode = -1 # stop all
+        elif(_AltHeld):
+            playlist.muteTrack(block.FLTrackIndex)
+        block.Trigger(tlcMode)
+        RefreshPerformanceMode(-1)
+    return True 
 
 def HandlePlaylist(padNum):
-
     plPadsA, plPadsB = getPlaylistPads()
 
     flIdx = _PadMap[padNum].FLIndex
@@ -2361,11 +2376,7 @@ def RefreshModes():
     elif(_PadMode.Mode == MODE_NOTE):
         RefreshNotes()
     elif(_PadMode.Mode == MODE_PERFORM):
-        pass 
-        # if(_isAltMode):
-        #     UpdateMarkerMap()
-        #     UpdateProgressMap()
-
+        RefreshPerformanceMode(-1)
 
          
 def RefreshPadModeButtons():
@@ -3814,7 +3825,7 @@ def SetPadMode():
     if(_PadMode.Mode == MODE_PATTERNS):
         UpdatePatternModeData()
     elif(_PadMode.Mode == MODE_PERFORM):
-        ClearAllPads()
+        RefreshPerformanceMode(-1)        
     RefreshPadModeButtons() # lights the button
     RefreshAll()
 
@@ -5091,3 +5102,93 @@ def getTrackSlotFromFormID(formID = -1):
 
 def getFormIDFromTrackSlot(trackNum, slotNum):
     return ((trackNum << 6) + slotNum) << 16
+
+def getTrackMatrix(startBank):
+    res = []
+    UpdatePerformanceBlockMap()
+    # UpdatePlaylistMap()
+    startOffset = startBank * 4
+    lastTrack = startOffset + 16
+    if(lastTrack > playlist.trackCount() ):
+        lastTrack = playlist.trackCount()
+    for track in _PlaylistMap[startOffset: lastTrack]:
+        # print('trackNum', track.FLIndex, track.Name, hex(track.Color) )
+        res.append(track)
+    return res 
+        
+_PerformanceBlockMap = []
+def UpdatePerformanceBlockMap():
+    width = 4
+    UpdatePlaylistMap()
+    _PerformanceBlockMap.clear()
+    for plTrack in _PlaylistMap:
+        for blockNum in range(width):
+            block = TnfxPerformanceBlock(plTrack.FLIndex, blockNum )
+            _PerformanceBlockMap.append(block)
+
+_PerformancePads = {}
+def UpdatePerformancePads(startBank = 0, width = 4):
+    height = 4
+    tracksToShow = getTrackMatrix(startBank)
+    for idx, track in enumerate(tracksToShow):
+        bank = idx // 4 # 4 banks
+        line = idx % 4 # height
+        for block in range(width):
+            padNum = anim._BankList[bank][line][block]
+            block = TnfxPerformanceBlock(track.FLIndex, block)
+            _PerformancePads[padNum] = block
+
+def RefreshPerformanceMode(beat):
+    global _BlinkTimer
+    if(len(_PerformancePads.keys()) > 0):
+        _BlinkTimer = transport.isPlaying()
+        for padNum in _PerformancePads.keys():
+            block = _PerformancePads[padNum]
+            block.Update()
+            status = block.LastStatus
+            color = block.Color
+            dim = 2 # 
+            if(playlist.isTrackMuted(block.FLTrackIndex)):
+                dim = 3
+                color = getShade(color, shDim)
+            else:
+                if( status == 0):
+                    color = cOff
+                else:
+                    if( status & 4): # playing
+                        if(_ToBlinkOrNotToBlink):
+                            color =  getShade(color, shLight)
+                        # if (beat in [0,2]): 
+                        #     color =  getShade(color, shLight)
+                        dim = 1
+                    elif( status & 2): # scheduled
+                        dim = 0
+            SetPadColor(padNum, color, dim)
+    else:
+        UpdatePerformancePads()
+
+def RefreshPerformanceMode2(beat):
+    startBank = 0
+    height = 4
+    width = 4
+    tracksToShow = getTrackMatrix(startBank)
+    for idx, track in enumerate(tracksToShow):
+        bank = idx // 4
+        line = idx % 4
+        # print('trackNum', track.FLIndex, 'bank', bank, 'line', line, anim._BankList[bank][line])
+        for block in range(width):
+            padNum = anim._BankList[bank][line][block]
+            color =  playlist.getLiveBlockColor(track.FLIndex, block)
+            status = playlist.getLiveBlockStatus(track.FLIndex, block, LB_Status_Default)
+            dim = 3 # 
+            if( status == 0):
+                color = cOff
+            else:
+                if( status & 4):
+                    if (beat in [0,2]): # playing
+                        color =  getShade(color, shLight)
+                    dim = 0
+                elif( status & 2): # scheduled
+                    dim = 1
+            SetPadColor(padNum, color, dim)
+

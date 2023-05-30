@@ -454,6 +454,7 @@ class TnfxPlaylistTrack:
         self.Selected = False 
         self.ChanIdx = -1
         self.MixerIdx = -1
+
         if(flIdx > -1):
             self.Update()
     
@@ -497,6 +498,29 @@ class TnfxParamPadMapping:
                 incby = 1 / size
                 val = self.Pads.index(padIdx) * incby 
             return val
+
+class TnfxPerformanceBlock:
+    def __init__(self, flIdx, blockNum) -> None:
+        self.FLTrackIndex = flIdx 
+        self.Number = blockNum
+        self.Color = 0x00
+        self.LastStatus = 0
+        self.Update()
+    def getStatus(self):
+        self.LastStatus = playlist.getLiveBlockStatus(self.FLTrackIndex, self.Number, midi.LB_Status_Default)
+        return self.LastStatus
+    def Update(self):
+        self.LastStatus = self.getStatus()
+        self.Color = playlist.getLiveBlockColor(self.FLTrackIndex, self.Number)
+    def Trigger(self, tlcMode = midi.TLC_MuteOthers | midi.TLC_Fill):
+        if tlcMode == -1:
+            self.StopAll()
+        else:
+            playlist.triggerLiveClip(self.FLTrackIndex, self.Number, tlcMode)
+    def StopAll(self):
+        playlist.triggerLiveClip(self.FLTrackIndex, -1, midi.TLC_Fill)
+    def __str__(self):
+        return "Block Track# {} - Block# {} - Color: {} - LastStatus: {}".format(self.FLTrackIndex, self.Number, hex(self.Color), self.LastStatus)
 
 
 class TnfxPadMap:
