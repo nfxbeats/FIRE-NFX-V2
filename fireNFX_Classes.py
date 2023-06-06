@@ -464,6 +464,10 @@ class TnfxPlaylistTrack:
         self.Muted = playlist.isTrackMuted(self.FLIndex)
         self.Selected = playlist.isTrackSelected(self.FLIndex)
         self.Solo = playlist.isTrackSolo(self.FLIndex)
+
+    def __str__(self):
+        return "Playlist Track #{} - {}".format(self.FLIndex, self.Name)
+
         
         
 class TnfxNoteInfo:

@@ -100,7 +100,7 @@ _OrigColor = 0x000000
 _NewColor = 0x000000
 _BlinkTimer = False
 _BlinkLast = 0.0
-_BlinkSeconds = 0.20
+_BlinkSeconds = 0.2
 _ToBlinkOrNotToBlink = False
 
 _showText = ['OFF', 'ON']
@@ -255,6 +255,7 @@ _pressisRepeating = False
 
 def OnIdle():
     global _lastHints
+    global _BlinkTimer
     global _BlinkLast
     global _ToBlinkOrNotToBlink
     global _lastFocus
@@ -338,6 +339,9 @@ def OnIdle():
         if(_PadMode.Mode in [MODE_DRUM, MODE_NOTE]):
             HandleShowNotesOnPlayback()
 
+    if _PadMode.Mode == MODE_PERFORM:
+        _BlinkTimer = transport.isPlaying() == 1
+
     if(_BlinkTimer):
         if(_BlinkLast == 0):
             _BlinkLast = time.time()
@@ -391,7 +395,7 @@ def CheckAndRefreshSongLen():
 
     
     
-def OnMidiMsg(event):
+def OnMidiMsg2(event):
     if(event.data1 in KnobCtrls) and (_KnobMode in [KM_USER1, KM_USER2, KM_USER3]): # user defined knobs
         # this code from the original script with slight modification:
         data2 = event.data2
@@ -616,13 +620,14 @@ def OnRefresh(flags):
 
         # something change in FL 21.0.2, that makes the mixer no longer follow when the selected channel changes
         # so I check if it needs to move here
-        if(CE_Select & _DirtyChannelFlags) and (_FollowChannelFX): 
-            trk = channels.getTargetFxTrack(getCurrChanIdx())
-            if(trk != mixer.trackNumber()):
-                print('forcing chanfx')
-                SelectAndShowMixerTrack(trk)
-                # mixer.setTrackNumber(trk, curfxScrollToMakeVisible)
-                # ui.miDisplayRect(trk, trk, _rectTime, CR_ScrollToView)
+        if (_PadMode.Mode != MODE_PERFORM): # ignore when in perf mode
+            if(CE_Select & _DirtyChannelFlags) and (_FollowChannelFX): 
+                trk = channels.getTargetFxTrack(getCurrChanIdx())
+                if(trk != mixer.trackNumber()):
+                    prnt('forcing chanfx')
+                    SelectAndShowMixerTrack(trk)
+                    # mixer.setTrackNumber(trk, curfxScrollToMakeVisible)
+                    # ui.miDisplayRect(trk, trk, _rectTime, CR_ScrollToView)
 
         if (_PadMode.Mode == MODE_DRUM):
             if(not isFPCActive()):
@@ -630,7 +635,6 @@ def OnRefresh(flags):
                 _isAltMode = True
                 SetPadMode()
             RefreshDrumPads()
-
         elif(_PadMode.Mode == MODE_PATTERNS):
             scrollTo = _CurrentChannel != channels.channelNumber()
             RefreshChannelStrip(scrollTo)
@@ -695,19 +699,15 @@ def isKnownPlugin():
 _prevCtrlID = 0
 _proctime = 0
 _DoubleTap = False
+_isPerfSafe = True
+_isModalWindowOpen = False
 
 def OnMidiIn(event):
-    global _ShiftHeld
-    global _AltHeld
-    global _PadMap
     global _proctime
     global _prevCtrlID
     global _DoubleTap
-    global _pressCheckTime
-    global _pressisRepeating
 
-    ctrlID = event.data1 # the low level hardware id of a button, knob, pad, etc
-
+    # check for double tap
     if(event.data2 > 0) and (ctrlID not in [IDKnob1, IDKnob2, IDKnob3, IDKnob4, IDSelect]):
         prevtime = _proctime
         _proctime = time.monotonic_ns() // 1000000
@@ -719,16 +719,38 @@ def OnMidiIn(event):
             _prevCtrlID = ctrlID
             _DoubleTap = False
 
+    return
+
+def OnMidiMsg(event):
+    global _ShiftHeld
+    global _AltHeld
+    global _PadMap
+    global _pressCheckTime
+    global _pressisRepeating
+    global _isPerfSafe
+    global _isModalWindowOpen
+
+    ctrlID = event.data1 # the low level hardware id of a button, knob, pad, etc
+
+    # check PME flags. note that these will be different from OnMidiIn PME values 
+    _isModalWindowOpen = (event.pmeFlags & PME_System_Safe == 0)
+    _isPerfSafe = (event.pmeFlags & PME_System != 0) and (not _isModalWindowOpen)
+    if(not _isPerfSafe):
+        prnt('pme not safe', event.pmeFlags)
+        event.handled = True
+        return 
+    # else:
+    #     prnt('pme safe', event.pmeFlags)
+
     # handle shift/alt
     if(ctrlID in [IDAlt, IDShift]):
         HandleShiftAlt(event, ctrlID)
         event.handled = True
-        return
-
+        return    
+    
     if(ctrlID in KnobCtrls): 
         if (event.status in [MIDI_NOTEON, MIDI_NOTEOFF]): # to prevent the mere touching of the knob generating a midi note event.
             event.handled = True
-
 
         pName, plugin = getCurrChanPlugin()
 
@@ -746,7 +768,26 @@ def OnMidiIn(event):
                 hasParams = len( [a for a in plugin.User3Knobs if a.Offset > -1]) > 0
 
             if(not hasParams):
-                return
+                # this code from the original script with slight modification:
+                data2 = event.data2
+                event.inEv = event.data2
+                if event.inEv >= 0x40:
+                    event.outEv = event.inEv - 0x80
+                else:
+                    event.outEv = event.inEv
+                event.isIncrement = 1
+
+                event.handled = False # user modes, free
+                event.data1 += (_KnobMode-KM_USER1) * 4 # so the CC is different for each user mode
+                device.processMIDICC(event)
+                
+                if (general.getVersion() > 9):
+                    BaseID = EncodeRemoteControlID(device.getPortNumber(), 0, 0)
+                    eventId = device.findEventID(BaseID + event.data1, 0)
+                    if eventId != 2147483647:
+                        s = device.getLinkedParamName(eventId)
+                        s2 = device.getLinkedValueString(eventId)
+                        DisplayTextAll(s, s2, '')        
         
         event.handled = HandleKnob(event, ctrlID, None, event.handled)
         return
@@ -1003,17 +1044,19 @@ def SelectAndShowChannel(newChanIdx):
             ShowPianoRoll(0)
 
 def HandlePerform(padNum):
-    if(padNum in _PerformancePads.keys()):
-        block = _PerformancePads[padNum]
-        tlcMode = TLC_MuteOthers | TLC_Fill
-        if(_AltHeld and _ShiftHeld):
-            playlist.soloTrack(block.FLTrackIndex, -1)
-        elif(_ShiftHeld):
-            tlcMode = -1 # stop all
-        elif(_AltHeld):
-            playlist.muteTrack(block.FLTrackIndex)
-        block.Trigger(tlcMode)
-        RefreshPerformanceMode(-1)
+    if _isPerfSafe:
+        if(padNum in _PerformanceBlocks.keys()):
+            block = _PerformanceBlocks[padNum]
+            # prnt('handling block', block, 'alt', _AltHeld, 'shift', _ShiftHeld)
+            tlcMode = TLC_MuteOthers | TLC_Fill
+            if(_AltHeld and _ShiftHeld):
+                playlist.soloTrack(block.FLTrackIndex, -1)
+            elif(_ShiftHeld):
+                tlcMode = -1 # stop all
+            elif(_AltHeld):
+                playlist.muteTrack(block.FLTrackIndex)
+            block.Trigger(tlcMode)
+            RefreshPerformanceMode(-1)
     return True 
 
 def HandlePlaylist(padNum):
@@ -1618,16 +1661,22 @@ def HandlePattUpDn(ctrlID):
 
 def HandleGridLR(ctrlID):
     global _ScrollTo
-    if(ctrlID == IDBankL):
-        NavSetList(-1)
-    elif(ctrlID == IDBankR):
-        NavSetList(1)
-    _ScrollTo = True
-    if(isNoNav()):
-        for pad in pdNav :
-            SetPadColor(pad, cOff, dimNormal)
+    global _PerfTrackOffset
 
-    RefreshModes()
+    if(_PadMode.Mode == MODE_PERFORM):
+        
+        pass
+    else:
+        if(ctrlID == IDBankL):
+            NavSetList(-1)
+        elif(ctrlID == IDBankR):
+            NavSetList(1)
+        _ScrollTo = True
+        if(isNoNav()):
+            for pad in pdNav :
+                SetPadColor(pad, cOff, dimNormal)
+
+        RefreshModes()
     return True
 
 def HandleKnobMode():
@@ -1980,8 +2029,15 @@ def HandleSelectWheel(event, ctrlID):
     jogNext = 1
     jogPrev = 127
 
-
-    if(ui.getFocused(widBrowser)):
+    if(_PadMode.Mode == MODE_PERFORM):
+        if(event.data2 == jogNext):
+            NavPerfTrackOffset(+16)
+        else:
+            NavPerfTrackOffset(-16)
+        UpdatePerformanceBlocks()            
+        RefreshPerformanceMode(-1)
+        return True
+    elif(ui.getFocused(widBrowser)):
         if(ctrlID == IDSelect):
             caption = ''
             if(event.data2 == jogNext):
@@ -2176,7 +2232,7 @@ def HandleBrowserButton():
     # para /settings menus    
     _ShowMenu = not _ShowMenu
     if(_ShowMenu):
-        prnt('showing alt menu', _ShiftHeld, _AltHeld)
+        # prnt('showing alt menu', _ShiftHeld, _AltHeld)
         _FLChannelFX = _ShiftHeld
         _menuHistory.clear()
         _menuItemSelected = 0
@@ -2186,7 +2242,7 @@ def HandleBrowserButton():
             channels.showEditor(getCurrChanIdx(), 1) 
             ui.right()
     else:
-        prnt('hiding alt menu', _ShiftHeld, _AltHeld)
+        # prnt('hiding alt menu', _ShiftHeld, _AltHeld)
         if(_FLChannelFX):
             channels.showEditor(getCurrChanIdx(), 0) 
         _FLChannelFX = False
@@ -2678,8 +2734,11 @@ def RefreshNotes():
     baseOctave = OctavesList[_OctaveIdx]
 
     id, pl = getCurrChanPlugin()
+    invert = False 
+    if (pl != None):
+        invert = pl.InvertOctaves
 
-    GetScaleGrid(_ScaleIdx, rootNote, baseOctave, pl.InvertOctaves) #this will populate _PadMap.NoteInfo
+    GetScaleGrid(_ScaleIdx, rootNote, baseOctave, invert) #this will populate _PadMap.NoteInfo
 
     for p in pdWorkArea:
         color = cDimWhite
@@ -2749,8 +2808,10 @@ def RefreshDrumPads():
         startnote = rootNote + (OctavesList[_OctaveIdx] * 12) 
 
         for idx, p in enumerate(pads):
-            
-            if(pl.InvertOctaves):
+            invert = False
+            if pl != None:
+                invert = pl.InvertOctaves
+            if(invert):
                 print('inv', rootNote)
             else:
                 print('noinv', rootNote)
@@ -3270,10 +3331,14 @@ def RefreshDisplay():
 
     _menuItemSelected = _chosenItem # reset this for the next menu
 
+    if( len(_ChannelMap) == 0):
+        UpdateChannelMap()    
+
     if(_ShowMenu):
         ShowMenuItems()    
         return     
     else:
+
         chanIdx = getCurrChanIdx() # 
         if( len(_ChannelMap) > (chanIdx - 1)):
             UpdateChannelMap()
@@ -3332,7 +3397,12 @@ def RefreshDisplay():
                     layout = 'DRM-B'
             toptext = "{} - {} - 0{}".format(layout, um, OctavesList[_OctaveIdx])
 
-
+        if(_PadMode.Mode == MODE_PERFORM):
+            firstTrack = getTrackMatrix(_PerfTrackOffset)[0].FLIndex
+            lastTrack = getTrackMatrix(_PerfTrackOffset)[-1].FLIndex
+            toptext = 'PERF Tracks'
+            midtext = "  {}-{}".format(firstTrack, lastTrack)
+            bottext = " "
 
     DisplayTextTop(toptext)
     DisplayTextMiddle(midtext)
@@ -3843,7 +3913,10 @@ def getCurrChanPluginNames():
             return name, name
         return 'Sampler', name
     else:
-        return plugins.getPluginName(getCurrChanIdx(), -1, 0), plugins.getPluginName(getCurrChanIdx(), -1, 1)
+        if(plugins.isValid(getCurrChanIdx(), -1, 0)):
+            return plugins.getPluginName(getCurrChanIdx(), -1, 0), plugins.getPluginName(getCurrChanIdx(), -1, 1)
+        else:
+            return None, None
 
 
 def getCurrChanPlugin():
@@ -3873,7 +3946,10 @@ _UserKnobModeIndex = 0
 
 def navigate(states, current_index, steps):
     num_states = len(states)
-    new_index = (current_index + steps) % num_states
+    if(num_states > 0):
+        new_index = (current_index + steps) % num_states
+    else:
+        new_index = current_index
     return new_index
 
 
@@ -4063,6 +4139,15 @@ def RefreshGridLR():
         else:
             SendCC(IDLeft, SingleColorOff)
             SendCC(IDRight, SingleColorOff)
+
+def NavPerfTrackOffset(val):
+    global _PerfTrackOffset
+    if(len(_PlaylistMap) == 0):
+        UpdatePlaylistMap()
+
+    _PerfTrackOffset = navigate(_PlaylistMap, _PerfTrackOffset, val) # 16 = 4 x 4
+    # prnt('new PerfTrackOffset is', _PerfTrackOffset)
+    RefreshDisplay()
 
 
 def NavScalesList(val):
@@ -4459,6 +4544,9 @@ def UpdateAndRefreshWindowStates():
     global _lastFocus
     global _lastWindowID
 
+    if(_PadMode.Mode == MODE_PERFORM):
+        return 
+
     formID = getFocusedWID()
     isPluginFocused = formID in [widPlugin, widPluginGenerator]
     isEffectFocused = formID == widPluginEffect  # ui.getFocused(widPlugin) or ui.getFocused(widPluginGenerator)
@@ -4482,6 +4570,9 @@ def UpdateAndRefreshWindowStates():
     bColor = cOff
     currChan = getCurrChanIdx()
     UpdateChannelMap()
+
+    if(len(_ChannelMap) < 1):
+        return 
 
     # macro area channel buttons
     if(currChan >= 0): # hilight when the plugin or piano roll has focus
@@ -4604,7 +4695,11 @@ def isNoMacros():
 
 def DrumPads():
     id, pl = getCurrChanPlugin()
-    return getDrumPads(_isAltMode, isNoNav(), _PadMode.LayoutIdx, pl.InvertOctaves)
+    invert = False
+    if(pl != None):
+        invert = pl.InvertOctaves
+    return getDrumPads(_isAltMode, isNoNav(), _PadMode.LayoutIdx, invert)
+    
 
 def NotePads():
     if(isNoNav()):
@@ -5002,18 +5097,21 @@ def p(args):
 def mapRange(value, inMin, inMax, outMin, outMax):
     return outMin + (((value - inMin) / (inMax - inMin)) * (outMax - outMin))
 
+def AdjustColorBrightness(color, brightlevel):
+    r, g, b = utils.ColorToRGB(color)
+    h, s, v = utils.RGBToHSV(r, g, b) # colorsys.rgb_to_hsv(r, g, b)
+    newV = int(mapRange(round(brightlevel,1), 0.0, 1.0, 8, 127)) 
+    r, g, b = utils.HSVtoRGB(h, s, newV) # colorsys.hsv_to_rgb(h,s,newV)
+    color = utils.RGBToColor(int(r), int(g), int(b) ) 
+    return color 
+
 def SetPadColorPeakVal(pad = 0, color = cPurple, peakval = 1, flushBuffer= True):
     r, g, b = utils.ColorToRGB(color)
     h, s, v = utils.RGBToHSV(r, g, b) # colorsys.rgb_to_hsv(r, g, b)
     newV = int(mapRange(round(peakval,1), 0.0, 1.0, 8, 255)) 
-    # if pad in [0, 32]:
-    #     print('orgcol', hex(color), 'v', v, 'p->v', round(peakval,1), newV, _IsOnIdleRefreshing)
     r, g, b = utils.HSVtoRGB(h, s, newV) # colorsys.hsv_to_rgb(h,s,newV)
     color = utils.RGBToColor(int(r), int(g), int(b) ) 
-    # if pad in [0, 32]:
-    #     print('newcol', hex(color))
     SetPadColorDirect(pad, color, 0)
-    #SetPadColorBuffer(pad, color, 0, flushBuffer, False)
     #if(flushBuffer):
     #    time.sleep(.1)
 
@@ -5103,11 +5201,11 @@ def getTrackSlotFromFormID(formID = -1):
 def getFormIDFromTrackSlot(trackNum, slotNum):
     return ((trackNum << 6) + slotNum) << 16
 
-def getTrackMatrix(startBank):
+def getTrackMatrix(startTrack):
     res = []
     UpdatePerformanceBlockMap()
     # UpdatePlaylistMap()
-    startOffset = startBank * 4
+    startOffset = startTrack # * 4
     lastTrack = startOffset + 16
     if(lastTrack > playlist.trackCount() ):
         lastTrack = playlist.trackCount()
@@ -5126,69 +5224,59 @@ def UpdatePerformanceBlockMap():
             block = TnfxPerformanceBlock(plTrack.FLIndex, blockNum )
             _PerformanceBlockMap.append(block)
 
-_PerformancePads = {}
-def UpdatePerformancePads(startBank = 0, width = 4):
+_PerformanceBlocks = {}
+_PerfTrackOffset = 0 
+
+def UpdatePerformanceBlocks(width = 4):
     height = 4
-    tracksToShow = getTrackMatrix(startBank)
+    tracksToShow = getTrackMatrix(_PerfTrackOffset)
     for idx, track in enumerate(tracksToShow):
-        bank = idx // 4 # 4 banks
+        bank = idx // 4  # - startTrack # 4 banks
         line = idx % 4 # height
         for block in range(width):
             padNum = anim._BankList[bank][line][block]
             block = TnfxPerformanceBlock(track.FLIndex, block)
-            _PerformancePads[padNum] = block
+            _PerformanceBlocks[padNum] = block
+#    print(*getTrackMatrix(_PerfTrackOffset), sep = '\n')
+    if(_PadMode.Mode == MODE_PERFORM):
+        firstTrack = getTrackMatrix(_PerfTrackOffset)[0].FLIndex
+        lastTrack = getTrackMatrix(_PerfTrackOffset)[-1].FLIndex
+        playlist.liveDisplayZone(0, firstTrack, 4, lastTrack+1, Settings.DISPLAY_RECT_TIME_MS)
+
 
 def RefreshPerformanceMode(beat):
-    global _BlinkTimer
-    if(len(_PerformancePads.keys()) > 0):
-        _BlinkTimer = transport.isPlaying()
-        for padNum in _PerformancePads.keys():
-            block = _PerformancePads[padNum]
-            block.Update()
-            status = block.LastStatus
-            color = block.Color
-            dim = 2 # 
-            if(playlist.isTrackMuted(block.FLTrackIndex)):
-                dim = 3
-                color = getShade(color, shDim)
-            else:
-                if( status == 0):
+    if _isPerfSafe:
+        # prnt('rpm  pad len', len(_PerformanceBlocks), 'offs', _PerfTrackOffset)
+        # print(*list(_PerformanceBlocks.values()), sep = '\n')
+        if(len(_PerformanceBlocks.keys()) > 0):
+
+            for padNum in _PerformanceBlocks.keys():
+                block = _PerformanceBlocks[padNum]
+                block.Update()
+                status = block.LastStatus
+                color = block.Color
+                dim = 2 # not active nor playing
+                # if(playlist.isTrackMuted(block.FLTrackIndex)):
+                #     dim = 3
+                #     color = getShade(color, shDark)
+                # else:
+                if( status == 0): # no block
                     color = cOff
                 else:
-                    if( status & 4): # playing
-                        if(_ToBlinkOrNotToBlink):
-                            color =  getShade(color, shLight)
-                        # if (beat in [0,2]): 
-                        #     color =  getShade(color, shLight)
-                        dim = 1
-                    elif( status & 2): # scheduled
-                        dim = 0
-            SetPadColor(padNum, color, dim)
-    else:
-        UpdatePerformancePads()
+                    isactive = (status & 2)
 
-def RefreshPerformanceMode2(beat):
-    startBank = 0
-    height = 4
-    width = 4
-    tracksToShow = getTrackMatrix(startBank)
-    for idx, track in enumerate(tracksToShow):
-        bank = idx // 4
-        line = idx % 4
-        # print('trackNum', track.FLIndex, 'bank', bank, 'line', line, anim._BankList[bank][line])
-        for block in range(width):
-            padNum = anim._BankList[bank][line][block]
-            color =  playlist.getLiveBlockColor(track.FLIndex, block)
-            status = playlist.getLiveBlockStatus(track.FLIndex, block, LB_Status_Default)
-            dim = 3 # 
-            if( status == 0):
-                color = cOff
-            else:
-                if( status & 4):
-                    if (beat in [0,2]): # playing
-                        color =  getShade(color, shLight)
-                    dim = 0
-                elif( status & 2): # scheduled
-                    dim = 1
-            SetPadColor(padNum, color, dim)
+                    if isactive: # scheduled - AKA active
+                        dim = 0
+                        # color = AdjustColorBrightness(color, 1)
+                    else:
+                        dim = 2
+
+                    if( status & 4) and not isactive: # playing
+                        if(beat in [0,2]): # or (_ToBlinkOrNotToBlink):
+                            dim -= 1 
+
+                SetPadColor(padNum, color, dim)
+                
+        else:
+            UpdatePerformanceBlocks()
 
