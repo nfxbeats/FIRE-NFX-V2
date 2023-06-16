@@ -7,8 +7,11 @@
 # first public beta:    07/13/2022
 #
 # thanks to: HDSQ, TayseteDj, CBaum83, MegaSix, rd3d2, DAWNLIGHT, Jaimezin, a candle, Miro and Image-Line and more...
-# thanks to GeorgBit (#GS) for velocity curve for accent mode featue.
+# thanks to GeorgBit (#GS comments in code) for velocity curve for accent mode featue.
 #
+
+_VERSION = "2.2023.0616"
+print('VERSION ' + _VERSION)   
 
 import device
 import midi
@@ -23,7 +26,7 @@ import general
 import plugins 
 import playlist
 import arrangement
-\
+
 from math import exp, log   #GS
 
 from fireNFX_Utils import * 
@@ -174,6 +177,8 @@ _ScrollTo = True # used to determine when to scroll to the channel/pattern
 def OnInit():
     global _ScrollTo 
 
+    
+
     if Settings.SHOW_AUDIO_PEAKS:
         device.setHasMeters()
 
@@ -203,12 +208,14 @@ def OnInit():
     line = '----------------------'
     DisplayText(Font6x8, JustifyCenter, 0, Settings.STARTUP_TEXT_TOP, True)
     DisplayText(Font6x16, JustifyCenter, 1, '+', True)
-    DisplayText(Font10x16, JustifyCenter, 2, Settings.STARTUP_TEXT_BOT, True)
+    # DisplayText(Font10x16, JustifyCenter, 2, Settings.STARTUP_TEXT_BOT, True)
+    DisplayTextBottom('v' + _VERSION)    
+
     #fun "animation"
     for i in range(16):
         text = line[0:i]
         DisplayText(Font6x16, JustifyCenter, 1, text, True)
-        time.sleep(.066)
+        time.sleep(.1)
 
     # Init some data
     RefreshAll()
@@ -699,13 +706,17 @@ def isKnownPlugin():
 _prevCtrlID = 0
 _proctime = 0
 _DoubleTap = False
-_isPerfSafe = True
+_isPMESafe = True
 _isModalWindowOpen = False
 
 def OnMidiIn(event):
     global _proctime
     global _prevCtrlID
     global _DoubleTap
+
+    ctrlID = event.data1 # the low level hardware id of a button, knob, pad, etc
+
+    prnt('OnMidiIn', ctrlID, event.data2)
 
     # check for double tap
     if(event.data2 > 0) and (ctrlID not in [IDKnob1, IDKnob2, IDKnob3, IDKnob4, IDSelect]):
@@ -714,12 +725,20 @@ def OnMidiIn(event):
         elapsed = _proctime-prevtime
 
         if (_prevCtrlID == ctrlID):
-            _DoubleTap = (elapsed < 220)
+            _DoubleTap = (elapsed < Settings.DBL_TAP_DELAY_MS)
         else:
             _prevCtrlID = ctrlID
             _DoubleTap = False
+    
+    # handle shift/alt
+    if(ctrlID in [IDAlt, IDShift]):
+        HandleShiftAlt(event, ctrlID)
+        event.handled = True
+        return    
 
-    return
+    if(ctrlID in KnobCtrls):  #if false, it's a custom userX knob link
+        event.handled = OnMidiIn_KnobEvent(event)
+        return
 
 def OnMidiMsg(event):
     global _ShiftHeld
@@ -727,71 +746,47 @@ def OnMidiMsg(event):
     global _PadMap
     global _pressCheckTime
     global _pressisRepeating
-    global _isPerfSafe
+    global _isPMESafe
     global _isModalWindowOpen
 
     ctrlID = event.data1 # the low level hardware id of a button, knob, pad, etc
+    prnt('OnMidiMsg', ctrlID, event.data2, 'status', event.status)
 
     # check PME flags. note that these will be different from OnMidiIn PME values 
     _isModalWindowOpen = (event.pmeFlags & PME_System_Safe == 0)
-    _isPerfSafe = (event.pmeFlags & PME_System != 0) and (not _isModalWindowOpen)
-    if(not _isPerfSafe):
+    _isPMESafe = (event.pmeFlags & PME_System != 0)
+    if(not _isPMESafe):
         prnt('pme not safe', event.pmeFlags)
         event.handled = True
         return 
-    # else:
-    #     prnt('pme safe', event.pmeFlags)
 
-    # handle shift/alt
-    if(ctrlID in [IDAlt, IDShift]):
-        HandleShiftAlt(event, ctrlID)
-        event.handled = True
-        return    
-    
-    if(ctrlID in KnobCtrls): 
-        if (event.status in [MIDI_NOTEON, MIDI_NOTEOFF]): # to prevent the mere touching of the knob generating a midi note event.
-            event.handled = True
+    if(event.data1 in KnobCtrls) and (_KnobMode in [KM_USER1, KM_USER2, KM_USER3]): # user defined knobs
+        event.data1 += (_KnobMode-KM_USER1) * 4 # so the CC is different for each user mode
+        # prnt('knob CC', event.data1)
+        if not (event.status in [MIDI_NOTEON, MIDI_NOTEOFF]): # to prevent the mere touching of the knob generating a midi note event.
+            # this code from the original script with slight modification:
+            event.inEv = event.data2
+            if event.inEv >= 0x40:
+                event.outEv = event.inEv - 0x80
+            else:
+                event.outEv = event.inEv
+            event.isIncrement = 1
 
-        pName, plugin = getCurrChanPlugin()
-
-        # check if we have predefined user knob settings, if NOT shortcut out 
-        # to be processed by OnMidiMsg() to use processMIDICC per the docs
-        if(_KnobMode in [KM_USER1, KM_USER2, KM_USER3]):
-            if(plugin == None): # invalid plugin
-                return
-            hasParams = False
-            if(_KnobMode == KM_USER1):
-                hasParams = len( [a for a in plugin.User1Knobs if a.Offset > -1]) > 0
-            elif(_KnobMode == KM_USER2):
-                hasParams = len( [a for a in plugin.User2Knobs if a.Offset > -1]) > 0
-            elif(_KnobMode == KM_USER3):
-                hasParams = len( [a for a in plugin.User3Knobs if a.Offset > -1]) > 0
-
-            if(not hasParams):
-                # this code from the original script with slight modification:
-                data2 = event.data2
-                event.inEv = event.data2
-                if event.inEv >= 0x40:
-                    event.outEv = event.inEv - 0x80
-                else:
-                    event.outEv = event.inEv
-                event.isIncrement = 1
-
-                event.handled = False # user modes, free
-                event.data1 += (_KnobMode-KM_USER1) * 4 # so the CC is different for each user mode
-                device.processMIDICC(event)
-                
-                if (general.getVersion() > 9):
-                    BaseID = EncodeRemoteControlID(device.getPortNumber(), 0, 0)
-                    eventId = device.findEventID(BaseID + event.data1, 0)
-                    if eventId != 2147483647:
-                        s = device.getLinkedParamName(eventId)
-                        s2 = device.getLinkedValueString(eventId)
-                        DisplayTextAll(s, s2, '')        
+            event.handled = False # user modes, free
+            device.processMIDICC(event)
         
-        event.handled = HandleKnob(event, ctrlID, None, event.handled)
-        return
+        if (general.getVersion() > 9):
+            BaseID = EncodeRemoteControlID(device.getPortNumber(), 0, 0)
+            recEventIDIndex = device.findEventID(BaseID + event.data1, 0)
+            if recEventIDIndex != 2147483647:
+                # show the name/value on the display
+                Name = device.getLinkedParamName(recEventIDIndex)
+                currVal = device.getLinkedValue(recEventIDIndex)
+                valstr = device.getLinkedValueString(recEventIDIndex)
+                Bipolar = device.getLinkedInfo(recEventIDIndex) == Event_Centered
+                DisplayBar2(Name, currVal, valstr, Bipolar)
 
+    
     # handle a pad
     if( IDPadFirst <=  ctrlID <= IDPadLast):
         padNum = ctrlID - IDPadFirst
@@ -910,11 +905,11 @@ def OnMidiMsg(event):
         event.handled = True 
 
 def OnNoteOn(event):
-    #prn(lvlA, 'OnNoteOn()', utils.GetNoteName(event.data1),event.data1,event.data2)
+    prnt('OnNoteOn()', utils.GetNoteName(event.data1),event.data1,event.data2)
     pass
 
 def OnNoteOff(event):
-    #prn(lvlA, 'OnNoteOff()', utils.GetNoteName(event.data1),event.data1,event.data2)
+    prnt('OnNoteOff()', utils.GetNoteName(event.data1),event.data1,event.data2)
     pass
 
 #endregion 
@@ -933,7 +928,6 @@ def HandleChannelStrip(padNum): #, isChannelStripB):
     
     if(isPlaylistMode()):
         if(_SHOW_PROGRESS):
-            print('hcs')
             return HandleProgressBar(padNum)
         else:
             return True
@@ -1044,7 +1038,7 @@ def SelectAndShowChannel(newChanIdx):
             ShowPianoRoll(0)
 
 def HandlePerform(padNum):
-    if _isPerfSafe:
+    if _isPMESafe:
         if(padNum in _PerformanceBlocks.keys()):
             block = _PerformanceBlocks[padNum]
             # prnt('handling block', block, 'alt', _AltHeld, 'shift', _ShiftHeld)
@@ -2830,7 +2824,6 @@ def RefreshDrumPads():
         
         if( isFPCActive()):  # Show Custom FPC Colors
             # FPC A Pads
-            #fpcpadIdx = 0
             semitone = 0
             color = cOff
             dim =  dimNormal
@@ -2839,16 +2832,6 @@ def RefreshDrumPads():
                 semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, idx) #fpcpadIdx)
                 MapNoteToPad(p, semitone)
                 SetPadColor(p, FLColorToPadColor(color, 2), dim)
-            #     fpcpadIdx += 1 # NOTE! will be 16 when we exit the for loop, the proper first value for the B Pads loop...
-            # # FPC B Pads
-            # for p in pdFPCB: #NOTE! fpcpadIdx s/b 16 when entering this loop
-            #     color = plugins.getPadInfo(chanIdx, -1, PAD_Color, fpcpadIdx) 
-            #     semitone = plugins.getPadInfo(chanIdx, -1, PAD_Semitone, fpcpadIdx) 
-            #     MapNoteToPad(p, semitone)
-            #     #_PadMap[p].NoteInfo.MIDINote = semitone 
-            #     #_NoteMap[p] = semitone 
-            #     SetPadColor(p, FLColorToPadColor(color), dim)
-            #     fpcpadIdx += 1 # continue 
         else: # 
             for p in pads:
                 SetPadColor(p, cOff, dimNormal)
@@ -2883,8 +2866,11 @@ def getFPCChannels():
     return _FPCChannels
     
 def RefreshFPCSelector():
-    if(len(_FPCChannels) == 0):
-        getFPCChannels()
+    getFPCChannels() # always refresh
+
+    if len(pdFPCChannels) == 0:
+        DisplayTimedText('No FPC')
+        return
 
     # go through the FPC selector pads...
     for idx, padNum in enumerate(pdFPCChannels):
@@ -3398,11 +3384,17 @@ def RefreshDisplay():
             toptext = "{} - {} - 0{}".format(layout, um, OctavesList[_OctaveIdx])
 
         if(_PadMode.Mode == MODE_PERFORM):
-            firstTrack = getTrackMatrix(_PerfTrackOffset)[0].FLIndex
-            lastTrack = getTrackMatrix(_PerfTrackOffset)[-1].FLIndex
-            toptext = 'PERF Tracks'
-            midtext = "  {}-{}".format(firstTrack, lastTrack)
-            bottext = " "
+            if(playlist.getPerformanceModeState() == 1):
+                firstTrack = getTrackMatrix(_PerfTrackOffset)[0].FLIndex
+                lastTrack = getTrackMatrix(_PerfTrackOffset)[-1].FLIndex
+                toptext = 'PERF Tracks'
+                midtext = "  {}-{}".format(firstTrack, lastTrack)
+                bottext = " "
+            else:
+                toptext = 'NOT IN'
+                midtext = 'PERFORMANCE'
+                bottext = "MODE"
+
 
     DisplayTextTop(toptext)
     DisplayTextMiddle(midtext)
@@ -5202,6 +5194,7 @@ def getFormIDFromTrackSlot(trackNum, slotNum):
     return ((trackNum << 6) + slotNum) << 16
 
 def getTrackMatrix(startTrack):
+    prnt('gtm')
     res = []
     UpdatePerformanceBlockMap()
     # UpdatePlaylistMap()
@@ -5213,41 +5206,50 @@ def getTrackMatrix(startTrack):
         # print('trackNum', track.FLIndex, track.Name, hex(track.Color) )
         res.append(track)
     return res 
-        
-_PerformanceBlockMap = []
-def UpdatePerformanceBlockMap():
-    width = 4
-    UpdatePlaylistMap()
-    _PerformanceBlockMap.clear()
-    for plTrack in _PlaylistMap:
-        for blockNum in range(width):
-            block = TnfxPerformanceBlock(plTrack.FLIndex, blockNum )
-            _PerformanceBlockMap.append(block)
 
+def OnUpdateLiveMode(lastTrack):
+    prnt('oulm', lastTrack)
+
+_PerformanceBlockMap = []
 _PerformanceBlocks = {}
 _PerfTrackOffset = 0 
 
-def UpdatePerformanceBlocks(width = 4):
-    height = 4
-    tracksToShow = getTrackMatrix(_PerfTrackOffset)
-    for idx, track in enumerate(tracksToShow):
-        bank = idx // 4  # - startTrack # 4 banks
-        line = idx % 4 # height
-        for block in range(width):
-            padNum = anim._BankList[bank][line][block]
-            block = TnfxPerformanceBlock(track.FLIndex, block)
-            _PerformanceBlocks[padNum] = block
-#    print(*getTrackMatrix(_PerfTrackOffset), sep = '\n')
-    if(_PadMode.Mode == MODE_PERFORM):
-        firstTrack = getTrackMatrix(_PerfTrackOffset)[0].FLIndex
-        lastTrack = getTrackMatrix(_PerfTrackOffset)[-1].FLIndex
-        playlist.liveDisplayZone(0, firstTrack, 4, lastTrack+1, Settings.DISPLAY_RECT_TIME_MS)
 
+def UpdatePerformanceBlockMap():
+    prnt('upbm')
+    width = 4
+    if(playlist.getPerformanceModeState() == 1):
+        UpdatePlaylistMap()
+        _PerformanceBlockMap.clear()
+        for plTrack in _PlaylistMap:
+            for blockNum in range(width):
+                block = TnfxPerformanceBlock(plTrack.FLIndex, blockNum )
+                _PerformanceBlockMap.append(block)
+    else:
+        prnt('not in performance mode')
+
+def UpdatePerformanceBlocks(width = 4):
+    prnt('upb')
+    height = 4
+    if playlist.getPerformanceModeState() == 1:
+        tracksToShow = getTrackMatrix(_PerfTrackOffset)
+        for idx, track in enumerate(tracksToShow):
+            bank = idx // 4  # - startTrack # 4 banks
+            line = idx % 4 # height
+            for block in range(width):
+                padNum = anim._BankList[bank][line][block]
+                block = TnfxPerformanceBlock(track.FLIndex, block)
+                _PerformanceBlocks[padNum] = block
+    #    print(*getTrackMatrix(_PerfTrackOffset), sep = '\n')
+        if(_PadMode.Mode == MODE_PERFORM):
+            firstTrack = getTrackMatrix(_PerfTrackOffset)[0].FLIndex
+            lastTrack = getTrackMatrix(_PerfTrackOffset)[-1].FLIndex
+            playlist.liveDisplayZone(0, firstTrack, 4, lastTrack+1, Settings.DISPLAY_RECT_TIME_MS)
+    else:
+        prnt('not in performacnce mode')
 
 def RefreshPerformanceMode(beat):
-    if _isPerfSafe:
-        # prnt('rpm  pad len', len(_PerformanceBlocks), 'offs', _PerfTrackOffset)
-        # print(*list(_PerformanceBlocks.values()), sep = '\n')
+    if _isPMESafe:
         if(len(_PerformanceBlocks.keys()) > 0):
 
             for padNum in _PerformanceBlocks.keys():
@@ -5280,3 +5282,32 @@ def RefreshPerformanceMode(beat):
         else:
             UpdatePerformanceBlocks()
 
+def OnMidiIn_KnobEvent(event):
+    if (event.status in [MIDI_NOTEON, MIDI_NOTEOFF]): # to prevent the mere touching of the knob generating a midi note event.
+        event.handled = True
+
+    ctrlID = event.data1
+
+    pName, plugin = getCurrChanPlugin()
+
+    # check if we have predefined user knob settings, if NOT shortcut out 
+    # to be processed by OnMidiMsg() to use processMIDICC per the docs
+    if(_KnobMode in [KM_USER1, KM_USER2, KM_USER3]):
+        if(plugin == None): # invalid plugin
+            return False
+        
+        hasParams = False
+        if(_KnobMode == KM_USER1):
+            hasParams = len( [a for a in plugin.User1Knobs if a.Offset > -1]) > 0
+        elif(_KnobMode == KM_USER2):
+            hasParams = len( [a for a in plugin.User2Knobs if a.Offset > -1]) > 0
+        elif(_KnobMode == KM_USER3):
+            hasParams = len( [a for a in plugin.User3Knobs if a.Offset > -1]) > 0
+
+        if(not hasParams): # is a user knob and is handled in OnMidiMsg()
+            event.handled = False
+            return False
+
+        event.handled = HandleKnob(event, ctrlID, None, event.handled)
+
+    return event.handled
