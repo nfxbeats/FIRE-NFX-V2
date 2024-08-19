@@ -1,3 +1,7 @@
+# ATTENTION
+I am no longer updating this repository. For the latest and greatest please go to [FIRE-NFX-V2-OG+](https://github.com/nfxbeats/FIRE-NFX-V2-OG-Plus#fire-nfx-v2-og)
+
+
 # FIRE-NFX-V2
 The most advanced MIDI interface for FL Studio and the Akai FIRE ever created.  
 <br>
