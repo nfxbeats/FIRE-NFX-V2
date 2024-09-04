@@ -95,7 +95,7 @@ Please leave me feedback/bug reports on one of the following:
 
 ## *Credits*
 Much of this work was helped along by the following:
-* Miguel Guthridge, aka HDSQ in the forums. His [FL Studio API Stubs](https://github.com/MiguelGuthridge/FL-Studio-API-Stubs) have been invaluable to me while developing. He's also a powerhouse of help in the forums and even has his own FL script - [Universal Controller Script](https://github.com/MiguelGuthridge/Universal-Controller-Script) - that supports several devices.
+* Maddy Guthridge, aka HDSQ in the forums. Her [FL Studio API Stubs](https://github.com/MaddyGuthridge/FL-Studio-API-Stubs) have been invaluable to me while developing. She's also a powerhouse of help in the forums and even has her own FL script - [Universal Controller Script](https://github.com/MaddyGuthridge/Universal-Controller-Script) - that supports several devices.
 * Anyone who gave me some honest and accurate feedback - you guys help tremendously with ideas and bugs, thank you.
 * The author of the original AKAI Fire python script - I don't know who it is specifically (Miro?). Thank for the great code to learn from..
 
